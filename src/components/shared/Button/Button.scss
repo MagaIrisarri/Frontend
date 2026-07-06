@@ -1,0 +1,36 @@
+.button {
+  font-family: var(--sans);
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &--primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  &--secondary {
+    background: var(--accent-bg);
+    color: var(--accent);
+  }
+
+  &--md {
+    padding: 11px 18px;
+    font-size: 1rem;
+  }
+
+  &--sm {
+    padding: 7px 12px;
+    font-size: 0.85rem;
+  }
+}
