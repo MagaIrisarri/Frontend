@@ -5,5 +5,5 @@ export const formInitialState = {
   password: "",
   phone: "",
   dni: "",
-  birthDate: "",
+  date_of_brthdate: "",
 };

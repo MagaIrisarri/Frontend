@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Input from "../Input/Input";
 import Button from "../shared/Button/Button";
-import { formInitialState } from "./RegisterForm.data";
+import { formInitialState } from "../../types/UserType.data";
 import "./RegisterForm.scss";
 
 type RegisterFormProps = {
@@ -10,31 +10,54 @@ type RegisterFormProps = {
 
 const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
   const [form, setForm] = useState(formInitialState);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>, attr: string) =>
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>, attr: keyof typeof form) =>
     setForm((prevForm) => ({ ...prevForm, [attr]: event.target.value }));
+
+  const handleNumericChange = (event: React.ChangeEvent<HTMLInputElement>, attr: "dni" | "phone") => {
+    const digitsOnly = event.target.value.replace(/\D/g, "");
+    setForm((prevForm) => ({ ...prevForm, [attr]: digitsOnly }));
+  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    onSubmit(form);
+
+    if (!form.name.trim() || !form.last_name.trim() || !form.password.trim()) {
+      setFormError("Los campos no pueden estar vacíos ni contener solo espacios.");
+      return;
+    }
+
+    if (!/^\d{7,8}$/.test(form.dni)) {
+      setFormError("El DNI debe tener 7 u 8 dígitos, sin letras.");
+      return;
+    }
+
+    if (!form.phone) {
+      setFormError("El teléfono es requerido.");
+      return;
+    }
+
+    setFormError(null);
+    onSubmit({
+      ...form,
+      name: form.name.trim(),
+      last_name: form.last_name.trim(),
+      password: form.password.trim(),
+    });
     setForm(formInitialState);
   };
 
   return (
     <form className="register-form" onSubmit={handleSubmit}>
-      <Input label="Nombre" type="text" value={form.name} onChange={(e) => handleChange(e, "name")} />
-      <Input label="Apellido" type="text" value={form.last_name} onChange={(e) => handleChange(e, "last_name")} />
-      <Input label="Email" type="email" value={form.email} onChange={(e) => handleChange(e, "email")} />
-      <Input label="Contraseña" type="password" value={form.password} onChange={(e) => handleChange(e, "password")} />
-      <Input label="Telefono" type="tel" value={form.phone} onChange={(e) => handleChange(e, "phone")} />
-      <Input label="DNI" type="text" value={form.dni} onChange={(e) => handleChange(e, "dni")} />
-      <Input
-        label="Fecha de nacimiento"
-        type="date"
-        value={form.birthDate}
-        onChange={(e) => handleChange(e, "birthDate")}
-        full
-      />
+      {formError && <p className="form-error">{formError}</p>}
+      <Input label="Nombre" type="text" value={form.name} onChange={(e) => handleChange(e, "name")}  required />
+      <Input label="Apellido" type="text" value={form.last_name} onChange={(e) => handleChange(e, "last_name")} required />
+      <Input label="Email" type="email" value={form.email} onChange={(e) => handleChange(e, "email")} required />
+      <Input label="Contraseña" type="password" value={form.password} onChange={(e) => handleChange(e, "password")} required />
+      <Input label="Telefono" type="tel" value={form.phone} onChange={(e) => handleNumericChange(e, "phone")} required />
+      <Input label="DNI" type="text" value={form.dni} onChange={(e) => handleNumericChange(e, "dni")} maxLength={8} required />
+      <Input label="Fecha de nacimiento" type="date" value={form.date_of_brthdate} onChange={(e) => handleChange(e, "date_of_brthdate")}full required/>
       <Button type="submit" variant="primary" size="md">Registrarse</Button>
     </form>
   );

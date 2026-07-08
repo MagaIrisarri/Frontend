@@ -22,8 +22,8 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
 
   return (
     <form className="login-form" onSubmit={handleSubmit}>
-      <Input label="Email" type="email" value={form.email} onChange={(e) => handleChange(e, "email")} />
-      <Input label="Contraseña" type="password" value={form.password} onChange={(e) => handleChange(e, "password")} />
+      <Input label="Email" type="email" value={form.email} onChange={(e) => handleChange(e, "email")} required />
+      <Input label="Contraseña" type="password" value={form.password} onChange={(e) => handleChange(e, "password")} required/>
       <Button type="submit" variant="primary" size="md">Ingresar</Button>
     </form>
   );
