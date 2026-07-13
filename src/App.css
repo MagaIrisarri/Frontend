@@ -57,3 +57,13 @@
   font-size: 14px;
   color: var(--text);
 }
+
+.form-error {
+  color: #d92d20;
+  font-size: 0.875rem;
+}
+
+.form-success {
+  color: #027a48;
+  font-size: 0.875rem;
+}
