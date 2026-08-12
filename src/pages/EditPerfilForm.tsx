@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import EditPerfilForm from "../components/EditPerfilForm/EditPerfilForm.tsx";
 import ChangePasswordForm from "../components/ChangePasswordForm/ChangePasswordForm.tsx";
-import { getUserId, updateUser, changePassword } from "../services/User.ts";
+import { getUserId, updateUser, changePassword, removeUser} from "../services/User.ts";
 import { useEffect, useState } from "react";
 import { formUpdate } from "../types/UserType.data.ts";
 
@@ -52,6 +52,18 @@ const Update = () => {
     }
   };
 
+  const Remove = async () => {
+    console.log(" Eliminar cuenta:");
+
+    try {
+      await removeUser(id);
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setError("No se pudo elimar la cuenta. Intentá de nuevo.");
+    }
+  };
+
   return (
     <div className="page">
       <div className="card card-wide">
@@ -66,6 +78,12 @@ const Update = () => {
         {passwordError && <p className="form-error">{passwordError}</p>}
         {passwordSuccess && <p className="form-success">{passwordSuccess}</p>}
         <ChangePasswordForm onSubmit={handlePasswordChange} />
+
+      <p className="form-footer">
+          <button className="btn-link" onClick={() => Remove()}>
+            Eliminar cuenta
+          </button>
+        </p>  
 
         <p className="form-footer">
           <button className="btn-link" onClick={() => navigate("/home")}>
