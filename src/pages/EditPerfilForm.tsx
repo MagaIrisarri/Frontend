@@ -4,6 +4,7 @@ import ChangePasswordForm from "../components/ChangePasswordForm/ChangePasswordF
 import { getUserId, updateUser, changePassword, removeUser} from "../services/User.ts";
 import { useEffect, useState } from "react";
 import { formUpdate } from "../types/UserType.data.ts";
+import Button from "../components/shared/Button/Button.tsx";
 
 const Update = () => {
   const user = JSON.parse(localStorage.getItem("user") ?? "null");
@@ -52,9 +53,10 @@ const Update = () => {
     }
   };
 
-  const Remove = async () => {
-    console.log(" Eliminar cuenta:");
+  const [mostrarModal, setMostrarModal] = useState(false);
 
+  const Remove  = async () => {
+    console.log(" Eliminar cuenta:");
     try {
       await removeUser(id);
       navigate("/");
@@ -62,7 +64,8 @@ const Update = () => {
       console.error(err);
       setError("No se pudo elimar la cuenta. Intentá de nuevo.");
     }
-  };
+    setMostrarModal(false);
+};
 
   return (
     <div className="page">
@@ -74,18 +77,24 @@ const Update = () => {
         ) : (
           <p>Cargando...</p>
         )}
-
+        <div style={{ marginTop: "32px" }}></div>
         {passwordError && <p className="form-error">{passwordError}</p>}
         {passwordSuccess && <p className="form-success">{passwordSuccess}</p>}
         <ChangePasswordForm onSubmit={handlePasswordChange} />
 
-      <p className="form-footer">
-          <button className="btn-link" onClick={() => Remove()}>
-            Eliminar cuenta
-          </button>
-        </p>  
+        <div style={{ marginTop: "32px" }}></div>
+          <Button type="submit" variant="primary" size="sm" onClick={() => setMostrarModal(true)}>Eliminar cuenta</Button>
 
-        <p className="form-footer">
+            {mostrarModal && (
+              <div className="modal-overlay">
+                <div className="modal">
+                  <p className="form-footer"> ¿Estás seguro de que querés eliminar tu cuenta?</p>
+                  <Button type="submit" variant="secondary" size="md" onClick={Remove}>Sí, eliminar</Button>
+                  <Button type="submit" variant="secondary" size="md" onClick={() => setMostrarModal(false)}>Cancelar</Button>
+                </div>
+              </div>
+            )}
+          <p className="form-footer">
           <button className="btn-link" onClick={() => navigate("/home")}>
             Cancelar
           </button>

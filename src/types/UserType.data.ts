@@ -6,6 +6,7 @@ export const formInitialState = {
   phone: "",
   dni: "",
   date_of_brthdate: "",
+  type:"",
 };
 
 export const formUpdate = {

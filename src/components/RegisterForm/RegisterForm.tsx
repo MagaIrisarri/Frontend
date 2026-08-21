@@ -8,6 +8,9 @@ type RegisterFormProps = {
   onSubmit: (form: typeof formInitialState) => void;
 };
 
+type TipoUsuario = "CLIENTE" | "DUEÑO";
+
+
 const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
   const [form, setForm] = useState(formInitialState);
   const [formError, setFormError] = useState<string | null>(null);
@@ -19,6 +22,12 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
     const digitsOnly = event.target.value.replace(/\D/g, "");
     setForm((prevForm) => ({ ...prevForm, [attr]: digitsOnly }));
   };
+
+  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, attr: "type") => {
+    const value = event.target.value as TipoUsuario;
+    setForm((prevForm) => ({ ...prevForm, [attr]: value }));
+};
+  
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -58,6 +67,7 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
       <Input label="Telefono" type="tel" value={form.phone} onChange={(e) => handleNumericChange(e, "phone")} required />
       <Input label="DNI" type="text" value={form.dni} onChange={(e) => handleNumericChange(e, "dni")} maxLength={8} required />
       <Input label="Fecha de nacimiento" type="date" value={form.date_of_brthdate} onChange={(e) => handleChange(e, "date_of_brthdate")} full required />
+      <select value={form.type} onChange={(e) => handleSelectChange(e, "type")}><option value="">Seleccione tipo de usuario</option><option value="CLIENTE">Cliente</option><option value="DUEÑO">Dueño</option></select>
       <Button type="submit" variant="primary" size="md">Registrarse</Button>
     </form>
   );
