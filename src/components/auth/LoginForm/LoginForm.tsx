@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Input from "../Input/Input";
-import Button from "../shared/Button/Button";
+import Input from "../../shared/Input/Input";
+import Button from "../../shared/Button/Button";
 import { formInitialState } from "./LoginForm.data";
 import "./LoginForm.scss";
 

@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import Login from "./page/Login.tsx";
+import Login from "./pages/Login";
 import "./App.css";
-import Register from "./page/Register.tsx";
-import Home from "./page/Home.tsx";
+import Register from "./pages/Register";
+import Home from "./pages/Home";
+import VehicleManagement from "./pages/Vehicle/VehicleManagement";
+import CreateVehiclePage from "./pages/Vehicle/CreateVehicle";
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/vehicles" element={<VehicleManagement />} />
+        <Route path="/vehicles/new" element={<CreateVehiclePage />} />
       </Routes>
     </BrowserRouter>
   );

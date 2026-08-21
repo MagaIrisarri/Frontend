@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import LoginForm from "../components/LoginForm/LoginForm.tsx";
+import LoginForm from "../components/auth/LoginForm/LoginForm";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -22,6 +22,13 @@ const Login = () => {
           </button>
         </p>
       </div>
+          <button
+            type="button"
+            onClick={() => navigate('/vehicles/')}
+            className="btn-primary"
+          >
+            + Ver Vehiculos
+          </button>
     </div>
   );
 };
