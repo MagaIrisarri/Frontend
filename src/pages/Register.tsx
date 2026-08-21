@@ -1,25 +1,25 @@
 import { useNavigate } from "react-router-dom";
 import RegisterForm from "../components/RegisterForm/RegisterForm.tsx";
-import {createUser} from "../services/User.ts";
+import { createUser } from "../services/User.ts";
 import { useState } from "react";
-
-
+import type { formInitialState } from "../types/UserType.data.ts";
 
 const Register = () => {
   const navigate = useNavigate();
 
-const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-const handleRegister = async (form: {name:string, last_name: string, email: string, password: string, phone:string, dni:string, date_of_brthdate: string}) => {
-    console.log("Registrate completando:",form);
-    
+  const handleRegister = async (form: typeof formInitialState) => {
+    console.log("Registrate completando:", form);
+
     try {
-      await createUser(form);
+      const user = await createUser(form);
+      localStorage.setItem("user", JSON.stringify(user));
       navigate("/home");
     } catch (err) {
       console.error(err);
       setError("No se pudo completar el registro. Intentá de nuevo.");
-}
+    }
   };
 
   return (

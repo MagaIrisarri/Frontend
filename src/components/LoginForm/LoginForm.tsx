@@ -4,6 +4,7 @@ import Button from "../shared/Button/Button";
 import { formInitialState } from "./LoginForm.data";
 import "./LoginForm.scss";
 
+
 type LoginFormProps = {
   onSubmit: (email: string, password: string) => void;
 };

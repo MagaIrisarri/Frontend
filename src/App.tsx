@@ -1,8 +1,9 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link} from "react-router-dom";
 import Login from "./pages/Login.tsx";
 import "./App.css";
 import Register from "./pages/Register.tsx";
 import Home from "./pages/Home.tsx";
+import EditPerfilForm from "./pages/EditPerfilForm.tsx";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/EditPerfilForm" element={<EditPerfilForm />} />
       </Routes>
     </BrowserRouter>
   );

@@ -11,11 +11,12 @@ const Login = () => {
   const handleLogin = async (email: string, password: string) => {
     console.log("Iniciando sesión con:", email, password);
     try {
-          await loginUser(email, password);
-          navigate("/home");
-        } catch (err) {
-          console.error(err);
-          setError("No se pudo completar el registro. Intentá de nuevo.");
+      const user = await loginUser(email, password);
+      localStorage.setItem("user", JSON.stringify(user));
+      navigate("/home");
+    } catch (err) {
+      console.error(err);
+      setError("No se pudo iniciar sesión. Intentá de nuevo.");
     }
   };
 
@@ -23,7 +24,7 @@ const Login = () => {
     <div className="page">
       <div className="card">
         <h1>Iniciar sesión</h1>
-         {error && <p className="form-error">{error}</p>}
+        {error && <p className="form-error">{error}</p>}
         <LoginForm onSubmit={handleLogin} />
         <p className="form-footer">
           ¿No tenés cuenta?{" "}
