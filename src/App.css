@@ -68,3 +68,12 @@
   flex: 1;
   min-width: 280px;
 }
+.form-error {
+  color: #d92d20;
+  font-size: 0.875rem;
+}
+
+.form-success {
+  color: #027a48;
+  font-size: 0.875rem;
+}

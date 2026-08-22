@@ -1,31 +1,60 @@
-.create-vehicle-container { //Fondo
-  min-height: 100vh;
+
+.create-vehicle-container,
+.vehicle-management-container {
+  min-height: calc(100vh - 57px);
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem 1rem;
-  background-color: #f8fafc;
+  padding: 3rem 1.5rem;
+  background-color: #faf9f5; // Tono crudo / off-white
+  box-sizing: border-box;
 }
 
-.create-vehicle-card { //Tarjeta con la info
+// Tarjetas limpias en blanco con sombra sutil
+.create-vehicle-card {
   width: 100%;
-  max-width: 520px;
+  max-width: 700px;
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
   border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
   padding: 2.5rem;
+  box-sizing: border-box;
 }
 
-.card-header { //Titulo y descp de la tarjeta
-  margin-bottom: 2rem;
-  text-align: left;
+.vehicle-management-card {
+  width: 100%;
+  max-width: 1280px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-sizing: border-box;
+}
 
-  h2 {  // Por jerarquia de los titulos y subtitulos p
+.card-header,
+.management-header {
+  margin-bottom: 1.5rem;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 1.25rem;
+
+  h1,
+  h2 {
     font-size: 1.5rem;
-    font-weight: 700; // negrita
+    font-weight: 700;
     color: #0f172a;
-    margin: 0 0 0.5rem 0; 
+    margin: 0 0 0.35rem 0;
   }
 
   p {
@@ -35,65 +64,72 @@
   }
 }
 
-.vehicle-form { // verticalmente la dist
+.vehicle-form {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.form-grid-2 { // colocar datos lado a lado
+.form-grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr ; // 2 columnas
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
 
-  @media (max-width: 480px) {  // lo pasa a 1 columna 
+  @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
 }
 
-.form-group { // como agrupa cada label
+.form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   text-align: left;
 
-  label { // titulo de cada recuadro 
-    font-size: 0.875rem;
+  label {
+    font-size: 0.75rem;
     font-weight: 600;
-    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
   }
 
   input,
-  select { // recuadros para ingresar info
+  select {
     width: 100%;
     padding: 0.75rem 1rem;
-    border-radius: 8px;
+    border-radius: 10px;
     border: 1px solid #cbd5e1;
     background-color: #ffffff;
     color: #1e293b;
     font-size: 0.95rem;
-    transition: all 0.2s ease;
     outline: none;
     box-sizing: border-box;
+    transition: all 0.2s ease;
 
-    &:focus { // resalta el recuadro cuando le hago click
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    &:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
 
-    &:disabled { // en este caso el modelo queda apagado si no hay marca seleccionada
-      background-color: #f9f1f238; 
+    &:disabled {
+      background-color: #f1f5f9;
       cursor: not-allowed;
       color: #94a3b8;
     }
   }
+
+  option {
+    background-color: #ffffff;
+    color: #1e293b;
+  }
 }
 
-.owner-contact-banner { // toda la tarjeta sobre el propietario
+.owner-contact-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   background-color: #eff6ff;
   border: 1px solid #dbeafe;
   border-radius: 10px;
@@ -104,10 +140,10 @@
     flex-direction: column;
 
     span:first-child {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #3b82f6;
+      color: #2563eb;
       font-weight: 700;
     }
 
@@ -118,7 +154,7 @@
     }
   }
 
-  .btn-contact { // contacto
+  .btn-contact {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -126,7 +162,7 @@
     color: #ffffff;
     border: none;
     padding: 0.5rem 0.85rem;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 0.8125rem;
     font-weight: 600;
     cursor: pointer;
@@ -143,110 +179,28 @@
   flex-direction: column;
   gap: 0.75rem;
   margin-top: 1rem;
-
-  .btn-primary {
-    width: 100%;
-    padding: 0.85rem;
-    border-radius: 8px;
-    border: none;
-    background-color: #0f172a;
-    color: #ffffff;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover:not(:disabled) {
-      background-color: #1e293b;
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
-
-  .btn-ghost {
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    background-color: transparent;
-    color: #64748b;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: #f1f5f9;
-      color: #0f172a;
-    }
-  }
 }
 
-.vehicle-management-container {
-  min-height: 100vh;
-  background-color: #f8fafc;
-  padding: 2.5rem 1.5rem;
-  display: flex;
-  justify-content: center;
-}
-
-.vehicle-management-card {
+.btn-primary {
   width: 100%;
-  max-width: 960px;
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
+  padding: 0.85rem;
+  border-radius: 10px;
+  border: none;
+  background-color: #0f172a;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 
-.management-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid #f1f5f9;
-
-  .header-info {
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #0f172a;
-      margin: 0;
-    }
-
-    p {
-      color: #64748b;
-      font-size: 0.875rem;
-      margin: 0.25rem 0 0 0;
-    }
+  &:hover:not(:disabled) {
+    background-color: #1e293b;
   }
 
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.65rem 1.25rem;
-    background-color: #0f172a;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-
-    &:hover {
-      background-color: #1e293b;
-    }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 
