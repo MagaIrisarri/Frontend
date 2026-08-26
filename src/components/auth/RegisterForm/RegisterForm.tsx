@@ -1,7 +1,7 @@
 import { useState } from "react";
-import Input from "../Input/Input";
-import Button from "../shared/Button/Button";
-import { formInitialState } from "../../types/UserType.data";
+import Input from "../../shared/Input/Input";
+import Button from "../../shared/Button/Button";
+import { formInitialState } from "../../../types/UserType.data";
 import "./RegisterForm.scss";
 
 type RegisterFormProps = {
@@ -9,7 +9,6 @@ type RegisterFormProps = {
 };
 
 type TipoUsuario = "CLIENTE" | "DUEÑO";
-
 
 const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
   const [form, setForm] = useState(formInitialState);
@@ -26,8 +25,7 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>, attr: "type") => {
     const value = event.target.value as TipoUsuario;
     setForm((prevForm) => ({ ...prevForm, [attr]: value }));
-};
-  
+  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -67,7 +65,11 @@ const RegisterForm = ({ onSubmit }: RegisterFormProps) => {
       <Input label="Telefono" type="tel" value={form.phone} onChange={(e) => handleNumericChange(e, "phone")} required />
       <Input label="DNI" type="text" value={form.dni} onChange={(e) => handleNumericChange(e, "dni")} maxLength={8} required />
       <Input label="Fecha de nacimiento" type="date" value={form.date_of_brthdate} onChange={(e) => handleChange(e, "date_of_brthdate")} full required />
-      <select value={form.type} onChange={(e) => handleSelectChange(e, "type")}><option value="">Seleccione tipo de usuario</option><option value="CLIENTE">Cliente</option><option value="DUEÑO">Dueño</option></select>
+      <select value={form.type} onChange={(e) => handleSelectChange(e, "type")}>
+        <option value="">Seleccione tipo de usuario</option>
+        <option value="CLIENTE">Cliente</option>
+        <option value="DUEÑO">Dueño</option>
+      </select>
       <Button type="submit" variant="primary" size="md">Registrarse</Button>
     </form>
   );

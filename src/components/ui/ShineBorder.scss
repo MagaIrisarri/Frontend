@@ -1,0 +1,39 @@
+.shine-border-container {
+  position: relative;
+  box-sizing: border-box;
+
+  .shine-border-effect {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: var(--border-width, 2px);
+    border-radius: var(--border-radius, 16px);
+    box-sizing: border-box;
+
+    background-image: var(--shine-gradient);
+    background-size: 300% 300%;
+
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+
+    animation: shine-border-spin var(--duration, 8s) infinite linear;
+  }
+}
+
+@keyframes shine-border-spin {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  100% {
+    background-position: 0% 0%;
+  }
+}

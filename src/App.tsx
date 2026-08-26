@@ -1,34 +1,24 @@
-import { BrowserRouter, Routes, Route, Link} from "react-router-dom";
-import Login from "./pages/Login.tsx";
-import "./App.css";
-import Register from "./pages/Register.tsx";
-import Home from "./pages/Home.tsx";
-import EditPerfilForm from "./pages/EditPerfilForm.tsx";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Home } from './pages/Home/Home';
+import { Login } from './pages/Auth/Login';
+import { Register } from './pages/Auth/Register';
+import ProfilePage from './pages/Profile/ProfilePage';
+import VehicleManagement from './pages/Vehicle/VehicleManagement';
+import VehicleRegister from './pages/Vehicle/VehicleRegister';
 
-function App() {
+export function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={
-            <div className="page">
-              <div className="card">
-                <h1>Bienvenido al Sistema</h1>
-                <p className="subtitle">
-                  Por favor, inicia sesión para acceder a la aplicación.
-                </p>
-                <Link to="/login" className="button button--primary button--md cta-link">
-                  Ir a Iniciar Sesión
-                </Link>
-              </div>
-            </div>
-          }
-        />
+        <Route path="/" element={<Home />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/EditPerfilForm" element={<EditPerfilForm />} />
+
+        <Route path="/profile" element={<ProfilePage />} />
+
+        <Route path="/vehicles" element={<VehicleManagement />} />
+        <Route path="/vehicles/new" element={<VehicleRegister />} />
       </Routes>
     </BrowserRouter>
   );

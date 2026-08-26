@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Input from "../Input/Input";
+import Input from "../shared/Input/Input";
 import Button from "../shared/Button/Button";
 import { formUpdate } from "../../types/UserType.data";
 import "./EditPerfilForm.scss";

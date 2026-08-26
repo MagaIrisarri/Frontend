@@ -1,0 +1,158 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+  background-color: #f1f2f3;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(252, 249, 249, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+  border: 1px solid #e2e8f0;
+  padding: 2.5rem;
+}
+
+.card-header {
+  margin-bottom: 1.75rem;
+  text-align: left;
+
+  .brand-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 1rem;
+
+    span {
+      color: #2563eb;
+    }
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 0.35rem 0;
+  }
+
+  p {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+}
+
+.auth-alert-error {
+  padding: 0.75rem 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+  }
+
+  input,
+  select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #1e293b;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    outline: none;
+    box-sizing: border-box;
+
+    &:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+  }
+}
+
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+
+  .btn-primary {
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 8px;
+    border: none;
+    background-color: #0f172a;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background-color: #1e293b;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-ghost {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background-color: transparent;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+  }
+}
