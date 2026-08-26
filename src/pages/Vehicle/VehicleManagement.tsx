@@ -18,8 +18,9 @@ export default function VehicleManagement() {
 
   const loadVehicles = async () => {
     try {
+      const userId = localStorage.getItem('parkflow_user_id') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
       setLoading(true);
-      const data = await vehicleService.getVehicles();
+      const data = await vehicleService.getVehicles(userId);
       const list = Array.isArray(data) ? data : (data?.data || []);
       setVehicles(list);
     } catch (error) {

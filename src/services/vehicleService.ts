@@ -1,8 +1,8 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export const vehicleService = {
-  async getVehicles() {
-    const res = await fetch(`${API_URL}/api/vehicles`);
+  async getVehicles(userId: string) {
+    const res = await fetch(`${API_URL}/api/vehicles/client/${userId}`);
     if (!res.ok) throw new Error('Error al obtener vehículos');
     const data = await res.json();
     return data.data || data;
