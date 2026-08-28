@@ -216,6 +216,14 @@ export const ProfilePage: React.FC = () => {
                   <span>Ver Mis Vehículos Registrados</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/select-vehicle')}
+                  className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
+                >
+                  <span>Elegir vehiculo para reserva</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
             </ShineBorder>
           </div>

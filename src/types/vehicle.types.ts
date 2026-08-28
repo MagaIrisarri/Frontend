@@ -31,4 +31,5 @@ export interface Vehicle {
   model?: { id: string; name: string };
   client?: Client;
   insurance?: { id: string; name: string };
+  vehicleType?: { id: string; name: string };
 }

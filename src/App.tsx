@@ -2,9 +2,12 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Home } from './pages/Home/Home';
 import { Login } from './pages/Auth/Login';
 import { Register } from './pages/Auth/Register';
+import ParkingSearchPage from '../src/pages/Parking/ParkingSearch.js'
 import ProfilePage from './pages/Profile/ProfilePage';
 import VehicleManagement from './pages/Vehicle/VehicleManagement';
 import VehicleRegister from './pages/Vehicle/VehicleRegister';
+import { AppLayout } from './components/layout/appLayout.js';
+import VehicleSelect from './pages/Vehicle/VehicleSelect.js';
 
 export function App() {
   return (
@@ -14,6 +17,11 @@ export function App() {
 
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        <Route element={<AppLayout />}>
+          <Route path="/select-vehicle" element={<VehicleSelect />} />
+          <Route path="/parking" element={<ParkingSearchPage />} />
+        </Route>
 
         <Route path="/profile" element={<ProfilePage />} />
 
