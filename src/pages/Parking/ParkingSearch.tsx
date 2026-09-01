@@ -20,6 +20,8 @@ export default function ParkingSearchPage() {
   const { state } = useLocation() as { state: ParkingSearchState | null };
   const [prices, setPrices] = useState<Record<string, number>>({});
   const availableSpots = spots.filter((s) => prices[s.id] !== undefined);
+  const vehicleId = state?.vehicleId;
+  const vehicleType = state?.vehicleType;
   
 const navigate = useNavigate();
 
@@ -52,10 +54,10 @@ useEffect(() => {
   return (
     <div className="flex h-full w-full max-w-[1600px] mx-auto bg-surface-container-low">
       <aside className="w-[400px] bg-surface-container-lowest flex flex-col border-r border-outline-variant shrink-0">
-        <ParkingList spots={availableSpots} prices={prices} selectedId={selectedId} onSelect={setSelectedId} /> 
+        <ParkingList spots={availableSpots} prices={prices} selectedId={selectedId} onSelect={setSelectedId} vehicleId={vehicleId} vehicleType={vehicleType} /> 
       </aside>
       <section className="flex-1 relative bg-surface-variant overflow-hidden">
-        <MapView spots={availableSpots} prices={prices} selectedId={selectedId} onSelect={setSelectedId} />
+        <MapView spots={availableSpots} prices={prices} selectedId={selectedId} onSelect={setSelectedId}  />
       </section>
     </div>
     
