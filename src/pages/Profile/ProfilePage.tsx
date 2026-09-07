@@ -10,6 +10,7 @@ import carAnimation from '../../assets/carAnimation.json';
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const userId = localStorage.getItem('parkflow_user_id') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
+  const userType = JSON.parse(localStorage.getItem('user') || '{}')?.type;
 
   const [initialData, setInitialData] = useState<{
     name: string;
@@ -226,6 +227,41 @@ export const ProfilePage: React.FC = () => {
                 </button>
               </div>
             </ShineBorder>
+
+            {userType === 'DUEÑO' && (
+              <ShineBorder
+                className="w-full bg-zinc-900/90 border border-zinc-800 p-6 shadow-xl backdrop-blur-md rounded-2xl"
+                color={['#2563EB', '#38BDF8', '#818CF8']}
+                borderRadius={16}
+                borderWidth={1.5}
+                duration={10}
+              >
+                <h2 className="text-xl font-bold text-white text-center">Mis Estacionamientos</h2>
+                <p className="text-sm text-zinc-400 text-center mt-2">
+                  Administrá los estacionamientos que tenés registrados como dueño en ParkFlow.
+                </p>
+
+                <div className="mt-6 space-y-3 pt-6 border-t border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/my-parkings/create')}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4 stroke-[3]" />
+                    <span>Registrar Nuevo Estacionamiento</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/my-parkings')}
+                    className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
+                  >
+                    <span>Ver Mis Estacionamientos</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </ShineBorder>
+            )}
           </div>
 
         </div>

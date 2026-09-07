@@ -2,7 +2,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Home } from './pages/Home/Home';
 import { Login } from './pages/Auth/Login';
 import { Register } from './pages/Auth/Register';
-import ParkingSearchPage from '../src/pages/Parking/ParkingSearch.js'
+import ParkingSearchPage from '../src/pages/Parking/ParkingSearch.js';
+import MyParkings from '../src/pages/Parking/MyParkings.js'
+import ParkingCreate  from './pages/Parking/ParkingCreate.js'
 import ProfilePage from './pages/Profile/ProfilePage';
 import VehicleManagement from './pages/Vehicle/VehicleManagement';
 import VehicleRegister from './pages/Vehicle/VehicleRegister';
@@ -29,6 +31,9 @@ export function App() {
 
         <Route path="/vehicles" element={<VehicleManagement />} />
         <Route path="/vehicles/new" element={<VehicleRegister />} />
+
+        <Route path="/my-parkings" element={<MyParkings />} />
+        <Route path="/my-parkings/create" element={<ParkingCreate />} />
 
         
 
