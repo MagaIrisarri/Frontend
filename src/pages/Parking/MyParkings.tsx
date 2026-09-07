@@ -1,8 +1,9 @@
 import type { Parking } from '@/types/Parking.js';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {getParkingsByOwner} from '../../services/Parking.js';
+import {getParkingsByOwner, deleteParking} from '../../services/Parking.js';
 import { ShineBorder } from '../../components/ui/shine-border.js';
+import ConfirmDialog from '../../components/shared/ConfirmDialog/ConfirmDialog.js';
 import '../Vehicle/Vehicle.scss';
 
 
@@ -39,7 +40,22 @@ useEffect(() => {
     .finally(() => setLoading(false));
 }, [user]);  
 
-if (!user) return null; 
+const [deleteTarget, setDeleteTarget] = useState<Parking | null>(null);
+
+const confirmDelete = async () => {
+  if (!deleteTarget) return;
+
+  try {
+    await deleteParking(deleteTarget.id);
+    setParkings((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Error al eliminar el estacionamiento');
+  } finally {
+    setDeleteTarget(null);
+  }
+};
+
+if (!user) return null;
 
 return (
     <div className="vehicle-management-container bg-zinc-950">
@@ -78,6 +94,7 @@ return (
                   <th className="text-zinc-400">Hora de inicio</th>
                   <th className="text-zinc-400">Hora de cierre</th>
                   <th className="text-zinc-400">Nombre</th>
+                  <th className="text-zinc-400">Acciones</th>
                 </tr>
               </thead>
                <tbody>
@@ -89,9 +106,28 @@ return (
                       <td className="text-zinc-200">{p.openingTime}</td>
                       <td className="text-zinc-200">{p.closingTime}</td>
                       <td className="text-zinc-200">{p.name}</td>
+                      <td>
+                        <div className="table-actions">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/my-parkings/update/${p.id}`)}
+                            className="btn-primary"
+                          >
+                            Editar datos
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(p)}
+                            className="btn-danger"
+                          >
+                            Eliminar estacionamiento
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
+               
               </tbody>
             </table>
           </div>
@@ -100,6 +136,16 @@ return (
           ← Volver al Panel de Perfil
         </button>
       </ShineBorder>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Dar de baja estacionamiento"
+        message={`¿Confirmás que querés dar de baja "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Sí, dar de baja"
+        cancelLabel="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

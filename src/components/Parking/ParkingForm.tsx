@@ -3,13 +3,18 @@ import { formInitialState } from "../../components/Parking/ParkingForm.data.js";
 import Input from "../../components/shared/Input/Input";
 import Button from "../../components/shared/Button/Button";
 
-type ParkingFormProps = {
-  onSubmit: (form: typeof formInitialState) => void;}
 
-const ParkingForm = ({ onSubmit }: ParkingFormProps) => {
-  const [form, setForm] = useState(formInitialState);
+type EditParkingFormProps = {
+  onSubmit: (form: typeof formInitialState) => void;
+  initialData?: typeof formInitialState;
+  submitLabel?: string;
+};
+
+const ParkingForm = ({ onSubmit, initialData, submitLabel }: EditParkingFormProps) => {
+  const [form, setForm] = useState(initialData ?? formInitialState);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>, attr: string) =>
+    
     setForm((prevForm) => ({ ...prevForm, [attr]: event.target.value }));
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -32,7 +37,7 @@ const ParkingForm = ({ onSubmit }: ParkingFormProps) => {
       <Input label="Horas mínimas de reserva" type="number" value={form.minReservationHours} onChange={(e) => handleChange(e, "minReservationHours")} required />
       <Input label="Horas máximas de reserva" type="number" value={form.maxReservationHours} onChange={(e) => handleChange(e, "maxReservationHours")} required />
       <Input label="Margen de reserva (hs)" type="number" value={form.reservationMargin} onChange={(e) => handleChange(e, "reservationMargin")} required />
-      <Button type="submit" variant="primary" size="md">Crear estacionamiento</Button>
+      <Button type="submit" variant="primary" size="md">{submitLabel ?? 'Crear estacionamiento'}</Button>
     </form>
   );
 };

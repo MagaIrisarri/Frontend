@@ -11,6 +11,7 @@ import VehicleRegister from './pages/Vehicle/VehicleRegister';
 import { AppLayout } from './components/layout/appLayout.js';
 import VehicleSelect from './pages/Vehicle/VehicleSelect.js';
 import {ParkingSpaceMap} from './pages/ParkingSpace/ParkingSpaceMap.js';
+import EditParkingForm from './pages/Parking/EditParkingForm.js';
 
 export function App() {
   return (
@@ -34,6 +35,7 @@ export function App() {
 
         <Route path="/my-parkings" element={<MyParkings />} />
         <Route path="/my-parkings/create" element={<ParkingCreate />} />
+        <Route path="/my-parkings/update/:id" element={<EditParkingForm />} />
 
         
 
