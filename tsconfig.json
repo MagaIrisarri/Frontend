@@ -9,11 +9,10 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "leaflet"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    
-    
+    "noEmit": true
   },
   "include": ["src"]
 }

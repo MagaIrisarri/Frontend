@@ -8,6 +8,24 @@ export const vehicleService = {
     return data.data || data;
   },
 
+  async getUserVehicles(userId: string) {
+    const res = await fetch(`${API_URL}/api/vehicles/client/${userId}`);
+    if (!res.ok) throw new Error('Error al obtener vehículos del usuario');
+    const data = await res.json();
+    return data.data || data;
+  },
+
+  async deleteVehicle(id: string) {
+    const res = await fetch(`${API_URL}/api/vehicles/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Error al eliminar vehículo');
+    }
+    return await res.json();
+  },
+
   async getBrands() {
     const res = await fetch(`${API_URL}/api/brands`);
     if (!res.ok) throw new Error('Error al obtener marcas');

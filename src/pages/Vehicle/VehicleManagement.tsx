@@ -4,6 +4,7 @@ import { Vehicle } from '../../types/vehicle.types';
 import { useNavigate } from 'react-router-dom';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
+import { Trash2, LogOut } from 'lucide-react';
 import carAnimation from '../../assets/carAnimation.json';
 import './Vehicle.scss';
 
@@ -11,16 +12,33 @@ export default function VehicleManagement() {
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadVehicles();
-  }, []);
+    const rawUser = localStorage.getItem('user');
+    let currentId = localStorage.getItem('parkflow_user_id');
+    
+    if (!currentId && rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        currentId = parsed?.data?.id ?? parsed?.user?.id ?? parsed?.id;
+      } catch (e) {
+        console.error("Error al leer sesión");
+      }
+    }
 
-  const loadVehicles = async () => {
+    if (!currentId) {
+      navigate('/login');
+      return;
+    }
+
+    setUserId(currentId);
+    loadVehicles(currentId);
+  }, [navigate]);
+
+  const loadVehicles = async (id: string) => {
     try {
-      const userId = localStorage.getItem('parkflow_user_id') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
-      setLoading(true);
-      const data = await vehicleService.getVehicles(userId);
+      const data = await vehicleService.getUserVehicles(id);
       const list = Array.isArray(data) ? data : (data?.data || []);
       setVehicles(list);
     } catch (error) {
@@ -30,9 +48,25 @@ export default function VehicleManagement() {
     }
   };
 
-  // Extrae exclusivamente el propietario vinculado al vehículo
+  const handleDelete = async (vehicleId: string) => {
+    if (!window.confirm("¿Estás seguro de que querés dar de baja este vehículo?")) return;
+    
+    try {
+      await vehicleService.deleteVehicle(vehicleId);
+      setVehicles(prev => prev.filter((v: any) => (v.id || v._id) !== vehicleId));
+    } catch (error) {
+      console.error("Error al dar de baja el vehículo:", error);
+      alert("Ocurrió un error al dar de baja el vehículo.");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('parkflow_user_id');
+    navigate('/login');
+  };
+
   const getOwnerName = (v: any) => {
-    // 1. Buscar en objetos relacionados comunes
     const owner = v.client || v.user || v.owner || v.customer;
     if (owner) {
       const name = owner.name || owner.first_name || '';
@@ -40,11 +74,8 @@ export default function VehicleManagement() {
       const fullName = `${name} ${lastName}`.trim();
       if (fullName) return fullName;
     }
-
-    // 2. Buscar propiedades directas de texto en el vehículo
     if (v.clientName) return v.clientName;
     if (v.ownerName) return v.ownerName;
-
     return null;
   };
 
@@ -59,8 +90,8 @@ export default function VehicleManagement() {
       >
         <header className="management-header flex items-center justify-between">
           <div className="header-info">
-            <h1 className="text-white">Gestión de Vehículos</h1>
-            <p className="text-zinc-400">Listado y control de flota de vehículos registrados</p>
+            <h1 className="text-white">Mis Vehículos</h1>
+            <p className="text-zinc-400">Listado y control de tu flota de vehículos registrados</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 hidden sm:block">
@@ -73,13 +104,21 @@ export default function VehicleManagement() {
             >
               + Registrar Vehículo
             </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="h-5 w-5" />
+            </button>
           </div>
         </header>
 
         {loading ? (
           <div className="state-container"><p className="text-zinc-400">Cargando vehículos...</p></div>
         ) : vehicles.length === 0 ? (
-          <div className="state-container"><p className="text-zinc-400">No hay vehículos registrados todavía.</p></div>
+          <div className="state-container"><p className="text-zinc-400">No tenés vehículos registrados todavía.</p></div>
         ) : (
           <div className="table-wrapper">
             <table className="modern-table">
@@ -90,13 +129,16 @@ export default function VehicleManagement() {
                   <th className="text-zinc-400">Modelo</th>
                   <th className="text-zinc-400">Año</th>
                   <th className="text-zinc-400">Propietario</th>
+                  <th className="text-zinc-400 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {vehicles.map((v: any) => {
                   const ownerDisplay = getOwnerName(v);
+                  const currentId = v.id || v._id;
+                  
                   return (
-                    <tr key={v.id || v._id}>
+                    <tr key={currentId}>
                       <td><span className="plate-badge">{v.plate}</span></td>
                       <td className="text-zinc-200">{v.brand?.name || v.brand || '-'}</td>
                       <td className="text-zinc-200">{v.model?.name || v.model || '-'}</td>
@@ -107,6 +149,15 @@ export default function VehicleManagement() {
                         ) : (
                           <span className="text-zinc-500 italic">Sin asignar</span>
                         )}
+                      </td>
+                      <td className="text-center">
+                        <button
+                          onClick={() => handleDelete(currentId)}
+                          className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                          title="Dar de baja"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   );
