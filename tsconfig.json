@@ -9,7 +9,6 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["vite/client", "leaflet"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": true
