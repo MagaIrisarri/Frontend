@@ -39,8 +39,6 @@ export default function VehicleManagement() {
 
   const loadVehicles = async (id: string) => {
     try {
-      setLoading(true);
-      // 2. Traer SOLO los vehículos activos del usuario actual
       const data = await vehicleService.getUserVehicles(id);
       const list = Array.isArray(data) ? data : (data?.data || []);
       setVehicles(list);
