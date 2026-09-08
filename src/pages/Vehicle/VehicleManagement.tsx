@@ -4,7 +4,7 @@ import { Vehicle } from '../../types/vehicle.types';
 import { useNavigate } from 'react-router-dom';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, LogOut } from 'lucide-react';
 import carAnimation from '../../assets/carAnimation.json';
 import './Vehicle.scss';
 
@@ -15,7 +15,6 @@ export default function VehicleManagement() {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // 1. Obtener ID del cliente logueado
     const rawUser = localStorage.getItem('user');
     let currentId = localStorage.getItem('parkflow_user_id');
     
@@ -50,17 +49,21 @@ export default function VehicleManagement() {
   };
 
   const handleDelete = async (vehicleId: string) => {
-    // 3. Confirmación y baja lógica
     if (!window.confirm("¿Estás seguro de que querés dar de baja este vehículo?")) return;
     
     try {
       await vehicleService.deleteVehicle(vehicleId);
-      // Filtramos visualmente el vehículo dado de baja para no recargar la página entera
       setVehicles(prev => prev.filter((v: any) => (v.id || v._id) !== vehicleId));
     } catch (error) {
       console.error("Error al dar de baja el vehículo:", error);
       alert("Ocurrió un error al dar de baja el vehículo.");
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('parkflow_user_id');
+    navigate('/login');
   };
 
   const getOwnerName = (v: any) => {
@@ -100,6 +103,14 @@ export default function VehicleManagement() {
               className="btn-primary"
             >
               + Registrar Vehículo
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="h-5 w-5" />
             </button>
           </div>
         </header>

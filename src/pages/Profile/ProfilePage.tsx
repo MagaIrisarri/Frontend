@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EditPerfilForm from '../../components/EditPerfilForm/EditPerfilForm';
 import ChangePasswordForm from '../../components/ChangePasswordForm/ChangePasswordForm';
-import { Loader2, AlertCircle, CheckCircle, Plus, Shield, ArrowRight } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Plus, Shield, ArrowRight, LogOut } from 'lucide-react';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
 import carAnimation from '../../assets/carAnimation.json';
@@ -110,6 +110,12 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('parkflow_user_id');
+    navigate('/login');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#faf9f5] flex items-center justify-center text-zinc-500">
@@ -123,11 +129,20 @@ export const ProfilePage: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Cabecera */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Panel de Usuario</h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Gestioná tu información personal y los vehículos asociados a tu cuenta
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Panel de Usuario</h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Gestioná tu información personal y los vehículos asociados a tu cuenta
+            </p>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-600 hover:bg-red-500/20 font-semibold text-sm transition-colors cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Cerrar Sesión</span>
+          </button>
         </div>
 
         {errorMsg && (
