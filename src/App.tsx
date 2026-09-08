@@ -12,6 +12,9 @@ import { AppLayout } from './components/layout/appLayout.js';
 import VehicleSelect from './pages/Vehicle/VehicleSelect.js';
 import {ParkingSpaceMap} from './pages/ParkingSpace/ParkingSpaceMap.js';
 import EditParkingForm from './pages/Parking/EditParkingForm.js';
+import AdminPanel from './pages/Admin/AdminPanel.js';
+import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes.js';
+import AdminService from './pages/Admin/AdminService.js';
 
 export function App() {
   return (
@@ -37,7 +40,11 @@ export function App() {
         <Route path="/my-parkings/create" element={<ParkingCreate />} />
         <Route path="/my-parkings/update/:id" element={<EditParkingForm />} />
 
-        
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin/vehicles" element={<AdminVehicleTypes />} />
+        <Route path="/admin/services" element={<AdminService />} />
+
+
 
 
       </Routes>

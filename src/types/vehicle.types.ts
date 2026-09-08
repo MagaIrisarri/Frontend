@@ -6,7 +6,14 @@ export interface Brand {
 export interface VehicleType {
   id: string;
   name: string;
+  isActive?: boolean;
 }
+
+export interface CreateVehicleTypeInput {
+  name: string;
+}
+
+export type UpdateVehicleTypeInput = Partial<CreateVehicleTypeInput>;
 
 export interface Model {
   id: string;
