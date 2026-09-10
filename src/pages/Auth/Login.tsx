@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Car, Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Car, Mail, Lock, ArrowRight, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { ShineBorder } from '@/components/ui/shine-border';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +38,9 @@ export const Login: React.FC = () => {
         localStorage.setItem('parkflow_user_id', userId);
       }
 
+      // Redirigir según el rol
+      if (userData?.type === 'DUEÑO') {
+        navigate('/owner');
       // El Administrador tiene su propio panel; el resto va al panel de perfil unificado
       if (userData?.type === 'ADMINISTRADOR') {
         navigate('/admin');
@@ -114,13 +118,20 @@ export const Login: React.FC = () => {
               <div className="relative">
                 <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-500" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors"
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 pl-10 pr-10 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
