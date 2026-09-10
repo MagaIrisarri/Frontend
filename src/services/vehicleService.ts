@@ -1,74 +1,72 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import axios from 'axios';
+
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 export const vehicleService = {
   async getVehicles(userId: string) {
-    const res = await fetch(`${API_URL}/api/vehicles/client/${userId}`);
-    if (!res.ok) throw new Error('Error al obtener vehículos');
-    const data = await res.json();
-    return data.data || data;
+    try {
+      const res = await api.get(`/api/vehicles/client/${userId}`);
+      return res.data?.data ?? res.data;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al obtener vehículos');
+    }
   },
 
   async getUserVehicles(userId: string) {
-    const res = await fetch(`${API_URL}/api/vehicles/client/${userId}`);
-    if (!res.ok) throw new Error('Error al obtener vehículos del usuario');
-    const data = await res.json();
-    return data.data || data;
+    try {
+      const res = await api.get(`/api/vehicles/client/${userId}`);
+      return res.data?.data ?? res.data;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al obtener vehículos del usuario');
+    }
   },
 
   async deleteVehicle(id: string) {
-    const res = await fetch(`${API_URL}/api/vehicles/${id}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Error al eliminar vehículo');
+    try {
+      const res = await api.delete(`/api/vehicles/${id}`);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al eliminar vehículo');
     }
-    return await res.json();
   },
 
   async getBrands() {
-    const res = await fetch(`${API_URL}/api/brands`);
-    if (!res.ok) throw new Error('Error al obtener marcas');
-    const data = await res.json();
-    return data.data || data;
+    try {
+      const res = await api.get('/api/brands');
+      return res.data?.data ?? res.data;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al obtener marcas');
+    }
   },
 
   async getModels(brandId?: string) {
-    const url = brandId && brandId.trim() !== '' 
-      ? `${API_URL}/api/models?brandId=${brandId}` 
-      : `${API_URL}/api/models`;
-
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error('Error al obtener modelos');
+    try {
+      const res = await api.get('/api/models', {
+        params: brandId && brandId.trim() !== '' ? { brandId } : undefined,
+      });
+      return res.data?.data !== undefined ? res.data.data : res.data;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al obtener modelos');
     }
-    const json = await res.json();
-    
-    return json.data !== undefined ? json.data : json;
   },
 
   async createVehicle(userId: string, vehicleData: any) {
-    const res = await fetch(`${API_URL}/api/vehicles/client/${userId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(vehicleData),
-    });
-    
-    const json = await res.json();
-    if (!res.ok) {
-      throw new Error(json.message || 'Error al registrar vehículo');
+    try {
+      const res = await api.post(`/api/vehicles/client/${userId}`, vehicleData);
+      return res.data;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al registrar vehículo');
     }
-    return json;
   },
-  
-  async getInsurances(insuranceId?: string) {
-    const url = insuranceId && insuranceId.trim() !== ''
-      ? `${API_URL}/api/insurances?insuranceId=${insuranceId}` 
-      : `${API_URL}/api/insurances`;
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Error al obtener seguros');
-    const json = await res.json();
-    return json.data || json;
-  }
+  async getInsurances(insuranceId?: string) {
+    try {
+      const res = await api.get('/api/insurances', {
+        params: insuranceId && insuranceId.trim() !== '' ? { insuranceId } : undefined,
+      });
+      return res.data?.data ?? res.data;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al obtener seguros');
+    }
+  },
 };

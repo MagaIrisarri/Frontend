@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Car, Mail, Lock, ArrowRight, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { ShineBorder } from '@/components/ui/shine-border';
+import { loginUser } from '@/services/User.js';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -17,18 +18,7 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Credenciales incorrectas');
-      }
-
+      const data = await loginUser(email.trim(), password);
       const userData = data.user || data.data;
       const userId = userData?.id || userData?._id;
 
@@ -41,14 +31,13 @@ export const Login: React.FC = () => {
       // Redirigir según el rol
       if (userData?.type === 'DUEÑO') {
         navigate('/owner');
-      // El Administrador tiene su propio panel; el resto va al panel de perfil unificado
-      if (userData?.type === 'ADMINISTRADOR') {
+      } else if (userData?.type === 'ADMINISTRADOR') {
         navigate('/admin');
       } else {
         navigate('/profile');
       }
     } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión');
+      setError(err.response?.data?.message || 'Credenciales incorrectas');
     } finally {
       setLoading(false);
     }

@@ -88,12 +88,6 @@ export const Register: React.FC = () => {
   // Manejo de cambios con sanitización en tiempo real
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    const error = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: error }));
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
     let sanitizedValue = value;
 
     if (name === 'dni') sanitizedValue = value.replace(/\D/g, '').slice(0, 8);
@@ -119,7 +113,7 @@ export const Register: React.FC = () => {
         newErrors[key as keyof FormErrors] = error;
         isValid = false;
       }
-    }
+    });
 
     if(!formData.type){
       newErrors.type = 'Seleccioná un tipo de usuario';
@@ -242,7 +236,6 @@ export const Register: React.FC = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    onBlur={handleBlur}
                     placeholder="Juan"
                     className={`w-full rounded-xl border ${errors.name ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'} pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors`}
                   />
@@ -256,7 +249,6 @@ export const Register: React.FC = () => {
                   name="last_name"
                   value={formData.last_name}
                   onChange={handleChange}
-                  onBlur={handleBlur}
                   placeholder="Pérez"
                   className={`w-full rounded-xl border ${errors.last_name ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'} px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors`}
                 />
@@ -275,7 +267,6 @@ export const Register: React.FC = () => {
                     maxLength={8}
                     value={formData.dni}
                     onChange={handleChange}
-                    onBlur={handleBlur}
                     placeholder="40123456"
                     className={`w-full rounded-xl border ${errors.dni ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'} pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors`}
                   />
@@ -292,7 +283,6 @@ export const Register: React.FC = () => {
                     maxLength={15}
                     value={formData.phone}
                     onChange={handleChange}
-                    onBlur={handleBlur}
                     placeholder="3364001086"
                     className={`w-full rounded-xl border ${errors.phone ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'} pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors`}
                   />
@@ -311,7 +301,6 @@ export const Register: React.FC = () => {
                     name="date_of_birth"
                     value={formData.date_of_birth}
                     onChange={handleChange}
-                    onBlur={handleBlur}
                     className={`w-full rounded-xl border ${errors.date_of_birth ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'} pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors [color-scheme:dark]`}
                   />
                 </div>
@@ -326,7 +315,6 @@ export const Register: React.FC = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    onBlur={handleBlur as any}
                     placeholder="juan@correo.com"
                     className={`w-full rounded-xl border ${errors.email ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'} pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors`}
                   />
@@ -345,7 +333,6 @@ export const Register: React.FC = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    onBlur={handleBlur as any}
                     placeholder="Mínimo 6 caracteres"
                     className={`w-full rounded-xl border ${errors.password ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'} pl-10 pr-10 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors`}
                   />
@@ -363,7 +350,6 @@ export const Register: React.FC = () => {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    onBlur={handleBlur as any}
                     placeholder="Repetir contraseña"
                     className={`w-full rounded-xl border ${errors.confirmPassword ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'} px-4 pr-10 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-blue-500 focus:outline-none transition-colors`}
                   />
@@ -394,20 +380,6 @@ export const Register: React.FC = () => {
                   <p className="mt-1 text-[11px] text-red-400 font-medium">{errors.type}</p>
                 )}
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Tipo de Cuenta</label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
-              >
-                <option value="CLIENTE">Soy Cliente (Quiero estacionar mis vehículos)</option>
-                <option value="DUEÑO">Soy Dueño (Quiero administrar mis sucursales)</option>
-              </select>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -428,5 +400,6 @@ export const Register: React.FC = () => {
     </div>
   );
 };
+
 
 export default Register;

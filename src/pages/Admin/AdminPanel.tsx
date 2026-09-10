@@ -1,28 +1,9 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { ArrowRight } from 'lucide-react';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const raw = localStorage.getItem('user');
-    const parsedUser = raw ? JSON.parse(raw) : null;
-
-    if (!parsedUser) {
-      navigate('/login');
-      return;
-    }
-    if (parsedUser.type !== 'ADMINISTRADOR') {
-      navigate('/profile');
-      return;
-    }
-    setUser(parsedUser);
-  }, []);
-
-  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-[#faf9f5] text-white p-6 md:p-10">

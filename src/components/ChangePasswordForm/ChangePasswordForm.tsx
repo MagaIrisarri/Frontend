@@ -23,8 +23,8 @@ const ChangePasswordForm = ({ onSubmit }: ChangePasswordFormProps) => {
       return;
     }
 
-    if (form.newPassword.length < 8) {
-      setFormError("La nueva contraseña debe tener al menos 8 caracteres.");
+    if (form.newPassword.length < 6) {
+      setFormError("La nueva contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
@@ -45,7 +45,7 @@ const ChangePasswordForm = ({ onSubmit }: ChangePasswordFormProps) => {
       <Input label="Contraseña actual" type="password" value={form.currentPassword} onChange={(e) => handleChange(e, "currentPassword")} required />
       <Input label="Nueva contraseña" type="password" value={form.newPassword} onChange={(e) => handleChange(e, "newPassword")} required />
       <Input label="Confirmar contraseña" type="password" value={form.confirmPassword} onChange={(e) => handleChange(e, "confirmPassword")} required />
-      <p className="field-hint">Mínimo 8 caracteres</p>
+      <p className="field-hint">Mínimo 6 caracteres</p>
       <Button type="submit" variant="secondary" size="md">Actualizar contraseña</Button>
     </form>
   );

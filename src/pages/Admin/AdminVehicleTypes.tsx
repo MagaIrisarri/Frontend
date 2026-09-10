@@ -8,7 +8,6 @@ import '../Vehicle/Vehicle.scss';
 
 export default function AdminVehicleTypes() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
 
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,21 +21,6 @@ export default function AdminVehicleTypes() {
 
   const [deleteTarget, setDeleteTarget] = useState<VehicleType | null>(null);
 
-  useEffect(() => {
-    const raw = localStorage.getItem('user');
-    const parsedUser = raw ? JSON.parse(raw) : null;
-
-    if (!parsedUser) {
-      navigate('/login');
-      return;
-    }
-    if (parsedUser.type !== 'ADMINISTRADOR') {
-      navigate('/profile');
-      return;
-    }
-    setUser(parsedUser);
-  }, []);
-
   const loadVehicleTypes = () => {
     setLoading(true);
     getVehicleTypes()
@@ -46,11 +30,8 @@ export default function AdminVehicleTypes() {
   };
 
   useEffect(() => {
-    if (!user) return;
     loadVehicleTypes();
-  }, [user]);
-
-  if (!user) return null;
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

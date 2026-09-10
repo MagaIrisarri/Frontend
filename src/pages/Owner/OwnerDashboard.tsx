@@ -1,33 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Users, Receipt, CalendarClock, ArrowRight } from 'lucide-react';
 import { ShineBorder } from '../../components/ui/shine-border';
+import { useCurrentUser } from '../../hooks/useCurrentUser.js';
 
 export const OwnerDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState('');
-
-  useEffect(() => {
-    const rawUser = localStorage.getItem('user');
-    if (!rawUser) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(rawUser);
-      const user = parsed?.data ?? parsed?.user ?? parsed;
-      
-      if (user?.type !== 'DUEÑO') {
-        navigate('/profile');
-        return;
-      }
-      
-      setUserName(user.name || 'Dueño');
-    } catch (err) {
-      navigate('/login');
-    }
-  }, [navigate]);
+  const currentUser = useCurrentUser();
+  const userName = currentUser?.name || 'Dueño';
 
   return (
     <div className="min-h-screen bg-[#faf9f5] text-slate-900 p-6 md:p-10">
@@ -61,7 +41,11 @@ export const OwnerDashboard: React.FC = () => {
                 Administrá tus estacionamientos, capacidad de plazas y tarifas por hora.
               </p>
             </div>
-            <button className="mt-6 flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={() => navigate('/my-parkings')}
+              className="mt-6 flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors cursor-pointer"
+            >
               <span>Gestionar Estacionamientos</span>
               <ArrowRight className="h-4 w-4" />
             </button>
