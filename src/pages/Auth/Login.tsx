@@ -41,6 +41,9 @@ export const Login: React.FC = () => {
       // Redirigir según el rol
       if (userData?.type === 'DUEÑO') {
         navigate('/owner');
+      // El Administrador tiene su propio panel; el resto va al panel de perfil unificado
+      if (userData?.type === 'ADMINISTRADOR') {
+        navigate('/admin');
       } else {
         navigate('/profile');
       }

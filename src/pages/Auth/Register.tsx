@@ -26,10 +26,13 @@ interface FormErrors {
   password?: string;
   confirmPassword?: string;
   general?: string;
+  type?: string;
 }
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
+
+
 
   const [formData, setFormData] = useState({
     name: '',
@@ -40,7 +43,7 @@ export const Register: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    type: 'CLIENTE',
+    type: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -82,7 +85,8 @@ export const Register: React.FC = () => {
     return undefined;
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  // Manejo de cambios con sanitización en tiempo real
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const error = validateField(name, value);
     setErrors(prev => ({ ...prev, [name]: error }));
@@ -115,7 +119,31 @@ export const Register: React.FC = () => {
         newErrors[key as keyof FormErrors] = error;
         isValid = false;
       }
-    });
+    }
+
+    if(!formData.type){
+      newErrors.type = 'Seleccioná un tipo de usuario';
+    }
+    else{
+      const type = String(formData.type);
+      if (type != 'DUEÑO' && type != 'CLIENTE'){
+        newErrors.type = 'Seleccioná un tipo de usuario valido';
+      }
+    }
+    
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      newErrors.email = 'Ingresá un correo electrónico válido'; //[cite: 3, 8]
+    }
+
+    if (formData.password.length < 6) {
+      newErrors.password = 'La contraseña debe tener al menos 6 caracteres'; //[cite: 8]
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+    }
 
     setErrors(newErrors);
     return isValid;
@@ -345,6 +373,26 @@ export const Register: React.FC = () => {
                 </div>
                 {errors.confirmPassword && <p className="mt-1 text-[11px] text-red-400 font-medium">{errors.confirmPassword}</p>}
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Tipo de usuario
+                </label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                className={`w-full rounded-xl border ${
+                  errors.type ? 'border-red-500/80 bg-red-500/5' : 'border-zinc-800 bg-zinc-950/70'
+                } px-4 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors [color-scheme:dark]`}
+              >
+                <option value="">Seleccione tipo de usuario</option>
+                <option value="CLIENTE">Cliente</option>
+                <option value="DUEÑO">Dueño</option>
+              </select>
+            {errors.type && (
+                  <p className="mt-1 text-[11px] text-red-400 font-medium">{errors.type}</p>
+                )}
             </div>
 
             <div>

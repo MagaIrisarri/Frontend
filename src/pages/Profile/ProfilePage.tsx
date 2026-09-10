@@ -6,6 +6,8 @@ import { Loader2, AlertCircle, CheckCircle, Plus, Shield, ArrowRight, LogOut } f
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
 import carAnimation from '../../assets/carAnimation.json';
+import { removeUser } from '@/services/User.js';
+import ConfirmDialog from '@/components/shared/ConfirmDialog/ConfirmDialog.js';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -111,10 +113,20 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('parkflow_user_id');
-    navigate('/login');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!userId) return;
+
+    try {
+      await removeUser(userId);
+      localStorage.removeItem('user');
+      localStorage.removeItem('parkflow_user_id');
+      navigate('/login');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al eliminar la cuenta');
+      setConfirmingDelete(false);
+    }
   };
 
   if (loading) {
@@ -277,9 +289,38 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </ShineBorder>
             )}
-          </div>
 
+            <ShineBorder
+              className="w-full bg-zinc-900/90 border border-red-900/50 p-6 shadow-xl backdrop-blur-md rounded-2xl"
+              color={['#ef4444', '#f87171', '#ef4444']}
+              borderRadius={16}
+              borderWidth={1.5}
+              duration={10}
+            >
+              <h2 className="text-lg font-bold text-red-400">ELIMINAR CUENTA</h2>
+              <p className="text-sm text-zinc-400 mt-2">
+                Eliminar tu cuenta es una acción permanente: vas a perder el acceso y no vas a poder volver a iniciar sesión.
+              </p>
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                className="w-full mt-4 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold shadow-lg shadow-red-600/20 transition-all cursor-pointer"
+              >
+                Eliminar cuenta
+              </button>
+            </ShineBorder>
+          </div>
         </div>
+
+        <ConfirmDialog
+          open={confirmingDelete}
+          title="Eliminar cuenta"
+          message={`¿Confirmás que querés eliminar tu cuenta${initialData?.name ? `, ${initialData.name}` : ''}? Esta acción no se puede deshacer y vas a cerrar sesión.`}
+          confirmLabel="Sí, eliminar mi cuenta"
+          cancelLabel="Cancelar"
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
 
       </div>
     </div>

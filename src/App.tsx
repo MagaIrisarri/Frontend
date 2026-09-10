@@ -16,6 +16,13 @@ import EditParkingForm from './pages/Parking/EditParkingForm';
 import OwnerDashboard from './pages/Owner/OwnerDashboard';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
+import { AppLayout } from './components/layout/appLayout.js';
+import VehicleSelect from './pages/Vehicle/VehicleSelect.js';
+import {ParkingSpaceMap} from './pages/ParkingSpace/ParkingSpaceMap.js';
+import EditParkingForm from './pages/Parking/EditParkingForm.js';
+import AdminPanel from './pages/Admin/AdminPanel.js';
+import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes.js';
+import AdminService from './pages/Admin/AdminService.js';
 
 export function App() {
   useEffect(() => {
@@ -48,6 +55,21 @@ export function App() {
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/vehicles" element={<ProtectedRoute><VehicleManagement /></ProtectedRoute>} />
         <Route path="/vehicles/new" element={<ProtectedRoute><VehicleRegister /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProfilePage />} />
+
+        <Route path="/vehicles" element={<VehicleManagement />} />
+        <Route path="/vehicles/new" element={<VehicleRegister />} />
+
+        <Route path="/my-parkings" element={<MyParkings />} />
+        <Route path="/my-parkings/create" element={<ParkingCreate />} />
+        <Route path="/my-parkings/update/:id" element={<EditParkingForm />} />
+
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin/vehicles" element={<AdminVehicleTypes />} />
+        <Route path="/admin/services" element={<AdminService />} />
+
+
+
 
         {/* Rutas Protegidas - Solo DUEÑO */}
         <Route 
