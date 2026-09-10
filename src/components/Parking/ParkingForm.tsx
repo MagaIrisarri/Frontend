@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formInitialState } from "../../components/Parking/ParkingForm.data.js";
 import Input from "../../components/shared/Input/Input";
 import Button from "../../components/shared/Button/Button";
+import { LocationPicker } from "./LocationPicker";
 
 
 type EditParkingFormProps = {
@@ -17,6 +18,23 @@ const ParkingForm = ({ onSubmit, initialData, submitLabel }: EditParkingFormProp
     
     setForm((prevForm) => ({ ...prevForm, [attr]: event.target.value }));
 
+const handleLocationChange = (locationData: {
+  lat:number;
+  lng: number;
+  address?: string;
+  locality?: string;
+  postalCode?: string;
+} ) => {
+  setForm((prevForm) => ({
+    ...prevForm,
+    latitude:  String(locationData.lat),
+    longitude: String(locationData.lng),
+    address: locationData.address || prevForm.address,
+    locality: locationData.locality || prevForm.locality,
+    postalCode: locationData.postalCode || prevForm.postalCode,
+  }));
+}
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     onSubmit(form);
@@ -29,6 +47,14 @@ const ParkingForm = ({ onSubmit, initialData, submitLabel }: EditParkingFormProp
       <Input label="Localidad" type="text" value={form.locality} onChange={(e) => handleChange(e, "locality")} required/>
       <Input label="Codigo postal" type="number" value={form.postalCode} onChange={(e) => handleChange(e, "postalCode")} required/>
       <Input label="Dirección" type="text" value={form.address} onChange={(e) => handleChange(e, "address")} required/>
+     
+     {/*Mapa interactivo*/}
+      <LocationPicker
+      lat={Number(form.latitude)}
+      lng={Number(form.longitude)}
+      onChangeLocation={handleLocationChange}
+      />
+
       <Input label="Capacidad para autos" type="number" value={form.carCapacity} onChange={(e) => handleChange(e, "carCapacity")} required/>
       <Input label="Capacidad para motos" type="number" value={form.motorcycleCapacity} onChange={(e) => handleChange(e, "motorcycleCapacity")} required/>
       <Input label="Capacidad para camiones" type="number" value={form.truckCapacity} onChange={(e) => handleChange(e, "truckCapacity")} />

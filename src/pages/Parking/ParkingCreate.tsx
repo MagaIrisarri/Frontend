@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ParkingForm from '../../components/Parking/ParkingForm.js';
+import ParkingForm from '../../components/Parking/ParkingForm';
 import { createParking } from '../../services/Parking.js';
 import type { CreateParkingInput } from '../../types/Parking.js';
 import '../Vehicle/Vehicle.scss';
 import { formInitialState } from "../../components/Parking/ParkingForm.data.js";
 import { useCurrentUser } from '../../hooks/useCurrentUser.js';
-import { LocationPicker } from '../../components/Parking/LocationPicker.js';
 
 export default function ParkingsCreate() {
   const navigate = useNavigate();
@@ -20,7 +19,6 @@ export default function ParkingsCreate() {
   setError(null);
   setIsSubmitting(true);
 
-  // TODO: latitude/longitude van a venir del mapa, no de un input de texto.
   const payload: CreateParkingInput = {
     ownerId: user.id!,
     name: form.name,
@@ -53,26 +51,7 @@ export default function ParkingsCreate() {
   } finally {
     setIsSubmitting(false);
   }
-
-  const handleLocationChange = (locationData: {
-  lat: number;
-  lng: number;
-  address?: string;
-  locality?: string;
-  postalCode?: string;
-})=> {
-  setForm((prev) => ({
-    ...prev,
-    latitude:locationData.lat,
-    longitude: locationData.lng,
-    address:locationData.address || prev.address,
-    locality: localityData.locality || prev.locality,
-    postalCode: locationData.postalCode || prev.postalCode,
-
-  } ) )
-}
-};
-
+  }
   return (
     <div className="create-vehicle-container bg-zinc-950">
       <div className="create-vehicle-card">

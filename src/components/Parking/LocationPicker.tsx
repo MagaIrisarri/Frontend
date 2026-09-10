@@ -44,13 +44,12 @@ const position = useMemo<[number, number]>(() => {
   const defaultLng = lng && !isNaN(lng) && lng !== 0 ? lng : -60.6393;
   return [defaultLat, defaultLng];
 }, [lat, lng]);
-}
+
 
 const handlePositionChange = async (newLat: number, newLng: number) => {
  let address = '';
  let locality = '';
  let postalCode = '';
-}
 
 try { 
 const response = await  fetch (
@@ -71,36 +70,37 @@ if (data && data.address) {
 
 onChangeLocation(
   {
-    lat: newLat;
-    lng: newLng;
+    lat: newLat,
+    lng: newLng,
     address,
     locality, 
     postalCode,
   }
 )
-
+}
 return (
     <div className="w-full flex flex-col gap-2 my-4">
       <label className="text-sm font-medium text-zinc-300">
         Ubicación en el mapa (Haz clic o arrastra el pin para ubicar la playa)
       </label>
       
-      <div className="h-72 w-full rounded-lg overflow-hidden border border-zinc-700 relative z-0"></div>
+      <div className="h-72 w-full rounded-lg overflow-hidden border border-zinc-700 relative z-0">
        <MapContainer center={ position} zoom={13}>
-         < TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
-        <Marker
-          position={ position}
-         draggable={true}
-         eventHandlers= { {
-        dragend: (e) => {
-          const marker = e.target;
-          const pos = marker.getLantLng();
-          handlePositionChange(pos.lat, pos.lng);
-        }
-       }}
-     />
-   </MapContainer>
-   </div>
-  </div>
+         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
+         <MapEvents onSelect={handlePositionChange} />
+         <Marker  
+           position={ position}
+           draggable={true}
+           eventHandlers= { {
+             dragend: (e) => {
+                const marker = e.target;
+                const pos = marker.getLatLng();
+                handlePositionChange(pos.lat, pos.lng);
+              },
+            }}
+          />
+        </MapContainer>
+      </div>
+    </div>
  );
 }

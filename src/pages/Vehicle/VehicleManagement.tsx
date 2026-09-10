@@ -4,7 +4,7 @@ import { Vehicle } from '../../types/vehicle.types';
 import { useNavigate } from 'react-router-dom';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
-import { Trash2, LogOut } from 'lucide-react';
+import { Trash2, LogOut, Pencil} from 'lucide-react';
 import carAnimation from '../../assets/carAnimation.json';
 import './Vehicle.scss';
 
@@ -151,6 +151,14 @@ export default function VehicleManagement() {
                         )}
                       </td>
                       <td className="text-center">
+                        <div className="flex items-center justify-center gap-1"> 
+                          <button
+                            onClick={() => navigate(`/vehicles/edit/${currentId}`)}
+                            className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                            title="Modificar vehiculo"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
                         <button
                           onClick={() => handleDelete(currentId)}
                           className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
@@ -158,6 +166,7 @@ export default function VehicleManagement() {
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
+                        </div>
                       </td>
                     </tr>
                   );

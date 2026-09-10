@@ -69,4 +69,21 @@ export const vehicleService = {
       throw new Error(err.response?.data?.message || 'Error al obtener seguros');
     }
   },
+  async getVehicleId(id: string) {
+    try{
+      const res = await api.get(`/api/vehicles/${id}`);
+      return res.data?.data ?? res.data;
+    } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Error al obtener vehiculo');
+    }
+  },
+
+  async updateVehicle(id: string, vehicleData: any) {
+    try{
+      const res = await api.put(`/api/vehicles/${id}`, vehicleData);
+      return res.data;
+    } catch (err: any) {
+    throw new Error(err.response?.data?.message || 'Error al actualizar vehiculo');
+    }
+  }
 };
