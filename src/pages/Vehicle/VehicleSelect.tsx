@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { vehicleService } from '../../services/vehicleService';
+import { getUserVehicle } from '../../services/vehicleService';
 import { Vehicle } from '../../types/vehicle.types';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
@@ -10,6 +10,7 @@ import './Vehicle.scss';
 const VEHICLE_TYPE_MAP: Record<string, string> = {
   Auto: 'AUTO',
   Moto: 'MOTOCICLETA',
+  Utilitario: 'UTILITARIO',
 };
 
 export default function VehicleSelect() {
@@ -25,7 +26,7 @@ export default function VehicleSelect() {
     try {
       const userId = localStorage.getItem('parkflow_user_id') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
       setLoading(true);
-      const data = await vehicleService.getVehicles(userId);
+      const data = await getUserVehicle(userId);
       const list = Array.isArray(data) ? data : (data?.data || []);
       setVehicles(list);
     } catch (error) {

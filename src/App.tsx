@@ -19,6 +19,7 @@ import { PublicRoute } from './components/auth/PublicRoute';
 import AdminPanel from './pages/Admin/AdminPanel.js';
 import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes.js';
 import AdminService from './pages/Admin/AdminService.js';
+import VehicleEdit from './pages/Vehicle/VehicleEdit.js';
 
 export function App() {
   useEffect(() => {
@@ -51,6 +52,7 @@ export function App() {
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/vehicles" element={<ProtectedRoute><VehicleManagement /></ProtectedRoute>} />
         <Route path="/vehicles/new" element={<ProtectedRoute><VehicleRegister /></ProtectedRoute>} />
+        <Route path="/vehicles/:id/edit" element={<ProtectedRoute><VehicleEdit /></ProtectedRoute>} />
   
 
 

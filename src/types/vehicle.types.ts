@@ -40,3 +40,19 @@ export interface Vehicle {
   insurance?: { id: string; name: string };
   vehicleType?: { id: string; name: string };
 }
+
+export interface CreateVehicle {
+  plate: string;
+  year: number;
+  brandId: string;
+  modelId: string;
+  insuranceId?: string;
+}
+
+export interface UpdateVehicle {
+  plate: string;
+  year: number;
+  brandId: string;
+  modelId: string;
+  insuranceId: string;
+}

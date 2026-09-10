@@ -142,8 +142,8 @@ export function ParkingSpaceMap() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8">
-      <aside className="w-full md:w-1/3 flex flex-col gap-3">
+    <div className="flex flex-col md:flex-row gap-8 h-full min-h-0">
+      <aside className="w-full md:w-1/3 flex flex-col gap-3 overflow-y-auto">
         <div className="bg-card p-4 rounded-xl shadow-sm border border-border">
           <h2 className="text-lg font-semibold mb-4 text-foreground">Horario</h2>
           <div className="space-y-4">
@@ -241,7 +241,7 @@ export function ParkingSpaceMap() {
         )}
       </aside>
 
-      <section className="w-full md:w-2/3 bg-card p-4 rounded-xl shadow-sm border border-border flex flex-col">
+      <section className="w-full md:w-2/3 bg-card p-4 rounded-xl shadow-sm border border-border flex flex-col overflow-y-auto min-h-0">
         <div className="grid grid-cols-6 gap-x-4 gap-y-6">
           {Object.entries(columns).map(([prefix, columnSpaces]) => (
             <div key={prefix} className="flex flex-col gap-2">

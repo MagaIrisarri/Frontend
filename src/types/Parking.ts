@@ -15,7 +15,7 @@ export interface Parking {
   name: string;
   latitude: number; 
   longitude: number;
-  imageUrl: string;
+  image: string;
 }
 
 export interface CreateParkingInput{
@@ -33,7 +33,7 @@ export interface CreateParkingInput{
   name: string;
   latitude: number; 
   longitude: number;
-  imageUrl: string;
+  image: string;
   ownerId: string;
 }
 
@@ -52,7 +52,7 @@ export interface UpdateParkingInput{
   name: string;
   latitude: number; 
   longitude: number;
-  imageUrl: string;
+  image: string;
 }
 
 
