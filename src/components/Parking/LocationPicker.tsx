@@ -45,8 +45,8 @@ export function LocationPicker({ lat, lng, onChangeLocation }: LocationPickerPro
             const feat = result.features[0];
             address = feat.place_name || feat.text || '';
             const context = feat.context || [];
-            const placeContext = context.find((c) => c.id.startsWith('place') || c.id.startsWith('municipality'));
-            const postalContext = context.find((c) => c.id.startsWith('postal_code'));
+            const placeContext = context.find((c: any) => c.id?.startsWith('place') || c.id?.startsWith('municipality'));
+            const postalContext = context.find((c: any) => c.id?.startsWith('postal_code'));
             locality = placeContext?.text || '';
             postalCode = postalContext?.text || '';
           }
