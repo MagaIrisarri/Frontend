@@ -10,6 +10,7 @@ import ProfilePage from './pages/Profile/ProfilePage';
 import VehicleManagement from './pages/Vehicle/VehicleManagement';
 import VehicleRegister from './pages/Vehicle/VehicleRegister';
 import VehicleEdit  from './pages/Vehicle/VehicleEdit';
+import ClientDashboard from './pages/Client/ClientDashboard';
 import { AppLayout } from './components/layout/appLayout';
 import VehicleSelect from './pages/Vehicle/VehicleSelect';
 import { ParkingSpaceMap } from './pages/ParkingSpace/ParkingSpaceMap';
@@ -42,10 +43,13 @@ export function App() {
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
+        {/* Dashboard Principal de Cliente (Mapa Full-Screen + Menú Lateral) */}
+        <Route path="/dashboard" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
+        <Route path="/parking" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
+
         {/* Flujo de Reserva con Layout (Protegido) */}
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/select-vehicle" element={<VehicleSelect />} />
-          <Route path="/parking" element={<ParkingSearchPage />} />
           <Route path="/parkings/:id/reservar" element={<ParkingSpaceMap />} />
         </Route>
 

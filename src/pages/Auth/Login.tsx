@@ -34,7 +34,7 @@ export const Login: React.FC = () => {
       } else if (userData?.type === 'ADMINISTRADOR') {
         navigate('/admin');
       } else {
-        navigate('/profile');
+        navigate('/dashboard');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Credenciales incorrectas');
