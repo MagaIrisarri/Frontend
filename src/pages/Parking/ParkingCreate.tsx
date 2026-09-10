@@ -6,6 +6,7 @@ import type { CreateParkingInput } from '../../types/Parking.js';
 import '../Vehicle/Vehicle.scss';
 import { formInitialState } from "../../components/Parking/ParkingForm.data.js";
 import { useCurrentUser } from '../../hooks/useCurrentUser.js';
+import { LocationPicker } from '../../components/Parking/LocationPicker.js';
 
 export default function ParkingsCreate() {
   const navigate = useNavigate();
@@ -52,6 +53,24 @@ export default function ParkingsCreate() {
   } finally {
     setIsSubmitting(false);
   }
+
+  const handleLocationChange = (locationData: {
+  lat: number;
+  lng: number;
+  address?: string;
+  locality?: string;
+  postalCode?: string;
+})=> {
+  setForm((prev) => ({
+    ...prev,
+    latitude:locationData.lat,
+    longitude: locationData.lng,
+    address:locationData.address || prev.address,
+    locality: localityData.locality || prev.locality,
+    postalCode: locationData.postalCode || prev.postalCode,
+
+  } ) )
+}
 };
 
   return (
