@@ -13,5 +13,6 @@ export const formInitialState = {
   reservationMargin: "1", 
   latitude: "", 
   longitude: "",
+  image: "",
 }
 

@@ -63,6 +63,9 @@ const handleLocationChange = (locationData: {
       <Input label="Horas mínimas de reserva" type="number" value={form.minReservationHours} onChange={(e) => handleChange(e, "minReservationHours")} required />
       <Input label="Horas máximas de reserva" type="number" value={form.maxReservationHours} onChange={(e) => handleChange(e, "maxReservationHours")} required />
       <Input label="Margen de reserva (hs)" type="number" value={form.reservationMargin} onChange={(e) => handleChange(e, "reservationMargin")} required />
+      <Input label="Latitud" type="number" value={form.latitude} onChange={(e) => handleChange(e, "latitude")} required />
+      <Input label="Longitud" type="number" value={form.longitude} onChange={(e) => handleChange(e, "longitude")} required />
+      <Input label="Imagen" type="string" value={form.image} onChange={(e) => handleChange(e, "image")} required />
       <Button type="submit" variant="primary" size="md">{submitLabel ?? 'Crear estacionamiento'}</Button>
     </form>
   );

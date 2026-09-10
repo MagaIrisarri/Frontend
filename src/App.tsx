@@ -20,6 +20,8 @@ import { PublicRoute } from './components/auth/PublicRoute';
 import AdminPanel from './pages/Admin/AdminPanel.js';
 import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes.js';
 import AdminService from './pages/Admin/AdminService.js';
+import VehicleEdit from './pages/Vehicle/VehicleEdit.js';
+import { ParkingSpaceEdit } from './pages/ParkingSpace/ParkingSpaceEdit.js';
 
 export function App() {
   useEffect(() => {
@@ -52,7 +54,7 @@ export function App() {
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/vehicles" element={<ProtectedRoute><VehicleManagement /></ProtectedRoute>} />
         <Route path="/vehicles/new" element={<ProtectedRoute><VehicleRegister /></ProtectedRoute>} />
-        <Route path="/vehicles/edit/:id" element={<ProtectedRoute><VehicleEdit/></ProtectedRoute>} />
+        <Route path="/vehicles/:id/edit" element={<ProtectedRoute><VehicleEdit /></ProtectedRoute>} />
   
          {/* Rutas Protegidas - Solo ADMINISTRADOR */}
 
@@ -98,13 +100,21 @@ export function App() {
             </ProtectedRoute>
           } 
         />
-        <Route 
-          path="/my-parkings/update/:id" 
+        <Route
+          path="/my-parkings/update/:id"
           element={
             <ProtectedRoute allowedRoles={['DUEÑO']}>
               <EditParkingForm />
             </ProtectedRoute>
-          } 
+          }
+        />
+        <Route
+          path="/my-parkings/update/:id/space"
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <ParkingSpaceEdit />
+            </ProtectedRoute>
+          }
         />
       </Routes>
     </BrowserRouter>

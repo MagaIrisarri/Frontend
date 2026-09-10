@@ -28,7 +28,7 @@ export default function ParkingEdit() {
   name: string;
   latitude: string; 
   longitude: string;
-  imageUrl: string;
+  image: string;
     }>();
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -64,7 +64,7 @@ export default function ParkingEdit() {
           reservationMargin: String(parkingData.reservationMargin) || '',
           latitude: String(parkingData.latitude) || '',
           longitude: String(parkingData.longitude) || '',
-          imageUrl: parkingData.imageUrl || '',
+          image: parkingData.image || '',
         });
       } catch (err: any) {
         setErrorMsg(err.message);
@@ -97,7 +97,7 @@ export default function ParkingEdit() {
      reservationMargin: Number(form.reservationMargin),
      latitude: Number(form.latitude),
      longitude: Number(form.longitude),
-     imageUrl: '',
+     image: form.image,
    };
  
    try {

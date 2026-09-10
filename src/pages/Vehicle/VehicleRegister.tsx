@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { vehicleService } from '../../services/vehicleService';
+import { getBrands, getInsurances, getModels, createVehicle} from '../../services/vehicleService';
 import { useNavigate } from 'react-router-dom';
 import { PhoneIcon } from '../../components/icons/PhoneIcon';
 import { ShineBorder } from '../../components/ui/shine-border';
@@ -26,11 +26,11 @@ export default function VehicleRegister() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    vehicleService.getBrands()
+    getBrands()
       .then((res: any) => setBrands(Array.isArray(res) ? res : (res?.data || res?.brands || [])))
       .catch((err) => console.error("Error al cargar marcas:", err));
 
-    vehicleService.getInsurances()
+    getInsurances()
       .then((res: any) => setInsurances(Array.isArray(res) ? res : (res?.data || res?.insurances || [])))
       .catch((err) => console.error("Error al cargar seguros:", err));
   }, []);
@@ -38,7 +38,7 @@ export default function VehicleRegister() {
   useEffect(() => {
     if (selectedBrand) {
       setSelectedModel('');
-      vehicleService.getModels(selectedBrand)
+      getModels(selectedBrand)
         .then((res: any) => setModels(Array.isArray(res) ? res : (res?.data || res?.models || [])))
         .catch(() => setModels([]));
     } else {
@@ -64,7 +64,7 @@ export default function VehicleRegister() {
         insuranceId: selectedInsurance || undefined,
       };
       
-      const response = await vehicleService.createVehicle(userId, vehiclePayload);
+      const response = await createVehicle(userId, vehiclePayload);
       alert(response.message || '¡Vehículo creado con éxito!');
       navigate('/vehicles');
     } catch (error: any) {

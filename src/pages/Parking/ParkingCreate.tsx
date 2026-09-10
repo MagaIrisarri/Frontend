@@ -35,7 +35,7 @@ export default function ParkingsCreate() {
     reservationMargin: Number(form.reservationMargin),
     latitude: Number(form.latitude),
     longitude: Number(form.longitude),
-    imageUrl: '',
+    image: form.image,
   };
 
   try {

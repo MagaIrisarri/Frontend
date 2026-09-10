@@ -6,3 +6,7 @@ export interface ParkingSpace{
   parking: string;
   state: 'LIBRE' | 'OCUPADO' | 'MANTENIMIENTO';
 }
+
+export interface ParkingSpaceState{
+  state: 'LIBRE' | 'OCUPADO' | 'MANTENIMIENTO';
+}
