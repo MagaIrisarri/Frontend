@@ -20,7 +20,6 @@ import { PublicRoute } from './components/auth/PublicRoute';
 import AdminPanel from './pages/Admin/AdminPanel.js';
 import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes.js';
 import AdminService from './pages/Admin/AdminService.js';
-import VehicleEdit from './pages/Vehicle/VehicleEdit.js';
 import { ParkingSpaceEdit } from './pages/ParkingSpace/ParkingSpaceEdit.js';
 
 export function App() {

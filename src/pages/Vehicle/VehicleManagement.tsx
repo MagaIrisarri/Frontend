@@ -157,28 +157,21 @@ export default function VehicleManagement() {
                         )}
                       </td>
                       <td className="text-center">
-                        <div className="flex items-center justify-center gap-1"> 
+                        <div className="flex items-center justify-center gap-1">
                           <button
-                            onClick={() => navigate(`/vehicles/edit/${currentId}`)}
-                            className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
-                            title="Modificar vehiculo"
+                            onClick={() => navigate(`/vehicles/${currentId}/edit`)}
+                            className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                            title="Editar"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
-                        <button
-                          onClick={() => navigate(`/vehicles/${currentId}/edit`)}
-                          className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
-                          title="Editar"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(v)}
-                          className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
-                          title="Dar de baja"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                          <button
+                            onClick={() => setDeleteTarget(v)}
+                            className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                            title="Dar de baja"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>

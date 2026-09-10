@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import L from 'leaflet';
+import L, { type LeafletMouseEvent, type LeafletEvent } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 
@@ -7,7 +7,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 const DefaultIcon = L.icon({
-iconUrl: markerIcon,
+  iconUrl: markerIcon,
   shadowUrl: markerShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -22,18 +22,18 @@ interface LocationData {
   postalCode?: string;
 }
 
-interface LocationPickerProps{
+interface LocationPickerProps {
   lat: number;
   lng: number;
-  onChangeLocation: ( locationData:LocationData ) => void;
+  onChangeLocation: (locationData: LocationData) => void;
 }
 
-function MapEvents( {onSelect}:{ onSelect:( lat: number, lng: number ) => void} ) {
+function MapEvents({ onSelect }: { onSelect: (lat: number, lng: number) => void }) {
   useMapEvents({
-  click(e){
-    onSelect(e.latlng.lat, e.latlng.lng);
-  }
-  } );
+    click(e: LeafletMouseEvent) {
+      onSelect(e.latlng.lat, e.latlng.lng);
+    },
+  });
   return null;
 }
 
@@ -91,8 +91,8 @@ return (
          <Marker  
            position={ position}
            draggable={true}
-           eventHandlers= { {
-             dragend: (e) => {
+           eventHandlers={{
+             dragend: (e: LeafletEvent) => {
                 const marker = e.target;
                 const pos = marker.getLatLng();
                 handlePositionChange(pos.lat, pos.lng);
