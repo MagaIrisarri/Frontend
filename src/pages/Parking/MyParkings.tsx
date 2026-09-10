@@ -5,7 +5,7 @@ import {getParkingsByOwner, deleteParking} from '../../services/Parking.js';
 import { ShineBorder } from '../../components/ui/shine-border.js';
 import ConfirmDialog from '../../components/shared/ConfirmDialog/ConfirmDialog.js';
 import { useCurrentUser } from '../../hooks/useCurrentUser.js';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, LayoutGrid } from 'lucide-react';
 import '../Vehicle/Vehicle.scss';
 
 
@@ -100,6 +100,14 @@ return (
                             title="Editar"
                           >
                             <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/my-parkings/update/${p.id}/space`)}
+                            className="p-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                            title="Modificar espacios"
+                          >
+                            <LayoutGrid className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
