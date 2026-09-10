@@ -24,7 +24,7 @@ export function ParkingCard({ spot, selected, onSelect, price, vehicleId, vehicl
     >
       {selected && <div className="absolute top-0 left-0 w-1 h-full bg-primary rounded-l-xl" />}
       <div className="w-24 h-24 rounded-lg overflow-hidden shrink-0 bg-muted">
-        <img src={spot.imageUrl} alt={spot.name} className="w-full h-full object-cover" />
+        <img src={spot.image} alt={spot.name} className="w-full h-full object-cover" />
       </div>
       <div className="flex-1 flex flex-col justify-between">
         <h3 className="text-base font-semibold text-foreground leading-tight">

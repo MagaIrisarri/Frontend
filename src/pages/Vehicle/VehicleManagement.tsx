@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { vehicleService } from '../../services/vehicleService';
+import { getUserVehicle, removeVehicle } from '../../services/vehicleService';
 import { Vehicle } from '../../types/vehicle.types';
 import { useNavigate } from 'react-router-dom';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
-import { Trash2, LogOut } from 'lucide-react';
+import { Trash2, LogOut, Pencil } from 'lucide-react';
 import carAnimation from '../../assets/carAnimation.json';
 import './Vehicle.scss';
 
@@ -38,7 +38,7 @@ export default function VehicleManagement() {
 
   const loadVehicles = async (id: string) => {
     try {
-      const data = await vehicleService.getUserVehicles(id);
+      const data = await getUserVehicle(id);
       const list = Array.isArray(data) ? data : (data?.data || []);
       setVehicles(list);
     } catch (error) {
@@ -52,7 +52,7 @@ export default function VehicleManagement() {
     if (!window.confirm("¿Estás seguro de que querés dar de baja este vehículo?")) return;
     
     try {
-      await vehicleService.deleteVehicle(vehicleId);
+      await removeVehicle(vehicleId);
       setVehicles(prev => prev.filter((v: any) => (v.id || v._id) !== vehicleId));
     } catch (error) {
       console.error("Error al dar de baja el vehículo:", error);
@@ -151,6 +151,13 @@ export default function VehicleManagement() {
                         )}
                       </td>
                       <td className="text-center">
+                        <button
+                          onClick={() => navigate(`/vehicles/${currentId}/edit`)}
+                          className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => handleDelete(currentId)}
                           className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"

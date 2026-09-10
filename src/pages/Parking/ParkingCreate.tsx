@@ -19,7 +19,6 @@ export default function ParkingsCreate() {
   setError(null);
   setIsSubmitting(true);
 
-  // TODO: latitude/longitude van a venir del mapa, no de un input de texto.
   const payload: CreateParkingInput = {
     ownerId: user.id!,
     name: form.name,
@@ -36,7 +35,7 @@ export default function ParkingsCreate() {
     reservationMargin: Number(form.reservationMargin),
     latitude: Number(form.latitude),
     longitude: Number(form.longitude),
-    imageUrl: '',
+    image: form.image,
   };
 
   try {
