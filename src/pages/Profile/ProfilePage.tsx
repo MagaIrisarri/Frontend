@@ -6,10 +6,13 @@ import { Loader2, AlertCircle, CheckCircle, Plus, Shield, ArrowRight } from 'luc
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
 import carAnimation from '../../assets/carAnimation.json';
+import { removeUser } from '@/services/User.js';
+import ConfirmDialog from '@/components/shared/ConfirmDialog/ConfirmDialog.js';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const userId = localStorage.getItem('parkflow_user_id') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
+  const userType = JSON.parse(localStorage.getItem('user') || '{}')?.type;
 
   const [initialData, setInitialData] = useState<{
     name: string;
@@ -107,6 +110,22 @@ export const ProfilePage: React.FC = () => {
       setSuccessMsg('Contraseña actualizada correctamente.');
     } catch (err: any) {
       setErrorMsg(err.message);
+    }
+  };
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!userId) return;
+
+    try {
+      await removeUser(userId);
+      localStorage.removeItem('user');
+      localStorage.removeItem('parkflow_user_id');
+      navigate('/login');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Error al eliminar la cuenta');
+      setConfirmingDelete(false);
     }
   };
 
@@ -216,11 +235,83 @@ export const ProfilePage: React.FC = () => {
                   <span>Ver Mis Vehículos Registrados</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/select-vehicle')}
+                  className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
+                >
+                  <span>Elegir vehiculo para reserva</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
             </ShineBorder>
-          </div>
 
+            {userType === 'DUEÑO' && (
+              <ShineBorder
+                className="w-full bg-zinc-900/90 border border-zinc-800 p-6 shadow-xl backdrop-blur-md rounded-2xl"
+                color={['#2563EB', '#38BDF8', '#818CF8']}
+                borderRadius={16}
+                borderWidth={1.5}
+                duration={10}
+              >
+                <h2 className="text-xl font-bold text-white text-center">Mis Estacionamientos</h2>
+                <p className="text-sm text-zinc-400 text-center mt-2">
+                  Administrá los estacionamientos que tenés registrados como dueño en ParkFlow.
+                </p>
+
+                <div className="mt-6 space-y-3 pt-6 border-t border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/my-parkings/create')}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4 stroke-[3]" />
+                    <span>Registrar Nuevo Estacionamiento</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/my-parkings')}
+                    className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
+                  >
+                    <span>Ver Mis Estacionamientos</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </ShineBorder>
+            )}
+
+            <ShineBorder
+              className="w-full bg-zinc-900/90 border border-red-900/50 p-6 shadow-xl backdrop-blur-md rounded-2xl"
+              color={['#ef4444', '#f87171', '#ef4444']}
+              borderRadius={16}
+              borderWidth={1.5}
+              duration={10}
+            >
+              <h2 className="text-lg font-bold text-red-400">ELIMINAR CUENTA</h2>
+              <p className="text-sm text-zinc-400 mt-2">
+                Eliminar tu cuenta es una acción permanente: vas a perder el acceso y no vas a poder volver a iniciar sesión.
+              </p>
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                className="w-full mt-4 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold shadow-lg shadow-red-600/20 transition-all cursor-pointer"
+              >
+                Eliminar cuenta
+              </button>
+            </ShineBorder>
+          </div>
         </div>
+
+        <ConfirmDialog
+          open={confirmingDelete}
+          title="Eliminar cuenta"
+          message={`¿Confirmás que querés eliminar tu cuenta${initialData?.name ? `, ${initialData.name}` : ''}? Esta acción no se puede deshacer y vas a cerrar sesión.`}
+          confirmLabel="Sí, eliminar mi cuenta"
+          cancelLabel="Cancelar"
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
 
       </div>
     </div>

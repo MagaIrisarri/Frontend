@@ -37,8 +37,12 @@ export const Login: React.FC = () => {
         localStorage.setItem('parkflow_user_id', userId);
       }
 
-      // Redirigir al panel de perfil unificado
-      navigate('/profile');
+      // El Administrador tiene su propio panel; el resto va al panel de perfil unificado
+      if (userData?.type === 'ADMINISTRADOR') {
+        navigate('/admin');
+      } else {
+        navigate('/profile');
+      }
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {

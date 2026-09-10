@@ -70,6 +70,16 @@
   gap: 1.25rem;
 }
 
+.parking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  button[type="submit"] {
+    margin-top: 0.5rem;
+  }
+}
+
 .form-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -202,6 +212,36 @@
     opacity: 0.6;
     cursor: not-allowed;
   }
+}
+
+.btn-danger {
+  width: 100%;
+  padding: 0.85rem;
+  border-radius: 10px;
+  border: none;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #b91c1c;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.table-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 160px;
 }
 
 .table-wrapper {
