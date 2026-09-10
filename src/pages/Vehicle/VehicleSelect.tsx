@@ -7,10 +7,12 @@ import { Lottie } from 'lottie-react';
 import carAnimation from '../../assets/carAnimation.json';
 import './Vehicle.scss';
 
-const VEHICLE_TYPE_MAP: Record<string, string> = {
-  Auto: 'AUTO',
-  Moto: 'MOTOCICLETA',
-  Utilitario: 'UTILITARIO',
+const normalizeVehicleType = (rawType: any): string => {
+  const typeName = String(rawType?.name || rawType || '').trim().toUpperCase();
+  if (typeName.includes('AUTO') || typeName.includes('COCHE') || typeName.includes('CAR')) return 'AUTO';
+  if (typeName.includes('MOTO')) return 'MOTOCICLETA';
+  if (typeName.includes('UTIL')) return 'UTILITARIO';
+  return typeName || 'AUTO';
 };
 
 export default function VehicleSelect() {
@@ -37,13 +39,11 @@ export default function VehicleSelect() {
   };
 
   const handleSelect = (v: Vehicle) => {
-  const backendType = VEHICLE_TYPE_MAP[v.vehicleType?.name ?? ''];
-  if (!backendType) return; // Utilitario u otro tipo sin mapeo — no navega
-
-  navigate('/parking', {
-    state: { vehicleId: v.id, vehicleType: backendType },
-  });
-};
+    const backendType = normalizeVehicleType(v.vehicleType);
+    navigate('/parking', {
+      state: { vehicleId: v.id, vehicleType: backendType },
+    });
+  };
 
   return (
       <div className="vehicle-management-container bg-zinc-950">
@@ -93,24 +93,22 @@ export default function VehicleSelect() {
                 </thead>
                 <tbody>
                   {vehicles.map((v: any) => {
-                    const backendType = VEHICLE_TYPE_MAP[v.vehicleType?.name ?? ''];
-                    const isSelectable = Boolean(backendType);
+                    const typeDisplay = v.vehicleType?.name || (typeof v.vehicleType === 'string' ? v.vehicleType : 'Auto');
                     return (
-                      <tr key={v.id || v._id} className={!isSelectable ? 'opacity-50' : undefined}>
+                      <tr key={v.id || v._id}>
                         <td><span className="plate-badge">{v.plate}</span></td>
-                        <td className="text-zinc-200">{v.vehicleType?.name}</td>
+                        <td className="text-zinc-200">{typeDisplay}</td>
                         <td className="text-zinc-200">{v.brand?.name || v.brand || '-'}</td>
                         <td className="text-zinc-200">{v.model?.name || v.model || '-'}</td>
                         <td className="text-zinc-200">{v.year}</td>
                         <td>
-                        <button
-                          type="button"
-                          onClick={() => handleSelect(v)}
-                          disabled={!isSelectable}
-                          className={isSelectable ? 'btn-primary' : 'btn-primary opacity-50 cursor-not-allowed'}
-                        >
-                          {isSelectable ? 'Elegir' : 'Sin tarifas'}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSelect(v)}
+                            className="btn-primary"
+                          >
+                            Elegir
+                          </button>
                         </td>    
                       </tr>
                     );

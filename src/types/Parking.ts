@@ -15,7 +15,8 @@ export interface Parking {
   name: string;
   latitude: number; 
   longitude: number;
-  image: string;
+  image?: string;
+  imageUrl?: string;
 }
 
 export interface CreateParkingInput{
