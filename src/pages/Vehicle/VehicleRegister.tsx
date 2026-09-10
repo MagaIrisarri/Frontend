@@ -5,12 +5,14 @@ import { PhoneIcon } from '../../components/icons/PhoneIcon';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
 import carAnimation from '../../assets/carAnimation.json';
+import { useCurrentUser } from '../../hooks/useCurrentUser.js';
 import './Vehicle.scss';
 
 export default function VehicleRegister() {
   const navigate = useNavigate();
-  const [userId, setUserId] = useState<string>('');
-  const [userName, setUserName] = useState<string>('');
+  const currentUser = useCurrentUser();
+  const userId = currentUser?.id ?? currentUser?._id ?? '';
+  const userName = currentUser?.name ? `${currentUser.name} ${currentUser.last_name || ''}`.trim() : '';
   const [plate, setPlate] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
   
@@ -22,33 +24,6 @@ export default function VehicleRegister() {
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedInsurance, setSelectedInsurance] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const rawUser = localStorage.getItem('user');
-    if (!rawUser) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(rawUser);
-      const currentUser = parsed?.data ?? parsed?.user ?? parsed;
-      const currentId = currentUser?.id ?? currentUser?._id;
-
-      if (!currentId) {
-        navigate('/login');
-        return;
-      }
-
-      setUserId(currentId);
-      setUserName(
-        currentUser.name ? `${currentUser.name} ${currentUser.last_name || ''}`.trim() : ''
-      );
-    } catch {
-      localStorage.removeItem('user');
-      navigate('/login');
-    }
-  }, [navigate]);
 
   useEffect(() => {
     vehicleService.getBrands()

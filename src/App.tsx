@@ -1,52 +1,113 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Home } from './pages/Home/Home';
 import { Login } from './pages/Auth/Login';
 import { Register } from './pages/Auth/Register';
-import ParkingSearchPage from '../src/pages/Parking/ParkingSearch.js';
-import MyParkings from '../src/pages/Parking/MyParkings.js'
-import ParkingCreate  from './pages/Parking/ParkingCreate.js'
+import ParkingSearchPage from './pages/Parking/ParkingSearch';
+import MyParkings from './pages/Parking/MyParkings';
+import ParkingCreate from './pages/Parking/ParkingCreate';
 import ProfilePage from './pages/Profile/ProfilePage';
 import VehicleManagement from './pages/Vehicle/VehicleManagement';
 import VehicleRegister from './pages/Vehicle/VehicleRegister';
-import { AppLayout } from './components/layout/appLayout.js';
-import VehicleSelect from './pages/Vehicle/VehicleSelect.js';
-import {ParkingSpaceMap} from './pages/ParkingSpace/ParkingSpaceMap.js';
-import EditParkingForm from './pages/Parking/EditParkingForm.js';
+import { AppLayout } from './components/layout/appLayout';
+import VehicleSelect from './pages/Vehicle/VehicleSelect';
+import { ParkingSpaceMap } from './pages/ParkingSpace/ParkingSpaceMap';
+import EditParkingForm from './pages/Parking/EditParkingForm';
+import OwnerDashboard from './pages/Owner/OwnerDashboard';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { PublicRoute } from './components/auth/PublicRoute';
 import AdminPanel from './pages/Admin/AdminPanel.js';
 import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes.js';
 import AdminService from './pages/Admin/AdminService.js';
 
 export function App() {
+  useEffect(() => {
+    // Escuchar cambios en otras pestañas para cerrar sesión automáticamente
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user' && !e.newValue) {
+        window.location.href = '/login';
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
+        {/* Rutas Públicas (Si estás logueado te sacan de acá) */}
+        <Route path="/" element={<PublicRoute><Home /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        <Route element={<AppLayout />}>
+        {/* Flujo de Reserva con Layout (Protegido) */}
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/select-vehicle" element={<VehicleSelect />} />
           <Route path="/parking" element={<ParkingSearchPage />} />
           <Route path="/parkings/:id/reservar" element={<ParkingSpaceMap />} />
         </Route>
 
-        <Route path="/profile" element={<ProfilePage />} />
-
-        <Route path="/vehicles" element={<VehicleManagement />} />
-        <Route path="/vehicles/new" element={<VehicleRegister />} />
-
-        <Route path="/my-parkings" element={<MyParkings />} />
-        <Route path="/my-parkings/create" element={<ParkingCreate />} />
-        <Route path="/my-parkings/update/:id" element={<EditParkingForm />} />
-
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/admin/vehicles" element={<AdminVehicleTypes />} />
-        <Route path="/admin/services" element={<AdminService />} />
+        {/* Rutas Protegidas Generales (Perfil y Vehículos) */}
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/vehicles" element={<ProtectedRoute><VehicleManagement /></ProtectedRoute>} />
+        <Route path="/vehicles/new" element={<ProtectedRoute><VehicleRegister /></ProtectedRoute>} />
+  
 
 
+        
+
+         {/* Rutas Protegidas - Solo ADMINISTRADOR */}
+
+        <Route path="/admin" element={
+            <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+              <AdminPanel />
+            </ProtectedRoute>
+          }  />
+            <Route path="/admin/vehicles" element={
+            <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+              <AdminVehicleTypes />
+            </ProtectedRoute>
+          }  />
+            <Route path="/admin/services" element={
+            <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+              <AdminService />
+            </ProtectedRoute>
+          }  />
 
 
+        {/* Rutas Protegidas - Solo DUEÑO */}
+        <Route 
+          path="/owner" 
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <OwnerDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/my-parkings" 
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <MyParkings />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/my-parkings/create" 
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <ParkingCreate />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/my-parkings/update/:id" 
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <EditParkingForm />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </BrowserRouter>
   );

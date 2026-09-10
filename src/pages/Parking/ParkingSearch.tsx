@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ParkingList } from '../../components/Parking/ParkingList.js';
 import { ParkingCard } from '../../components/Parking/ParkingCard.js';
-import { MapMarker } from '../../components/Parking/MapMarket.js';
 import { MapView } from '../../components/Parking/MapView.js';
 import { getParking } from '../../services/Parking.js';
 import type { Parking } from '../../types/Parking.js';

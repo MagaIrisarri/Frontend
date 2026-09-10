@@ -1,33 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ParkingForm from '../../components/Parking/ParkingForm.js';
 import { createParking } from '../../services/Parking.js';
 import type { CreateParkingInput } from '../../types/Parking.js';
 import '../Vehicle/Vehicle.scss';
 import { formInitialState } from "../../components/Parking/ParkingForm.data.js";
+import { useCurrentUser } from '../../hooks/useCurrentUser.js';
 
 export default function ParkingsCreate() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const user = useCurrentUser();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const raw = localStorage.getItem('user');
-    const parsedUser = raw ? JSON.parse(raw) : null;
-
-    if (!parsedUser) {
-      navigate('/login');
-      return;
-    }
-    if (parsedUser.type !== 'DUEÑO') {
-      navigate('/profile');
-      return;
-    }
-    setUser(parsedUser);
-  }, []);
-
-  if (!user) return null;
+  if (!user?.id) return null;
 
   const handleCreate = async (form: typeof formInitialState) => {
   setError(null);
@@ -35,7 +21,7 @@ export default function ParkingsCreate() {
 
   // TODO: latitude/longitude van a venir del mapa, no de un input de texto.
   const payload: CreateParkingInput = {
-    ownerId: user.id,
+    ownerId: user.id!,
     name: form.name,
     locality: form.locality,
     postalCode: form.postalCode,

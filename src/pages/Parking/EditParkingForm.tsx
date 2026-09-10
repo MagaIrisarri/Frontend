@@ -11,7 +11,6 @@ import { useParams } from 'react-router-dom';
 export default function ParkingEdit() {
   const {id} = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
     const [initialData, setInitialData] = useState<{
@@ -35,24 +34,9 @@ export default function ParkingEdit() {
     const [loading, setLoading] = useState(true);
       
 
-  useEffect(() => {
-    const raw = localStorage.getItem('user');
-    const parsedUser = raw ? JSON.parse(raw) : null;
-
-    if (!parsedUser) {
-      navigate('/login');
-      return;
-    }
-    if (parsedUser.type !== 'DUEÑO') {
-      navigate('/profile');
-      return;
-    }
-    setUser(parsedUser);
-  }, []);
-
     useEffect(() => {
       if (!id) {
-        setErrorMsg('No se encontró la sesión del usuario.');
+        setErrorMsg('No se encontró el estacionamiento a editar.');
         setLoading(false);
         return;
       }
@@ -92,8 +76,6 @@ export default function ParkingEdit() {
     fetchUser();
   }, [id]);
 
-
-  if (!user) return null;
 
  const handleUpdate = async (form: typeof formInitialState) => {
    setError(null);
@@ -156,10 +138,14 @@ export default function ParkingEdit() {
           </div>
         )}
 
-        {initialData ? (
+        {errorMsg ? (
+          <div className="state-container">
+            <p className="text-destructive">{errorMsg}</p>
+          </div>
+        ) : initialData ? (
           <ParkingForm initialData={initialData} onSubmit={handleUpdate} submitLabel="Actualizar estacionamiento" />
         ) : (
-          <p>Cargando...</p>
+          <p>{loading ? 'Cargando...' : 'No se encontraron datos del estacionamiento.'}</p>
         )}
 
         <button type="button" onClick={() => navigate('/my-parkings')} className="btn-ghost">

@@ -4,34 +4,20 @@ import { useNavigate } from 'react-router-dom';
 import {getParkingsByOwner, deleteParking} from '../../services/Parking.js';
 import { ShineBorder } from '../../components/ui/shine-border.js';
 import ConfirmDialog from '../../components/shared/ConfirmDialog/ConfirmDialog.js';
+import { useCurrentUser } from '../../hooks/useCurrentUser.js';
 import '../Vehicle/Vehicle.scss';
 
 
 
 export default function MyParkings() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const user = useCurrentUser();
 
   const [parkings, setParkings] = useState<Parking[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const raw = localStorage.getItem('user');
-    const parsedUser = raw ? JSON.parse(raw) : null;
-
-    if (!parsedUser) {
-      navigate('/login');
-      return;
-    }
-    if (parsedUser.type !== 'DUEÑO') {
-      navigate('/profile');
-      return;
-    }
-    setUser(parsedUser);
-  }, []);
-
 useEffect(() => {
-  if (!user) return;
+  if (!user?.id) return;
 
   setLoading(true);
   getParkingsByOwner(user.id)
@@ -54,8 +40,6 @@ const confirmDelete = async () => {
     setDeleteTarget(null);
   }
 };
-
-if (!user) return null;
 
 return (
     <div className="vehicle-management-container bg-zinc-950">

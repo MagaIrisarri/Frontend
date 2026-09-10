@@ -38,7 +38,7 @@ export function ParkingCard({ spot, selected, onSelect, price, vehicleId, vehicl
           <Link
             state={{ vehicleId, vehicleType }}
             to={`/parkings/${spot.id}/reservar`}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
             className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
           >
             Ver disponibilidad

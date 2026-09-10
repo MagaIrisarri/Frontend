@@ -2,17 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EditPerfilForm from '../../components/EditPerfilForm/EditPerfilForm';
 import ChangePasswordForm from '../../components/ChangePasswordForm/ChangePasswordForm';
-import { Loader2, AlertCircle, CheckCircle, Plus, Shield, ArrowRight } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Plus, Shield, ArrowRight, LogOut } from 'lucide-react';
 import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
 import carAnimation from '../../assets/carAnimation.json';
-import { removeUser } from '@/services/User.js';
+import { getUserId, updateUser, changePassword, removeUser } from '@/services/User.js';
 import ConfirmDialog from '@/components/shared/ConfirmDialog/ConfirmDialog.js';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const userId = localStorage.getItem('parkflow_user_id') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
-  const userType = JSON.parse(localStorage.getItem('user') || '{}')?.type;
 
   const [initialData, setInitialData] = useState<{
     name: string;
@@ -34,11 +33,7 @@ export const ProfilePage: React.FC = () => {
 
     const fetchUser = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/api/users/${userId}`);
-        const data = await res.json();
-        
-        if (!res.ok) throw new Error(data.message || 'Error al cargar perfil');
-
+        const data = await getUserId(userId);
         const userData = data.data || data;
         setInitialData({
           name: userData.name || '',
@@ -47,7 +42,7 @@ export const ProfilePage: React.FC = () => {
           phone: userData.phone || '',
         });
       } catch (err: any) {
-        setErrorMsg(err.message);
+        setErrorMsg(err.response?.data?.message || 'Error al cargar perfil');
       } finally {
         setLoading(false);
       }
@@ -61,14 +56,7 @@ export const ProfilePage: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || 'Error al actualizar');
+      await updateUser(userId, formData);
 
       const rawUser = localStorage.getItem('user');
       if (rawUser) {
@@ -89,7 +77,7 @@ export const ProfilePage: React.FC = () => {
 
       setSuccessMsg('Datos personales actualizados correctamente.');
     } catch (err: any) {
-      setErrorMsg(err.message);
+      setErrorMsg(err.response?.data?.message || 'Error al actualizar');
     }
   };
 
@@ -98,19 +86,17 @@ export const ProfilePage: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userId}/password`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(passwordData),
-      });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || 'Error al cambiar contraseña');
-
+      await changePassword(userId, passwordData.currentPassword, passwordData.newPassword);
       setSuccessMsg('Contraseña actualizada correctamente.');
     } catch (err: any) {
-      setErrorMsg(err.message);
+      setErrorMsg(err.response?.data?.message || 'Error al cambiar contraseña');
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('parkflow_user_id');
+    navigate('/login');
   };
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -142,11 +128,20 @@ export const ProfilePage: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Cabecera */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Panel de Usuario</h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Gestioná tu información personal y los vehículos asociados a tu cuenta
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Panel de Usuario</h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Gestioná tu información personal y los vehículos asociados a tu cuenta
+            </p>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-600 hover:bg-red-500/20 font-semibold text-sm transition-colors cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Cerrar Sesión</span>
+          </button>
         </div>
 
         {errorMsg && (
@@ -245,41 +240,6 @@ export const ProfilePage: React.FC = () => {
                 </button>
               </div>
             </ShineBorder>
-
-            {userType === 'DUEÑO' && (
-              <ShineBorder
-                className="w-full bg-zinc-900/90 border border-zinc-800 p-6 shadow-xl backdrop-blur-md rounded-2xl"
-                color={['#2563EB', '#38BDF8', '#818CF8']}
-                borderRadius={16}
-                borderWidth={1.5}
-                duration={10}
-              >
-                <h2 className="text-xl font-bold text-white text-center">Mis Estacionamientos</h2>
-                <p className="text-sm text-zinc-400 text-center mt-2">
-                  Administrá los estacionamientos que tenés registrados como dueño en ParkFlow.
-                </p>
-
-                <div className="mt-6 space-y-3 pt-6 border-t border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/my-parkings/create')}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4 stroke-[3]" />
-                    <span>Registrar Nuevo Estacionamiento</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate('/my-parkings')}
-                    className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
-                  >
-                    <span>Ver Mis Estacionamientos</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </ShineBorder>
-            )}
 
             <ShineBorder
               className="w-full bg-zinc-900/90 border border-red-900/50 p-6 shadow-xl backdrop-blur-md rounded-2xl"
