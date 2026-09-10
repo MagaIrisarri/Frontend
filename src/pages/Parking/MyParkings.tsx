@@ -5,6 +5,7 @@ import {getParkingsByOwner, deleteParking} from '../../services/Parking.js';
 import { ShineBorder } from '../../components/ui/shine-border.js';
 import ConfirmDialog from '../../components/shared/ConfirmDialog/ConfirmDialog.js';
 import { useCurrentUser } from '../../hooks/useCurrentUser.js';
+import { Pencil, Trash2 } from 'lucide-react';
 import '../Vehicle/Vehicle.scss';
 
 
@@ -73,12 +74,12 @@ return (
             <table className="modern-table">
               <thead>
                 <tr>
-                  <th className="text-zinc-400">Localidad</th>
-                  <th className="text-zinc-400">Direccion</th>
-                  <th className="text-zinc-400">Hora de inicio</th>
-                  <th className="text-zinc-400">Hora de cierre</th>
-                  <th className="text-zinc-400">Nombre</th>
-                  <th className="text-zinc-400">Acciones</th>
+                  <th className="text-zinc-400 text-left">Localidad</th>
+                  <th className="text-zinc-400 text-left">Direccion</th>
+                  <th className="text-zinc-400 text-left">Hora de inicio</th>
+                  <th className="text-zinc-400 text-left">Hora de cierre</th>
+                  <th className="text-zinc-400 text-left">Nombre</th>
+                  <th className="text-zinc-400 text-center">Acciones</th>
                 </tr>
               </thead>
                <tbody>
@@ -95,16 +96,18 @@ return (
                           <button
                             type="button"
                             onClick={() => navigate(`/my-parkings/update/${p.id}`)}
-                            className="btn-primary"
+                            className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                            title="Editar"
                           >
-                            Editar datos
+                            <Pencil className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setDeleteTarget(p)}
-                            className="btn-danger"
+                            className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                            title="Dar de baja"
                           >
-                            Eliminar estacionamiento
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </td>

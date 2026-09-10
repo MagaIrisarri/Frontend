@@ -6,6 +6,7 @@ import { ShineBorder } from '../../components/ui/shine-border';
 import { Lottie } from 'lottie-react';
 import { Trash2, LogOut, Pencil } from 'lucide-react';
 import carAnimation from '../../assets/carAnimation.json';
+import ConfirmDialog from '../../components/shared/ConfirmDialog/ConfirmDialog.js';
 import './Vehicle.scss';
 
 export default function VehicleManagement() {
@@ -48,15 +49,20 @@ export default function VehicleManagement() {
     }
   };
 
-  const handleDelete = async (vehicleId: string) => {
-    if (!window.confirm("¿Estás seguro de que querés dar de baja este vehículo?")) return;
-    
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const vehicleId = deleteTarget.id || deleteTarget._id;
+
     try {
       await removeVehicle(vehicleId);
       setVehicles(prev => prev.filter((v: any) => (v.id || v._id) !== vehicleId));
     } catch (error) {
       console.error("Error al dar de baja el vehículo:", error);
       alert("Ocurrió un error al dar de baja el vehículo.");
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -124,11 +130,11 @@ export default function VehicleManagement() {
             <table className="modern-table">
               <thead>
                 <tr>
-                  <th className="text-zinc-400">Patente</th>
-                  <th className="text-zinc-400">Marca</th>
-                  <th className="text-zinc-400">Modelo</th>
-                  <th className="text-zinc-400">Año</th>
-                  <th className="text-zinc-400">Propietario</th>
+                  <th className="text-zinc-400 text-left">Patente</th>
+                  <th className="text-zinc-400 text-left">Marca</th>
+                  <th className="text-zinc-400 text-left">Modelo</th>
+                  <th className="text-zinc-400 text-left">Año</th>
+                  <th className="text-zinc-400 text-left">Propietario</th>
                   <th className="text-zinc-400 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -159,7 +165,7 @@ export default function VehicleManagement() {
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(currentId)}
+                          onClick={() => setDeleteTarget(v)}
                           className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
                           title="Dar de baja"
                         >
@@ -178,6 +184,16 @@ export default function VehicleManagement() {
           ← Volver al Panel de Perfil
         </button>
       </ShineBorder>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Dar de baja vehículo"
+        message={`¿Confirmás que querés dar de baja la patente "${deleteTarget?.plate}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Sí, dar de baja"
+        cancelLabel="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

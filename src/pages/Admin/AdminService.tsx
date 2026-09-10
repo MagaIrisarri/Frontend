@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShineBorder } from '../../components/ui/shine-border';
 import ConfirmDialog from '../../components/shared/ConfirmDialog/ConfirmDialog.js';
+import { Pencil, Trash2 } from 'lucide-react';
 import { getServices, createService, updateService, removeService } from '../../services/Service.js';
 import type { Service, ServiceInput } from '../../types/Service.js';
 import '../Vehicle/Vehicle.scss';
@@ -147,10 +148,10 @@ export default function AdminService() {
             <table className="modern-table">
               <thead>
                 <tr>
-                  <th className="text-zinc-400">Nombre</th>
-                  <th className="text-zinc-400">Estado</th>
-                  <th className="text-zinc-400">Descripcion</th>
-                  <th className="text-zinc-400">Acciones</th>
+                  <th className="text-zinc-400 text-left">Nombre</th>
+                  <th className="text-zinc-400 text-left">Estado</th>
+                  <th className="text-zinc-400 text-left">Descripcion</th>
+                  <th className="text-zinc-400 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,11 +197,21 @@ export default function AdminService() {
                           </>
                         ) : (
                           <>
-                            <button type="button" onClick={() => startEditing(s)} className="btn-primary">
-                              Editar
+                            <button
+                              type="button"
+                              onClick={() => startEditing(s)}
+                              className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                              title="Editar"
+                            >
+                              <Pencil className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={() => setDeleteTarget(s)} className="btn-danger">
-                              Eliminar
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(s)}
+                              className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </>
                         )}
