@@ -344,7 +344,7 @@ export function ReservationBookingModal({
             </div>
             <div>
               <h3 className="text-base font-bold text-zinc-900 dark:text-white leading-tight">
-                {step === 'success' ? 'Â¡Reserva Confirmada!' : `Reservar en ${parking.name}`}
+                {step === 'success' ? '¡Reserva Confirmada!' : `Reservar en ${parking.name}`}
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 mt-0.5">
                 <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
@@ -566,12 +566,12 @@ export function ReservationBookingModal({
           {/* ========================================================= */}
           {step === 'details' && (
             <div className="space-y-3.5 animate-in fade-in">
-              {/* 2. VEHÃCULO SELECCIONADO */}
+              {/* 2. VEHÍCULO SELECCIONADO */}
               <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 text-zinc-900 dark:text-white font-medium">
                   <span className="text-sm">{vehicleInfo.icon}</span>
                   <span className="font-mono font-bold tracking-wide uppercase">{selectedVehicle?.plate}</span>
-                  <span className="text-zinc-400 dark:text-zinc-500">Â·</span>
+                  <span className="text-zinc-400 dark:text-zinc-500">·</span>
                   <span className="text-zinc-600 dark:text-zinc-400">{vehicleInfo.label}</span>
                 </div>
                 <button
@@ -858,7 +858,7 @@ export function ReservationBookingModal({
           )}
 
           {/* ========================================================= */}
-          {/* PASO 3: Ã‰XITO Y TICKET DE CONFIRMACIÃ“N */}
+          {/* PASO 3: EXITO Y TICKET DE CONFIRMACION */}
           {/* ========================================================= */}
           {step === 'success' && (
             <div className="py-4 flex flex-col items-center justify-center text-center space-y-4 animate-in zoom-in-95 duration-200">
@@ -868,7 +868,7 @@ export function ReservationBookingModal({
 
               <div className="max-w-md space-y-1">
                 <h4 className="text-lg font-extrabold text-zinc-900 dark:text-white">
-                  Â¡Reserva Exitosa!
+                  ¡Reserva Exitosa!
                 </h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Tu plaza fue asignada automáticamente y está garantizada para tu llegada.
@@ -973,7 +973,7 @@ export function ReservationBookingModal({
                   {isSubmitting
                     ? 'Confirmando...'
                     : isHorarioValid
-                    ? `Confirmar reserva Â· $${grandTotal.toLocaleString('es-AR')}`
+                    ? `Confirmar reserva · $${grandTotal.toLocaleString('es-AR')}`
                     : 'Confirmar reserva'}
                 </span>
               </button>

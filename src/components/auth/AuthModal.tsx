@@ -405,7 +405,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
 
             <p className="text-center text-xs text-zinc-500 pt-2">
-              Â¿No tenés una cuenta?{' '}
+              ¿No tenés una cuenta?{' '}
               <button
                 type="button"
                 onClick={() => setActiveTab('register')}
@@ -676,7 +676,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </form>
 
             <p className="text-center text-xs text-zinc-500 pt-1">
-              Â¿Ya tenés una cuenta?{' '}
+              ¿Ya tenés una cuenta?{' '}
               <button
                 type="button"
                 onClick={() => setActiveTab('login')}

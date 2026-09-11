@@ -53,50 +53,17 @@ export const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {/* Layout de 2 Columnas Balanceadas */}
+        {/* Layout de 2 Columnas */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* =========================================================
-              COLUMNA 1 (Izquierda): Datos Personales y Fiscales
+              COLUMNA 1 (Izquierda): Datos Personales 
              ========================================================= */}
           <div className="lg:col-span-6 space-y-6">
             <PersonalDataCard {...profileProps} />
 
             {isOwner && <FiscalDataCard {...profileProps} />}
 
-            {/* Accesos a flota para cliente */}
-            {!isOwner && !isAdmin && (
-              <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-100 dark:border-zinc-800/80 pb-3.5">
-                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
-                    <Car className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Mis Vehículos</h2>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Administrá tus patentes registradas</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2.5">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/vehicles/new')}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4 stroke-[2.5]" />
-                    <span>Registrar Nuevo Vehículo</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/vehicles')}
-                    className="w-full flex items-center justify-between py-2 px-4 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 text-sm font-medium transition-colors cursor-pointer"
-                  >
-                    <span>Ver Mis Vehículos</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* =========================================================

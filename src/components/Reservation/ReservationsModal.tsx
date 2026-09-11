@@ -289,7 +289,7 @@ export function ReservationsModal({
                   {(res.status === 'PENDIENTE' || res.status === 'CONFIRMADA') && onCancelReservation && (
                     <div className="pt-2 border-t border-zinc-200/70 dark:border-zinc-800 flex items-center justify-between">
                       <span className="text-[11px] text-zinc-400">
-                        Â¿No vas a utilizar la cochera?
+                        ¿No vas a utilizar la cochera?
                       </span>
                       <button
                         type="button"
@@ -311,7 +311,7 @@ export function ReservationsModal({
         </div>
       </div>
 
-      {/* MODAL DE CONFIRMACIÃ“N DE BAJA */}
+      {/* MODAL DE CONFIRMACIÓN DE BAJA */}
       {confirmingReservation && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70  animate-in fade-in">
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
@@ -321,7 +321,7 @@ export function ReservationsModal({
               </div>
               <div>
                 <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                  Â¿Dar de baja esta reserva?
+                  ¿Dar de baja esta reserva?
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Esta acción liberará la plaza inmediatamente
@@ -361,7 +361,7 @@ export function ReservationsModal({
             </div>
 
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
-              âš ï¸ La plaza asignada quedará disponible de inmediato para otros conductores.
+              La plaza asignada quedará disponible de inmediato para otros conductores.
             </div>
 
             {cancelError && (

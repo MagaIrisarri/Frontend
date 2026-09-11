@@ -171,7 +171,7 @@ export const VehicleManagerModal: React.FC<VehicleManagerModalProps> = ({
       };
 
       const res = await createVehicle(userId, payload);
-      setSuccess('Â¡Vehículo registrado con éxito!');
+      setSuccess('¡Vehículo registrado con éxito!');
       await loadVehicles();
       if (onVehicleCreated) {
         onVehicleCreated(res?.data || res?.vehicle || res);
@@ -209,7 +209,7 @@ export const VehicleManagerModal: React.FC<VehicleManagerModalProps> = ({
       };
 
       await updateVehicle(editingVehicleId, payload);
-      setSuccess('Â¡Vehículo actualizado correctamente!');
+      setSuccess('¡Vehículo actualizado correctamente!');
       await loadVehicles();
       if (onVehiclesUpdated) {
         onVehiclesUpdated();
@@ -315,15 +315,7 @@ export const VehicleManagerModal: React.FC<VehicleManagerModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   Tus Vehículos ({vehicles.length})
-                </span>
-                <button
-                  type="button"
-                  onClick={handleStartCreate}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Nuevo Vehículo</span>
-                </button>
+                </span>        
               </div>
 
               {vehicles.length === 0 ? (
@@ -334,9 +326,9 @@ export const VehicleManagerModal: React.FC<VehicleManagerModalProps> = ({
                   <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-1">
                     No tenés vehículos registrados
                   </h4>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto mb-4">
+                  <h4 className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto mb-4">
                     Agregá tus autos, motos o camionetas para reservar lugares de forma rápida.
-                  </p>
+                  </h4>
                   <button
                     type="button"
                     onClick={handleStartCreate}
@@ -561,7 +553,7 @@ export const VehicleManagerModal: React.FC<VehicleManagerModalProps> = ({
       <ConfirmDialog
         open={!!deleteTarget}
         title="Dar de baja vehículo"
-        message={`Â¿Confirmás que querés dar de baja la patente "${deleteTarget?.plate}"? Esta acción no se puede deshacer.`}
+        message={`¿Confirmás que querés dar de baja la patente "${deleteTarget?.plate}"? Esta acción no se puede deshacer.`}
         confirmLabel="Sí, dar de baja"
         cancelLabel="Cancelar"
         onConfirm={confirmDeleteVehicle}
