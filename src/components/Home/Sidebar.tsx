@@ -79,7 +79,7 @@ export const Sidebar: React.FC<any> = (props: any) => {
               <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 group-hover:bg-blue-600/20 text-zinc-500 dark:text-zinc-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
                 <HomeIcon className="h-4 w-4" />
               </div>
-              <span className="text-xs font-semibold">Inicio (Mapa)</span>
+              <span className="text-xs font-semibold">Inicio</span>
             </div>
           </button>
 
