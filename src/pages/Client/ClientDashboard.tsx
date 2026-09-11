@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+﻿import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Menu,
@@ -98,13 +98,13 @@ export default function ClientDashboard() {
 
       {/* 2. BARRA DE CONTROL SUPERIOR FLOTANTE */}
       <header className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none gap-3">
-        {/* Botón Menú Hamburguesa & Buscador */}
+        {/* BotÃ³n MenÃº Hamburguesa & Buscador */}
         <div className="flex items-center gap-3 pointer-events-auto w-full max-w-md">
           <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
-            className="p-3 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 shadow-xl backdrop-blur-md transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
-            title="Abrir menú de opciones"
+            className="p-3 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 shadow-xl  transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
+            title="Abrir menÃº de opciones"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -117,7 +117,7 @@ export default function ClientDashboard() {
               placeholder="Buscar cochera o zona..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-zinc-900/90 text-sm text-white placeholder-zinc-400 border border-zinc-800 shadow-xl backdrop-blur-md focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-zinc-900/90 text-sm text-white placeholder-zinc-400 border border-zinc-800 shadow-xl  focus:outline-none focus:border-blue-500 transition-colors"
             />
             {searchQuery && (
               <button
@@ -131,12 +131,12 @@ export default function ClientDashboard() {
           </div>
         </div>
 
-        {/* Botón Flotante para ver Lista / Perfil */}
+        {/* BotÃ³n Flotante para ver Lista / Perfil */}
         <div className="flex items-center gap-2 pointer-events-auto">
           <button
             type="button"
             onClick={() => setIsListDrawerOpen(!isListDrawerOpen)}
-            className="hidden md:flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 shadow-xl backdrop-blur-md text-xs font-semibold transition-all cursor-pointer"
+            className="hidden md:flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 shadow-xl  text-xs font-semibold transition-all cursor-pointer"
           >
             <Layers className="h-4 w-4 text-blue-400" />
             <span>{isListDrawerOpen ? 'Ocultar Lista' : `Ver Lista (${filteredParkings.length})`}</span>
@@ -144,7 +144,7 @@ export default function ClientDashboard() {
 
           <Link
             to="/profile"
-            className="flex items-center gap-2 p-2 sm:px-3.5 sm:py-2.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 shadow-xl backdrop-blur-md text-xs font-semibold transition-all"
+            className="flex items-center gap-2 p-2 sm:px-3.5 sm:py-2.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-800 shadow-xl  text-xs font-semibold transition-all"
             title="Mi Perfil"
           >
             <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
@@ -155,16 +155,16 @@ export default function ClientDashboard() {
         </div>
       </header>
 
-      {/* 3. MENÚ LATERAL DESPLEGABLE (DRAWER IZQUIERDO) */}
+      {/* 3. MENs LATERAL DESPLEGABLE (DRAWER IZQUIERDO) */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+          className="fixed inset-0 z-40 bg-black/60  transition-opacity animate-in fade-in"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-80 bg-zinc-900/95 border-r border-zinc-800 shadow-2xl backdrop-blur-xl flex flex-col transition-transform duration-300 ease-out ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-80 bg-zinc-900/95 border-r border-zinc-800 shadow-2xl  flex flex-col transition-transform duration-300 ease-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -206,13 +206,13 @@ export default function ClientDashboard() {
           </div>
         </div>
 
-        {/* Lista de Navegación y CRUDs */}
+        {/* Lista de NavegaciÃ³n y CRUDs */}
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
           <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Gestión y Servicios
+            GestiÃ³n y Servicios
           </div>
 
-          {/* Mis Vehículos */}
+          {/* Mis VehÃ­culos */}
           <Link
             to="/vehicles"
             onClick={() => setIsSidebarOpen(false)}
@@ -223,14 +223,14 @@ export default function ClientDashboard() {
                 <Car className="h-4 w-4" />
               </div>
               <div>
-                <span className="text-sm font-semibold block">Mis Vehículos</span>
+                <span className="text-sm font-semibold block">Mis VehÃ­culos</span>
                 <span className="text-[11px] text-zinc-400">Ver, registrar y modificar</span>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
           </Link>
 
-          {/* Registrar Vehículo Directo */}
+          {/* Registrar VehÃ­culo Directo */}
           <Link
             to="/vehicles/new"
             onClick={() => setIsSidebarOpen(false)}
@@ -241,7 +241,7 @@ export default function ClientDashboard() {
                 <Plus className="h-4 w-4" />
               </div>
               <div>
-                <span className="text-sm font-semibold block">+ Registrar Vehículo</span>
+                <span className="text-sm font-semibold block">+ Registrar VehÃ­culo</span>
                 <span className="text-[11px] text-zinc-400">Agregar nuevo auto o moto</span>
               </div>
             </div>
@@ -267,7 +267,7 @@ export default function ClientDashboard() {
           </Link>
 
           <div className="pt-3 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Exploración
+            ExploraciÃ³n
           </div>
 
           <button
@@ -291,7 +291,7 @@ export default function ClientDashboard() {
           </button>
         </nav>
 
-        {/* Footer Sidebar - Cerrar Sesión */}
+        {/* Footer Sidebar - Cerrar SesiÃ³n */}
         <div className="p-4 border-t border-zinc-800 bg-zinc-950/40">
           <button
             type="button"
@@ -299,18 +299,18 @@ export default function ClientDashboard() {
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-colors cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
-            <span>Cerrar Sesión</span>
+            <span>Cerrar SesiÃ³n</span>
           </button>
         </div>
       </aside>
 
       {/* 4. LISTADO LATERAL DE COCHERAS (SLIDE-OVER DERECHO / DESKTOP) */}
       {isListDrawerOpen && (
-        <aside className="absolute top-20 right-4 bottom-6 z-20 w-96 bg-zinc-900/95 border border-zinc-800 rounded-3xl shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
+        <aside className="absolute top-20 right-4 bottom-6 z-20 w-96 bg-zinc-900/95 border border-zinc-800 rounded-3xl shadow-2xl  flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
           <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white">Estacionamientos ({filteredParkings.length})</h3>
-              <p className="text-[11px] text-zinc-400">Seleccioná uno para ver en el mapa</p>
+              <p className="text-[11px] text-zinc-400">SeleccionÃ¡ uno para ver en el mapa</p>
             </div>
             <button
               type="button"
@@ -376,7 +376,7 @@ export default function ClientDashboard() {
       {/* 5. TARJETA FLOTANTE INFERIOR DE COCHERA SELECCIONADA */}
       {selectedParking && (
         <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[440px] z-30 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="bg-zinc-900/95 border border-zinc-800 rounded-3xl p-4 shadow-2xl backdrop-blur-xl flex flex-col gap-3.5">
+          <div className="bg-zinc-900/95 border border-zinc-800 rounded-3xl p-4 shadow-2xl  flex flex-col gap-3.5">
             <div className="flex gap-3.5">
               {/* Foto de la cochera */}
               <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 bg-zinc-950 border border-zinc-800">
@@ -390,7 +390,7 @@ export default function ClientDashboard() {
                 />
               </div>
 
-              {/* Información */}
+              {/* InformaciÃ³n */}
               <div className="flex-1 min-w-0 flex flex-col justify-between">
                 <div>
                   <div className="flex items-start justify-between gap-2">
@@ -427,7 +427,7 @@ export default function ClientDashboard() {
               </div>
             </div>
 
-            {/* Botón de Acción Principal: Reservar Lugar */}
+            {/* BotÃ³n de AcciÃ³n Principal: Reservar Lugar */}
             <button
               type="button"
               onClick={() => handleOpenReservation(selectedParking)}
@@ -440,7 +440,7 @@ export default function ClientDashboard() {
         </div>
       )}
 
-      {/* 6. MODAL SELECTOR DE VEHÍCULO */}
+      {/* 6. MODAL SELECTOR DE VEHÃCULO */}
       <VehicleSelectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -449,3 +449,4 @@ export default function ClientDashboard() {
     </div>
   );
 }
+

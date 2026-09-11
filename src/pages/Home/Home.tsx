@@ -7,7 +7,7 @@ export const Home: React.FC = () => {
     <section className="relative min-h-[calc(100vh-57px)] w-full flex items-center justify-center overflow-hidden bg-zinc-950 px-6 py-24">
       {/* Contenido principal sobre fondo estático */}
       <div className="relative z-10 max-w-4xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-6 backdrop-blur-sm">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-6 ">
           <Sparkles className="h-3.5 w-3.5" />
           <span>Gestión y Reservas</span>
         </div>

@@ -17,7 +17,7 @@ export default function AdminPanel() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <ShineBorder
-            className="w-full bg-zinc-900/90 border border-zinc-800 p-6 shadow-xl backdrop-blur-md rounded-2xl flex flex-col justify-between"
+            className="w-full bg-zinc-900/90 border border-zinc-800 p-6 shadow-xl  rounded-2xl flex flex-col justify-between"
             color={['#2563EB', '#38BDF8', '#818CF8']}
             borderRadius={16}
             borderWidth={1.5}
@@ -41,7 +41,7 @@ export default function AdminPanel() {
           </ShineBorder>
 
           <ShineBorder
-            className="w-full bg-zinc-900/90 border border-zinc-800 p-6 shadow-xl backdrop-blur-md rounded-2xl flex flex-col justify-between"
+            className="w-full bg-zinc-900/90 border border-zinc-800 p-6 shadow-xl  rounded-2xl flex flex-col justify-between"
             color={['#2563EB', '#38BDF8', '#818CF8']}
             borderRadius={16}
             borderWidth={1.5}

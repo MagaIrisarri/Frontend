@@ -3,6 +3,7 @@ import * as maptilersdk from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { Search, MapPin, Locate } from 'lucide-react';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle, MAPTILER_API_KEY } from '../../config/map.js';
+import { useTheme } from '../../context/ThemeContext';
 
 interface LocationData {
   lat: number;
@@ -19,6 +20,7 @@ interface LocationPickerProps {
 }
 
 export function LocationPicker({ lat, lng, onChangeLocation }: LocationPickerProps) {
+  const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maptilersdk.Map | null>(null);
   const markerRef = useRef<maptilersdk.Marker | null>(null);
@@ -85,11 +87,13 @@ export function LocationPicker({ lat, lng, onChangeLocation }: LocationPickerPro
 
     const map = new maptilersdk.Map({
       container: mapContainerRef.current,
-      style: getMapStyle(),
+      style: getMapStyle(theme),
       center: [initialLng, initialLat],
       zoom: DEFAULT_MAP_ZOOM,
       navigationControl: 'top-right',
     });
+
+    map.on('styleimagemissing', () => {});
 
     const marker = new maptilersdk.Marker({
       draggable: true,
@@ -112,12 +116,27 @@ export function LocationPicker({ lat, lng, onChangeLocation }: LocationPickerPro
     markerRef.current = marker;
 
     return () => {
-      marker.remove();
-      map.remove();
+      try {
+        marker.remove();
+        map.remove();
+      } catch {
+        // Safe unmount
+      }
       mapRef.current = null;
       markerRef.current = null;
     };
   }, []);
+
+  // Actualizar tema del mapa si cambia
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    try {
+      map.setStyle(getMapStyle(theme));
+    } catch {
+      // Ignore style change error if unmounting
+    }
+  }, [theme]);
 
   // Búsqueda de dirección (Geocodificación directa)
   const handleSearch = async (e: React.FormEvent) => {

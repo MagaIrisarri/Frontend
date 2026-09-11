@@ -60,7 +60,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* SECCIÓN 1: DATOS GENERALES */}
+      {/* SECCI"N 1: DATOS GENERALES */}
       <div className="space-y-4">
         <h3 className="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2 border-b border-zinc-800 pb-2">
           <Building2 className="h-4 w-4" />
@@ -104,7 +104,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
         </div>
       </div>
 
-      {/* SECCIÓN 2: UBICACIÓN Y MAPA */}
+      {/* SECCI"N 2: UBICACI"N Y MAPA */}
       <div className="space-y-4 pt-2">
         <h3 className="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2 border-b border-zinc-800 pb-2">
           <MapPin className="h-4 w-4" />
@@ -172,7 +172,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
         </div>
       </div>
 
-      {/* SECCIÓN 3: CAPACIDADES (PLAZAS) */}
+      {/* SECCI"N 3: CAPACIDADES (PLAZAS) */}
       <div className="space-y-4 pt-2">
         <h3 className="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2 border-b border-zinc-800 pb-2">
           <Car className="h-4 w-4" />
@@ -235,7 +235,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
         </div>
       </div>
 
-      {/* SECCIÓN 4: HORARIOS Y RESERVAS */}
+      {/* SECCI"N 4: HORARIOS Y RESERVAS */}
       <div className="space-y-4 pt-2">
         <h3 className="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2 border-b border-zinc-800 pb-2">
           <Clock className="h-4 w-4" />
@@ -333,7 +333,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
         </div>
       </div>
 
-      {/* BOTÓN DE GUARDAR */}
+      {/* BOT"N DE GUARDAR */}
       <button
         type="submit"
         disabled={isSubmitting}

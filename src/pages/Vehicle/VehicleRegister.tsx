@@ -77,7 +77,7 @@ export default function VehicleRegister() {
   return (
     <div className="create-vehicle-container bg-[#faf9f5]">
       <ShineBorder
-        className="create-vehicle-card bg-zinc-900/90 border border-zinc-800 shadow-2xl backdrop-blur-md text-white"
+        className="create-vehicle-card bg-zinc-900/90 border border-zinc-800 shadow-2xl  text-white"
         color={['#2563EB', '#38BDF8', '#818CF8']}
         borderRadius={16}
         borderWidth={1.5}

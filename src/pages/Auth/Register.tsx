@@ -207,7 +207,7 @@ export const Register: React.FC = () => {
 
         {/* Formulario con ShineBorder */}
         <ShineBorder
-          className="w-full bg-zinc-900/90 border border-zinc-800 p-8 shadow-2xl backdrop-blur-md"
+          className="w-full bg-zinc-900/90 border border-zinc-800 p-8 shadow-2xl "
           color={['#2563EB', '#38BDF8', '#818CF8']}
           borderRadius={16}
           borderWidth={1.5}

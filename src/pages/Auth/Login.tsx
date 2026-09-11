@@ -34,7 +34,7 @@ export const Login: React.FC = () => {
       } else if (userData?.type === 'ADMINISTRADOR') {
         navigate('/admin');
       } else {
-        navigate('/dashboard');
+        navigate('/');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Credenciales incorrectas');
@@ -59,7 +59,7 @@ export const Login: React.FC = () => {
 
         {/* Tarjeta con efecto ShineBorder */}
         <ShineBorder
-          className="w-full bg-zinc-900/90 border border-zinc-800 p-8 shadow-2xl backdrop-blur-md"
+          className="w-full bg-zinc-900/90 border border-zinc-800 p-8 shadow-2xl "
           color={['#e3e0ec', '#8915a0', '#e3e0ec']}
           borderRadius={16}
           borderWidth={1.5}

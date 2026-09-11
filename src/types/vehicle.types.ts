@@ -1,4 +1,4 @@
-export interface Brand {
+﻿export interface Brand {
   id: string;
   name: string;
 }
@@ -54,5 +54,5 @@ export interface UpdateVehicle {
   year: number;
   brandId: string;
   modelId: string;
-  insuranceId: string;
+  insuranceId?: string;
 }

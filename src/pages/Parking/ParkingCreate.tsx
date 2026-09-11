@@ -83,7 +83,7 @@ export default function ParkingsCreate() {
 
         {/* Tarjeta principal con ShineBorder */}
         <ShineBorder
-          className="w-full bg-zinc-900/90 border border-zinc-800 p-6 md:p-8 shadow-2xl backdrop-blur-md"
+          className="w-full bg-zinc-900/90 border border-zinc-800 p-6 md:p-8 shadow-2xl "
           color={['#e3e0ec', '#8915a0', '#e3e0ec']}
           borderRadius={16}
           borderWidth={1.5}

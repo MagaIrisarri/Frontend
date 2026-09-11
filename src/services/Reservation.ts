@@ -6,11 +6,16 @@ const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 export const createReservation = (payload: {
   vehicleId: string;
   parkingId: string;
-  parkingSpaceId: string;
+  parkingSpaceId?: string;
   startTime: Date;
   endTime: Date;
+  serviceIds?: string[];
 }) => api.post('/api/reservations/', {
   ...payload,
   startTime: toLocalISOString(payload.startTime),
   endTime: toLocalISOString(payload.endTime),
 }).then(res => res.data);
+
+export const getReservationsByClient = (clientId: string) => api.get('/api/reservations/client/' + clientId).then(res => res.data);
+export const getReservationsByOwner = (ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
+export const cancelReservation = (reservationId: string, userId: string) => api.delete('/api/reservations/' + reservationId + '/cancel', { data: { userId } }).then(res => res.data);

@@ -40,7 +40,7 @@ export default function VehicleSelect() {
 
   const handleSelect = (v: Vehicle) => {
     const backendType = normalizeVehicleType(v.vehicleType);
-    navigate('/parking', {
+    navigate('/', {
       state: { vehicleId: v.id, vehicleType: backendType },
     });
   };
@@ -48,7 +48,7 @@ export default function VehicleSelect() {
   return (
       <div className="vehicle-management-container bg-zinc-950">
         <ShineBorder
-          className="vehicle-management-card bg-zinc-900/90 border border-zinc-800 shadow-2xl backdrop-blur-md text-white"
+          className="vehicle-management-card bg-zinc-900/90 border border-zinc-800 shadow-2xl  text-white"
           color={['#2563EB', '#38BDF8', '#818CF8']}
           borderRadius={16}
           borderWidth={1.5}

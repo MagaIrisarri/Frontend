@@ -60,7 +60,7 @@ export default function ParkingSearchPage() {
     <div className="flex h-[calc(100vh-4rem)] w-full max-w-[1600px] mx-auto bg-zinc-950 overflow-hidden">
       {/* Barra lateral de cocheras */}
       <aside className="w-[420px] bg-zinc-900 flex flex-col border-r border-zinc-800 shrink-0">
-        <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/90 backdrop-blur-md">
+        <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/90 ">
           <div>
             <h2 className="text-base font-bold text-white">Cocheras Disponibles</h2>
             <p className="text-xs text-zinc-400">

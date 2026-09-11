@@ -12,11 +12,17 @@ export interface Parking {
   maxReservationHours: number;
   reservationMargin: number;
   isActive: boolean;
+  state?: string;
   name: string;
   latitude: number; 
   longitude: number;
   image?: string;
   imageUrl?: string;
+  prices?: any[];
+  services?: any[];
+  availableCarSpaces?: number;
+  availableMotorcycleSpaces?: number;
+  availableTruckSpaces?: number;
 }
 
 export interface CreateParkingInput{
@@ -58,5 +64,6 @@ export interface UpdateParkingInput{
 
 
   
+
 
 

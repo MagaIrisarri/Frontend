@@ -73,7 +73,7 @@ export function ParkingSpaceMap() {
 
   useEffect(() => {
     if (!state?.vehicleId || !state?.vehicleType) {
-      navigate('/parking');
+      navigate('/');
       return;
     }
   }, [state]);
