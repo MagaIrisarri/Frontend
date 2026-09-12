@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Star, MapPin, ArrowLeft, Clock, ChevronRight } from 'lucide-react';
-import type { Parking } from '../../types/Parking';
-import type { VehicleFilterType } from '../../types/MapFilters';
+import type { Parking } from '../../types/parking.types';
+import type { VehicleFilterType } from '../../types/mapFilters.types';
 import { formatSpotPrice, matchesVehicleCategory } from '../../utils/parkingPriceUtils';
 
 interface ListDrawerProps {

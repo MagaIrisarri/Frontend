@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ParkingSpace, ParkingSpaceState } from '../types/ParkingSpace.js';
+import type { ParkingSpace, ParkingSpaceState } from '../types/parkingSpace.types';
 import { toLocalISOString } from '../utils/date.js';
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 

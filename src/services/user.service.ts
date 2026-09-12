@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { formInitialState } from "../types/UserType.data.ts";
+import type { formInitialState } from "../types/user.types";
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 

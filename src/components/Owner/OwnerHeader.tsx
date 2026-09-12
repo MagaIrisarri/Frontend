@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, RefreshCw, ExternalLink, Calendar, User, LogOut } from 'lucide-react';
-import { ThemeToggle } from '../shared/ThemeToggle';
+import { ThemeToggle } from '../Shared/ThemeToggle';
 import type { OwnerDashboardProps } from '../../hooks/useOwnerDashboard';
 
 export const OwnerHeader: React.FC<OwnerDashboardProps> = ({

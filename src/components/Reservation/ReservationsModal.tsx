@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, MapPin, Car, CheckCircle, AlertTriangle, Trash2, AlertCircle } from 'lucide-react';
-import type { Reservation } from '../../types/Reservation';
+import type { Reservation } from '../../types/reservation.types';
 
 interface ReservationsModalProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, SlidersHorizontal, Check, X, Car, Bike, Truck, Tag } from 'lucide-react';
-import type { VehicleFilterType } from '../../types/MapFilters';
+import type { VehicleFilterType } from '../../types/mapFilters.types';
 
 interface VehicleOption {
   type: VehicleFilterType;

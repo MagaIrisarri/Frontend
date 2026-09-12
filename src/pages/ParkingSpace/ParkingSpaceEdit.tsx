@@ -6,7 +6,7 @@ import { ParkingSpaceToolbar } from '../../components/ParkingSpace/ParkingSpaceT
 import { ParkingSpaceGrid } from '../../components/ParkingSpace/ParkingSpaceGrid';
 import { ParkingSpaceDrawer } from '../../components/ParkingSpace/ParkingSpaceDrawer';
 import { AddSpaceModal } from '../../components/ParkingSpace/AddSpaceModal';
-import ConfirmDialog from '../../components/shared/ConfirmDialog/ConfirmDialog';
+import ConfirmDialog from '../../components/Shared/ConfirmDialog/ConfirmDialog';
 
 export function ParkingSpaceEdit() {
   const spaceProps = useParkingSpaceEdit();

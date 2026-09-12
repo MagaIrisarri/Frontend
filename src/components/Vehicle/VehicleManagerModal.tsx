@@ -21,10 +21,10 @@ import {
   getBrands,
   getModels,
   getInsurances,
-} from '../../services/vehicleService';
+} from '../../services/vehicle.service';
 import type { Vehicle } from '../../types/vehicle.types';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
-import ConfirmDialog from '../shared/ConfirmDialog/ConfirmDialog';
+import ConfirmDialog from '../Shared/ConfirmDialog/ConfirmDialog';
 
 interface VehicleManagerModalProps {
   isOpen: boolean;

@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getParking, getOneParking } from '../services/Parking';
-import { getReservationsByClient, cancelReservation } from '../services/Reservation';
-import type { Parking } from '../types/Parking';
-import type { MapFilters, VehicleFilterType } from '../types/MapFilters';
-import { DEFAULT_MAP_FILTERS } from '../types/MapFilters';
-import { useCurrentUser } from './useCurrentUser';
+import { getParking, getOneParking } from '../services/parking.service';
+import { getReservationsByClient, cancelReservation } from '../services/reservation.service';
+import type { Parking } from '../types/parking.types';
+import type { MapFilters, VehicleFilterType } from '../types/mapFilters.types';
+import { DEFAULT_MAP_FILTERS } from '../types/mapFilters.types';
+import { useAuthStore } from '../stores/authStore';
 import { useTheme } from '../context/ThemeContext';
 
 export interface UserNotification {
@@ -19,10 +19,11 @@ export interface UserNotification {
 
 export function useHomePage() {
   const navigate = useNavigate();
-  const user = useCurrentUser();
+  const user = useAuthStore((state) => state.user);
+  const isOwner = useAuthStore((state) => state.isOwner);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
+  const logout = useAuthStore((state) => state.logout);
   const { theme } = useTheme();
-  const isOwner = user?.type === 'DUEÑO';
-  const isAdmin = user?.type === 'ADMINISTRADOR';
 
   const [parkings, setParkings] = useState<Parking[]>([]);
   const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
@@ -200,13 +201,10 @@ export function useHomePage() {
   }, []);
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('token');
-    window.dispatchEvent(new Event('auth-change'));
+    logout();
     setIsUserMenuOpen(false);
     setIsSidebarOpen(false);
-  }, []);
+  }, [logout]);
 
 
   const handleOpenReservation = useCallback((parking: Parking) => {

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, memo, useCallback } from 'react';
 import * as maptilersdk from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
-import type { Parking } from '../../types/Parking.js';
-import type { VehicleFilterType } from '../../types/MapFilters.js';
+import type { Parking } from '../../types/parking.types';
+import type { VehicleFilterType } from '../../types/mapFilters.types';
 import { formatSpotPrice } from '../../utils/parkingPriceUtils.js';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle } from '../../config/map.js';
 import { useTheme } from '../../context/ThemeContext';
@@ -216,8 +216,13 @@ function MapViewComponent({
     };
   }, []);
 
-  // Actualizar tema del mapa si cambia
+  // Actualizar tema del mapa si cambia (ignorar primer render ya que Map() ya recibe el estilo inicial)
+  const isFirstThemeRun = useRef(true);
   useEffect(() => {
+    if (isFirstThemeRun.current) {
+      isFirstThemeRun.current = false;
+      return;
+    }
     const map = mapRef.current;
     if (!map) return;
     try {

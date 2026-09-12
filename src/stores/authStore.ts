@@ -1,29 +1,43 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface CurrentUser {
   id?: string;
   _id?: string;
   type?: string;
+  role?: string;
   name?: string;
   last_name?: string;
   email?: string;
   phone?: string;
+  dni?: string;
+  date_of_birth?: string;
   [key: string]: any;
 }
 
-interface AuthState {
+export type NormalizedRole = 'DUEÑO' | 'ADMINISTRADOR' | 'EMPLEADO' | 'CLIENTE' | '';
+
+export function normalizeRole(roleOrType?: string): NormalizedRole {
+  if (!roleOrType) return '';
+  const r = roleOrType.toUpperCase().trim();
+  if (r.includes('DUE') || r.includes('OWNER')) return 'DUEÑO';
+  if (r.includes('ADMIN')) return 'ADMINISTRADOR';
+  if (r.includes('EMP')) return 'EMPLEADO';
+  if (r.includes('CLI') || r.includes('USER') || r.includes('CLIENT')) return 'CLIENTE';
+  return '';
+}
+
+export interface AuthState {
   user: CurrentUser | null;
-  token: string | null;
   isAuthenticated: boolean;
   isOwner: boolean;
   isAdmin: boolean;
   isClient: boolean;
-  setUser: (user: CurrentUser | null, token?: string | null) => void;
+  setUser: (user: CurrentUser | null) => void;
   logout: () => void;
-  refreshUser: () => void;
 }
 
-function readStoredUser(): CurrentUser | null {
+function getInitialUser(): CurrentUser | null {
   try {
     const raw = localStorage.getItem('user');
     if (!raw) return null;
@@ -34,81 +48,86 @@ function readStoredUser(): CurrentUser | null {
   }
 }
 
-function readStoredToken(): string | null {
-  return localStorage.getItem('token') || localStorage.getItem('parkflow_token');
-}
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: getInitialUser(),
+      isAuthenticated: !!getInitialUser(),
+      isOwner: normalizeRole(getInitialUser()?.type || getInitialUser()?.role) === 'DUEÑO',
+      isAdmin: normalizeRole(getInitialUser()?.type || getInitialUser()?.role) === 'ADMINISTRADOR',
+      isClient:
+        !!getInitialUser() &&
+        normalizeRole(getInitialUser()?.type || getInitialUser()?.role) !== 'DUEÑO' &&
+        normalizeRole(getInitialUser()?.type || getInitialUser()?.role) !== 'ADMINISTRADOR',
 
-export const useAuthStore = create<AuthState>((set, get) => {
-  const initialUser = readStoredUser();
-  const initialToken = readStoredToken();
-  const userType = (initialUser?.type || '').toUpperCase();
-
-  return {
-    user: initialUser,
-    token: initialToken,
-    isAuthenticated: !!initialUser,
-    isOwner: userType.includes('DUE') || userType.includes('OWNER'),
-    isAdmin: userType.includes('ADMIN'),
-    isClient: !!initialUser && !userType.includes('DUE') && !userType.includes('ADMIN'),
-
-    setUser: (user, token) => {
-      if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
-        if (user.id || user._id) {
-          localStorage.setItem('parkflow_user_id', (user.id || user._id)!);
+      setUser: (user: CurrentUser | null) => {
+        if (!user) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('parkflow_user_id');
+          localStorage.removeItem('user_id');
+          localStorage.removeItem('token');
+          localStorage.removeItem('parkflow_token');
+          set({
+            user: null,
+            isAuthenticated: false,
+            isOwner: false,
+            isAdmin: false,
+            isClient: false,
+          });
+          return;
         }
-      } else {
+
+        const rawType = user.type || user.role || 'CLIENTE';
+        const normalized = normalizeRole(rawType);
+        const enrichedUser: CurrentUser = {
+          ...user,
+          type: normalized || rawType,
+        };
+
+        localStorage.setItem('user', JSON.stringify(enrichedUser));
+        const userId = enrichedUser.id || enrichedUser._id;
+        if (userId) {
+          localStorage.setItem('parkflow_user_id', userId);
+          localStorage.setItem('user_id', userId);
+        }
+
+        set({
+          user: enrichedUser,
+          isAuthenticated: true,
+          isOwner: normalized === 'DUEÑO',
+          isAdmin: normalized === 'ADMINISTRADOR',
+          isClient: normalized === 'CLIENTE' || !normalized,
+        });
+      },
+
+      logout: () => {
         localStorage.removeItem('user');
         localStorage.removeItem('parkflow_user_id');
-      }
-
-      if (token !== undefined) {
-        if (token) {
-          localStorage.setItem('token', token);
-        } else {
-          localStorage.removeItem('token');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('token');
+        localStorage.removeItem('parkflow_token');
+        set({
+          user: null,
+          isAuthenticated: false,
+          isOwner: false,
+          isAdmin: false,
+          isClient: false,
+        });
+      },
+    }),
+    {
+      name: 'parkflow_auth_session',
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.user) {
+          const normalized = normalizeRole(state.user.type || state.user.role);
+          state.isAuthenticated = true;
+          state.isOwner = normalized === 'DUEÑO';
+          state.isAdmin = normalized === 'ADMINISTRADOR';
+          state.isClient = normalized === 'CLIENTE' || !normalized;
         }
-      }
-
-      const type = (user?.type || '').toUpperCase();
-      set({
-        user,
-        token: token ?? get().token,
-        isAuthenticated: !!user,
-        isOwner: type.includes('DUE') || type.includes('OWNER'),
-        isAdmin: type.includes('ADMIN'),
-        isClient: !!user && !type.includes('DUE') && !type.includes('ADMIN'),
-      });
-    },
-
-    logout: () => {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('parkflow_user_id');
-      localStorage.removeItem('parkflow_token');
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isOwner: false,
-        isAdmin: false,
-        isClient: false,
-      });
-    },
-
-    refreshUser: () => {
-      const u = readStoredUser();
-      const t = readStoredToken();
-      const type = (u?.type || '').toUpperCase();
-      set({
-        user: u,
-        token: t,
-        isAuthenticated: !!u,
-        isOwner: type.includes('DUE') || type.includes('OWNER'),
-        isAdmin: type.includes('ADMIN'),
-        isClient: !!u && !type.includes('DUE') && !type.includes('ADMIN'),
-      });
-    },
-  };
-});
+      },
+    }
+  )
+);
 

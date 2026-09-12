@@ -3,9 +3,9 @@ import { ReservationBookingModal } from '../../components/Reservation/Reservatio
 import { VehicleManagerModal } from '../../components/Vehicle/VehicleManagerModal';
 import { ReservationsModal } from '../../components/Reservation/ReservationsModal';
 import { FavoritesModal } from '../../components/Parking/FavoritesModal';
-import { NotificationsModal } from '../../components/shared/NotificationsModal';
+import { NotificationsModal } from '../../components/Shared/NotificationsModal';
 import { SupportModal } from '../../components/Home/SupportModal';
-import { AuthModal } from '../../components/auth/AuthModal';
+import { AuthModal } from '../../components/Auth/AuthModal';
 
 export const HomeModalManager: React.FC<any> = (props: any) => {
   const {

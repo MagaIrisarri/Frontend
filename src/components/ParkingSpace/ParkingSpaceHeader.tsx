@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Building2, ChevronDown, RefreshCw, Plus } from 'lucide-react';
-import { ThemeToggle } from '../shared/ThemeToggle';
+import { ThemeToggle } from '../Shared/ThemeToggle';
 import type { ParkingSpaceEditProps } from '../../hooks/useParkingSpaceEdit';
 
 export const ParkingSpaceHeader: React.FC<ParkingSpaceEditProps> = ({

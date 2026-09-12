@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { getUserId, updateUser, changePassword, removeUser } from '../services/User';
-import { getParkingsByOwner } from '../services/Parking';
+import { getUserId, updateUser, changePassword, removeUser } from '../services/user.service';
+import { getParkingsByOwner } from '../services/parking.service';
 
 export function useProfile() {
   const navigate = useNavigate();

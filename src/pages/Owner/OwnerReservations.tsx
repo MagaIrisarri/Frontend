@@ -19,13 +19,13 @@ import {
   Trash2,
   AlertTriangle,
 } from 'lucide-react';
-import { ThemeToggle } from '../../components/shared/ThemeToggle';
+import { ThemeToggle } from '../../components/Shared/ThemeToggle';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { useTheme } from '../../context/ThemeContext';
-import { getReservationsByOwner, cancelReservation } from '../../services/Reservation';
-import { getParkingsByOwner } from '../../services/Parking';
-import type { Reservation } from '../../types/Reservation';
-import type { Parking } from '../../types/Parking';
+import { getReservationsByOwner, cancelReservation } from '../../services/reservation.service';
+import { getParkingsByOwner } from '../../services/parking.service';
+import type { Reservation } from '../../types/reservation.types';
+import type { Parking } from '../../types/parking.types';
 
 export const OwnerReservations: React.FC = () => {
   const navigate = useNavigate();
@@ -349,9 +349,9 @@ export const OwnerReservations: React.FC = () => {
           </div>
         </div>
 
-        {/* Planilla Principal con ShineBorder */}
+        {/* Planilla Principal */}
         <div
-          className="w-full bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 p-6 md:p-8 shadow-2xl  rounded-3xl"
+          className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 md:p-8 shadow-sm rounded-3xl"
         >
           {/* Cabecera del Reporte */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800 mb-6">

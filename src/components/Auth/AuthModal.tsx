@@ -14,7 +14,8 @@ import {
   EyeOff,
   Car,
 } from 'lucide-react';
-import { loginUser } from '@/services/User.js';
+import { loginUser } from '@/services/user.service';
+import { useAuthStore } from '@/stores/authStore';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -169,14 +170,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       const data = await loginUser(loginEmail.trim(), loginPassword);
       const userData = data.user || data.data;
-      const userId = userData?.id || userData?._id;
 
-      localStorage.setItem('user', JSON.stringify(userData));
-      if (userId) {
-        localStorage.setItem('user_id', userId);
-      }
-
-      window.dispatchEvent(new Event('auth-change'));
+      useAuthStore.getState().setUser(userData);
       if (onSuccess) onSuccess(userData);
       onClose();
     } catch (err: any) {
@@ -261,14 +256,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       // Auto-login tras registro exitoso
       const loginData = await loginUser(payload.email, payload.password);
       const userData = loginData.user || loginData.data;
-      const userId = userData?.id || userData?._id;
 
-      localStorage.setItem('user', JSON.stringify(userData));
-      if (userId) {
-        localStorage.setItem('user_id', userId);
-      }
-
-      window.dispatchEvent(new Event('auth-change'));
+      useAuthStore.getState().setUser(userData);
       if (onSuccess) onSuccess(userData);
       onClose();
     } catch (err: any) {

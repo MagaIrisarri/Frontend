@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { TopNavBar } from './topNavBar.js';
+import { TopNavBar } from './TopNavBar';
 
 export function AppLayout() {
   return (

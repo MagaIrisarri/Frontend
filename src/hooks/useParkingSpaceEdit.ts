@@ -5,12 +5,12 @@ import {
   updateParkingSpace,
   removeParkingSpace,
   createParkingSpace,
-} from '../services/ParkingSpace';
-import { getOneParking, getParkingsByOwner } from '../services/Parking';
-import { getReservationsByOwner } from '../services/Reservation';
+} from '../services/parkingSpace.service';
+import { getOneParking, getParkingsByOwner } from '../services/parking.service';
+import { getReservationsByOwner } from '../services/reservation.service';
 import { useAuthStore } from '../stores/authStore';
-import type { Parking } from '../types/Parking';
-import type { ParkingSpace } from '../types/ParkingSpace';
+import type { Parking } from '../types/parking.types';
+import type { ParkingSpace } from '../types/parkingSpace.types';
 
 export function useParkingSpaceEdit() {
   const { id } = useParams<{ id: string }>();

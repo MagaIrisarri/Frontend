@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getParkingsByOwner } from '../services/Parking';
-import { getReservationsByOwner } from '../services/Reservation';
+import { getParkingsByOwner } from '../services/parking.service';
+import { getReservationsByOwner } from '../services/reservation.service';
 import { useAuthStore } from '../stores/authStore';
-import type { Parking } from '../types/Parking';
+import type { Parking } from '../types/parking.types';
 
 export interface BranchStat {
   parking: Parking;

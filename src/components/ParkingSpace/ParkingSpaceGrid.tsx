@@ -1,7 +1,7 @@
 import React from 'react';
 import { Car, Bike, Truck } from 'lucide-react';
 import type { ParkingSpaceEditProps } from '../../hooks/useParkingSpaceEdit';
-import type { ParkingSpace } from '../../types/ParkingSpace';
+import type { ParkingSpace } from '../../types/parkingSpace.types';
 
 export const ParkingSpaceGrid: React.FC<ParkingSpaceEditProps> = ({
   filteredSpaces,

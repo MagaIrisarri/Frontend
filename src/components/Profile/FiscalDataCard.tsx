@@ -22,7 +22,7 @@ export const FiscalDataCard: React.FC<ProfileProps> = ({
 
       <form onSubmit={handleSaveFiscal} className="space-y-3.5">
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Razón Social o Nombre Fantasía</label>
+          <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Razón Social</label>
           <input
             type="text"
             value={fiscalData.businessName}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, Search, X, Layers, Building2, HelpCircle, User, Settings, Bell, LogOut } from 'lucide-react';
-import { ThemeToggle } from '../shared/ThemeToggle';
+import { ThemeToggle } from '../Shared/ThemeToggle';
 import { VehicleMapFilter } from '../Parking/VehicleMapFilter';
 
 export const TopBar: React.FC<any> = (props: any) => {

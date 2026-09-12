@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import VehicleForm from '../../components/Vehicle/VehicleForm';
-import { getOneVehicle, updateVehicle } from '../../services/vehicleService';
+import { getOneVehicle, updateVehicle } from '../../services/vehicle.service';
 import type { UpdateVehicle } from '../../types/vehicle.types';
 import '../Vehicle/Vehicle.scss';
 import { formInitialState } from '../../components/Vehicle/VehicleForm.data';

@@ -25,7 +25,7 @@ export interface Parking {
   availableTruckSpaces?: number;
 }
 
-export interface CreateParkingInput{
+export interface CreateParkingInput {
   locality: string;
   postalCode: string;
   address: string;
@@ -40,11 +40,12 @@ export interface CreateParkingInput{
   name: string;
   latitude: number; 
   longitude: number;
-  image: string;
-  ownerId: string;
+  image?: string;
+  imageUrl?: string;
+  ownerId?: string;
 }
 
-export interface UpdateParkingInput{
+export interface UpdateParkingInput {
   locality: string;
   postalCode: string;
   address: string;
@@ -59,7 +60,8 @@ export interface UpdateParkingInput{
   name: string;
   latitude: number; 
   longitude: number;
-  image: string;
+  image?: string;
+  imageUrl?: string;
 }
 
 

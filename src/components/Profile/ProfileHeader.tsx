@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft, LogOut } from 'lucide-react';
-import { ThemeToggle } from '../shared/ThemeToggle';
+import { ThemeToggle } from '../Shared/ThemeToggle';
 import type { ProfileProps } from '../../hooks/useProfile';
 
 export const ProfileHeader: React.FC<ProfileProps> = ({

@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ServicePrice } from '../types/ServicePrice.js';
+import type { ServicePrice } from '../types/servicePrice.types';
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 export const getParkingServices = (parkingId: string) =>

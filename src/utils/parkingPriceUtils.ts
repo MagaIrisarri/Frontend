@@ -1,5 +1,5 @@
-﻿import type { Parking } from '../types/Parking';
-import type { VehicleFilterType } from '../types/MapFilters';
+﻿import type { Parking } from '../types/parking.types';
+import type { VehicleFilterType } from '../types/mapFilters.types';
 
 export const matchesVehicleCategory = (
   typeStr?: string,

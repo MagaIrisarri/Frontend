@@ -15,15 +15,16 @@ import {
   MapPin,
   Check,
 } from 'lucide-react';
-import { getUserVehicle } from '../../services/vehicleService';
-import { getPriceParking } from '../../services/Parking';
-import { getParkingServices } from '../../services/ServicePrice';
-import { createReservation } from '../../services/Reservation';
-import type { Parking } from '../../types/Parking';
+import { getUserVehicle } from '../../services/vehicle.service';
+import { getPriceParking } from '../../services/parking.service';
+import { getParkingServices } from '../../services/servicePrice.service';
+import { createReservation } from '../../services/reservation.service';
+import type { Parking } from '../../types/parking.types';
 import type { Vehicle } from '../../types/vehicle.types';
-import type { ServicePrice } from '../../types/ServicePrice';
-import type { VehicleFilterType } from '../../types/MapFilters';
+import type { ServicePrice } from '../../types/servicePrice.types';
+import type { VehicleFilterType } from '../../types/mapFilters.types';
 import { matchesVehicleCategory } from '../../utils/parkingPriceUtils';
+import { useAuthStore } from '../../stores/authStore';
 
 interface ReservationBookingModalProps {
   isOpen: boolean;
@@ -193,9 +194,8 @@ export function ReservationBookingModal({
 
       // Cargar vehículos
       setLoadingVehicles(true);
-      const userId =
-        localStorage.getItem('user_id') ||
-        JSON.parse(localStorage.getItem('user') || '{}')?.id;
+      const currentUser = useAuthStore.getState().user;
+      const userId = currentUser?.id || currentUser?._id;
 
       if (userId) {
         getUserVehicle(userId)

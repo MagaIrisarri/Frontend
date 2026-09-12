@@ -1,52 +1,35 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
 import HomePage from './pages/Home/HomePage';
-import { Login } from './pages/Auth/Login';
-import { Register } from './pages/Auth/Register';
 import MyParkings from './pages/Parking/MyParkings';
 import ParkingCreate from './pages/Parking/ParkingCreate';
 import ProfilePage from './pages/Profile/ProfilePage';
 import VehicleManagement from './pages/Vehicle/VehicleManagement';
 import VehicleRegister from './pages/Vehicle/VehicleRegister';
 import VehicleEdit from './pages/Vehicle/VehicleEdit';
-import { AppLayout } from './components/layout/appLayout';
+import { AppLayout } from './components/Layout/AppLayout';
 import VehicleSelect from './pages/Vehicle/VehicleSelect';
 import { ParkingSpaceMap } from './pages/ParkingSpace/ParkingSpaceMap';
 import EditParkingForm from './pages/Parking/EditParkingForm';
 import OwnerDashboard from './pages/Owner/OwnerDashboard';
 import OwnerReservations from './pages/Owner/OwnerReservations';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { PublicRoute } from './components/auth/PublicRoute';
-import AdminPanel from './pages/Admin/AdminPanel.js';
-import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes.js';
-import AdminService from './pages/Admin/AdminService.js';
-import { ParkingSpaceEdit } from './pages/ParkingSpace/ParkingSpaceEdit.js';
+import { ProtectedRoute } from './components/Auth/ProtectedRoute';
+import AdminPanel from './pages/Admin/AdminPanel';
+import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes';
+import AdminService from './pages/Admin/AdminService';
+import { ParkingSpaceEdit } from './pages/ParkingSpace/ParkingSpaceEdit';
 
 export function App() {
-  useEffect(() => {
-    // Escuchar cambios en otras pestañas para cerrar sesión automáticamente
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'user' && !e.newValue) {
-        window.location.href = '/login';
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
   return (
     <BrowserRouter>
       <Routes>
         {/* Ruta Principal: Mapa y Dashboard Unificado */}
         <Route path="/" element={<HomePage />} />
 
-        {/* Redirecciones de rutas obsoletas directamente a Home */}
+        {/* Redirecciones de rutas de auth y obsoletas directamente a Home */}
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/register" element={<Navigate to="/" replace />} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         <Route path="/parking" element={<Navigate to="/" replace />} />
-
-        {/* Rutas de Autenticación */}
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
         {/* Flujo de Reserva con Layout (Protegido) */}
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -119,11 +102,37 @@ export function App() {
             </ProtectedRoute>
           }
         />
+        {/* Unificación de rutas de edición de sucursal */}
+        <Route
+          path="/my-parkings/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <EditParkingForm />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/my-parkings/update/:id"
           element={
             <ProtectedRoute allowedRoles={['DUEÑO']}>
               <EditParkingForm />
+            </ProtectedRoute>
+          }
+        />
+        {/* Unificación de rutas de distribución de plazas */}
+        <Route
+          path="/parking-space/:id"
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <ParkingSpaceEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-parkings/edit/:id/space"
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <ParkingSpaceEdit />
             </ProtectedRoute>
           }
         />
@@ -135,17 +144,13 @@ export function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/parking-space/:id"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <ParkingSpaceEdit />
-            </ProtectedRoute>
-          }
-        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
 }
 
 export default App;
+

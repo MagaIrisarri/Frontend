@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Service, ServiceInput } from '../types/Service.js';
+import type { Service, ServiceInput } from '../types/service.types';
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 export const getService = (serviceId: string) =>

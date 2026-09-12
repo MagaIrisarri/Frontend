@@ -1,14 +1,14 @@
 import { useParams } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { getParkingSpace, getSpaceAvailability } from '../../services/ParkingSpace.js';
-import { getOneParking } from '../../services/Parking.js';
-import type { Parking } from '../../types/Parking.js';
-import type { ParkingSpace } from '@/types/ParkingSpace.js';
+import { getParkingSpace, getSpaceAvailability } from '../../services/parkingSpace.service';
+import { getOneParking } from '../../services/parking.service';
+import type { Parking } from '../../types/parking.types';
+import type { ParkingSpace } from '@/types/parkingSpace.types';
 import { cn } from '@/lib/utils.js';
-import type { ServicePrice } from '@/types/ServicePrice.js';
-import { getParkingServices } from '@/services/ServicePrice.js';
-import { createReservation } from '../../services/Reservation.js';
+import type { ServicePrice } from '@/types/servicePrice.types';
+import { getParkingServices } from '@/services/servicePrice.service';
+import { createReservation } from '../../services/reservation.service';
 
 interface ReservarState {
   vehicleId: string;

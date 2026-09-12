@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Reservation } from '../types/Reservation.js';
+import type { Reservation } from '../types/reservation.types';
 import { toLocalISOString } from '../utils/date.js';
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
@@ -18,4 +18,16 @@ export const createReservation = (payload: {
 
 export const getReservationsByClient = (clientId: string) => api.get('/api/reservations/client/' + clientId).then(res => res.data);
 export const getReservationsByOwner = (ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
-export const cancelReservation = (reservationId: string, userId: string) => api.delete('/api/reservations/' + reservationId + '/cancel', { data: { userId } }).then(res => res.data);
+export const cancelReservation = (reservationId: string, userId: string) =>
+  api
+    .delete(`/api/reservations/${reservationId}/cancel`, {
+      data: { userId },
+      headers: { 'x-user-id': userId },
+    })
+    .catch(() =>
+      api.delete(`/api/reservations/${reservationId}`, {
+        data: { userId },
+        headers: { 'x-user-id': userId },
+      })
+    )
+    .then((res) => res.data);

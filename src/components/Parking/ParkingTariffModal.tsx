@@ -22,17 +22,17 @@ import {
   deleteParkingPrice,
   reactivateParking,
   deleteParking,
-} from '../../services/Parking';
+} from '../../services/parking.service';
 import {
   getParkingServices,
   createServicePrice,
   deleteServicePrice,
   getServiceCatalog,
   type ServiceCatalogItem,
-} from '../../services/ServicePrice';
-import { getVehicleTypes } from '../../services/VehicleType';
+} from '../../services/servicePrice.service';
+import { getVehicleTypes } from '../../services/vehicleType.service';
 import type { VehicleType } from '../../types/vehicle.types';
-import type { Parking } from '../../types/Parking';
+import type { Parking } from '../../types/parking.types';
 
 export const getVehicleIcon = (typeName: string) => {
   const t = (typeName || '').toLowerCase();
