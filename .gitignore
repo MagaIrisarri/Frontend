@@ -3,6 +3,7 @@ dist/
 dist-ssr/
 *.local
 *.tsbuildinfo
+prompt.md
 
 .vite/
 .eslintcache
@@ -37,3 +38,6 @@ playwright-report/
 
 .DS_Store
 Thumbs.db
+
+tsconfig.tsbuildinfo
+package-lock.json

@@ -1,30 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUserVehicle } from '../../services/vehicleService';
+import { getUserVehicle } from '../../services/vehicle.service';
+import { useAuthStore } from '../../stores/authStore';
 import { Vehicle } from '../../types/vehicle.types';
-import { ShineBorder } from '../../components/ui/shine-border';
-import { Lottie } from 'lottie-react';
-import carAnimation from '../../assets/carAnimation.json';
-import './Vehicle.scss';
+import { ArrowLeft, Plus, Car } from 'lucide-react';
 
-const VEHICLE_TYPE_MAP: Record<string, string> = {
-  Auto: 'AUTO',
-  Moto: 'MOTOCICLETA',
-  Utilitario: 'UTILITARIO',
+const normalizeVehicleType = (rawType: any): string => {
+  const typeName = String(rawType?.name || rawType || '').trim().toUpperCase();
+  if (typeName.includes('AUTO') || typeName.includes('COCHE') || typeName.includes('CAR')) return 'AUTO';
+  if (typeName.includes('MOTO')) return 'MOTOCICLETA';
+  if (typeName.includes('UTIL')) return 'UTILITARIO';
+  return typeName || 'AUTO';
 };
 
 export default function VehicleSelect() {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadVehicles();
-  }, []);
+  }, [user]);
 
   const loadVehicles = async () => {
     try {
-      const userId = localStorage.getItem('parkflow_user_id') || JSON.parse(localStorage.getItem('user') || '{}')?.id;
+      const userId = user?.id || user?._id;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const data = await getUserVehicle(userId);
       const list = Array.isArray(data) ? data : (data?.data || []);
@@ -37,80 +42,86 @@ export default function VehicleSelect() {
   };
 
   const handleSelect = (v: Vehicle) => {
-  const backendType = VEHICLE_TYPE_MAP[v.vehicleType?.name ?? ''];
-  if (!backendType) return; // Utilitario u otro tipo sin mapeo — no navega
-
-  navigate('/parking', {
-    state: { vehicleId: v.id, vehicleType: backendType },
-  });
-};
+    const backendType = normalizeVehicleType(v.vehicleType);
+    navigate('/', {
+      state: { vehicleId: v.id, vehicleType: backendType },
+    });
+  };
 
   return (
-      <div className="vehicle-management-container bg-zinc-950">
-        <ShineBorder
-          className="vehicle-management-card bg-zinc-900/90 border border-zinc-800 shadow-2xl backdrop-blur-md text-white"
-          color={['#2563EB', '#38BDF8', '#818CF8']}
-          borderRadius={16}
-          borderWidth={1.5}
-          duration={10}
+    <div className="min-h-screen bg-[#faf9f5] dark:bg-[#0B0F17] text-slate-900 dark:text-white p-6 md:p-10 transition-colors">
+      <div className="max-w-5xl mx-auto space-y-6">
+        <button
+          type="button"
+          onClick={() => navigate('/profile')}
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
         >
-          <header className="management-header flex items-center justify-between">
-            <div className="header-info">
-              <h1 className="text-white">Seleccion de Vehículo</h1>
-              <p className="text-zinc-400">Seleccione el vehiculo que va a utilizar</p>
+          <ArrowLeft className="h-4 w-4" />
+          <span>Volver a Mi Perfil</span>
+        </button>
+
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 md:p-8 shadow-sm">
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-slate-100 dark:border-zinc-800">
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Selección de Vehículo</h1>
+              <p className="text-sm text-slate-600 dark:text-zinc-400 mt-1">Seleccioná el vehículo con el que vas a buscar o reservar cochera</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 hidden sm:block">
-                <Lottie src={carAnimation} autoplay loop={true} />
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 hidden sm:flex items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm transition-transform hover:scale-105">
+                <Car className="h-6 w-6 animate-pulse" />
               </div>
               <button
                 type="button"
                 onClick={() => navigate('/vehicles/new')}
-                className="btn-primary"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
               >
-                + Registrar Vehículo
+                <Plus className="h-4 w-4" />
+                <span>Registrar Vehículo</span>
               </button>
             </div>
           </header>
-  
+
           {loading ? (
-            <div className="state-container"><p className="text-zinc-400">Cargando vehículos...</p></div>
+            <div className="py-12 text-center text-sm text-slate-500 dark:text-zinc-400">Cargando vehículos...</div>
           ) : vehicles.length === 0 ? (
-            <div className="state-container"><p className="text-zinc-400">No hay vehículos registrados todavía.</p></div>
+            <div className="py-12 text-center text-sm text-slate-500 dark:text-zinc-400">No hay vehículos registrados todavía.</div>
           ) : (
-            <div className="table-wrapper">
-              <table className="modern-table">
-                <thead>
+            <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 dark:bg-zinc-800/50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800">
                   <tr>
-                    <th className="text-zinc-400">Patente</th>
-                    <th className="text-zinc-400">Tipo</th>
-                    <th className="text-zinc-400">Marca</th>
-                    <th className="text-zinc-400">Modelo</th>
-                    <th className="text-zinc-400">Año</th>
-                    <th></th>
-                    
+                    <th className="px-5 py-3">Patente</th>
+                    <th className="px-5 py-3">Tipo</th>
+                    <th className="px-5 py-3">Marca</th>
+                    <th className="px-5 py-3">Modelo</th>
+                    <th className="px-5 py-3">Año</th>
+                    <th className="px-5 py-3 text-right">Acción</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                   {vehicles.map((v: any) => {
-                    const backendType = VEHICLE_TYPE_MAP[v.vehicleType?.name ?? ''];
-                    const isSelectable = Boolean(backendType);
+                    const typeDisplay = v.vehicleType?.name || (typeof v.vehicleType === 'string' ? v.vehicleType : 'Auto');
+                    const currentId = v.id || v._id;
+
                     return (
-                      <tr key={v.id || v._id} className={!isSelectable ? 'opacity-50' : undefined}>
-                        <td><span className="plate-badge">{v.plate}</span></td>
-                        <td className="text-zinc-200">{v.vehicleType?.name}</td>
-                        <td className="text-zinc-200">{v.brand?.name || v.brand || '-'}</td>
-                        <td className="text-zinc-200">{v.model?.name || v.model || '-'}</td>
-                        <td className="text-zinc-200">{v.year}</td>
-                        <td>
-                        <button
-                          type="button"
-                          onClick={() => handleSelect(v)}
-                          disabled={!isSelectable}
-                          className={isSelectable ? 'btn-primary' : 'btn-primary opacity-50 cursor-not-allowed'}
-                        >
-                          {isSelectable ? 'Elegir' : 'Sin tarifas'}
-                        </button>
+                      <tr key={currentId} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono font-bold text-xs tracking-wider border border-slate-200 dark:border-zinc-700">
+                            {v.plate}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-slate-900 dark:text-zinc-200 font-medium">{typeDisplay}</td>
+                        <td className="px-5 py-3.5 text-slate-600 dark:text-zinc-300">{v.brand?.name || v.brand || '-'}</td>
+                        <td className="px-5 py-3.5 text-slate-600 dark:text-zinc-300">{v.model?.name || v.model || '-'}</td>
+                        <td className="px-5 py-3.5 text-slate-600 dark:text-zinc-300">{v.year}</td>
+                        <td className="px-5 py-3.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleSelect(v)}
+                            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+                          >
+                            Elegir
+                          </button>
                         </td>    
                       </tr>
                     );
@@ -119,14 +130,11 @@ export default function VehicleSelect() {
               </table>
             </div>
           )}
-  
-          <button type="button" onClick={() => navigate('/profile')} className="btn-ghost">
-            ← Volver al Panel de Perfil
-          </button>
-        </ShineBorder>
+        </div>
       </div>
-    );
-  }
-  
-  export { VehicleSelect };
+    </div>
+  );
+}
+
+export { VehicleSelect };
   

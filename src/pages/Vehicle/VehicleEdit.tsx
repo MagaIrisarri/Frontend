@@ -1,51 +1,44 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import VehicleForm from '../../components/Vehicle/VehicleForm.js';
-import { getOneVehicle, updateVehicle } from '../../services/vehicleService.js';
-import type { UpdateVehicle } from '../../types/vehicle.types.js';
+import { useNavigate, useParams } from 'react-router-dom';
+import VehicleForm from '../../components/Vehicle/VehicleForm';
+import { getOneVehicle, updateVehicle } from '../../services/vehicle.service';
+import type { UpdateVehicle } from '../../types/vehicle.types';
 import '../Vehicle/Vehicle.scss';
-import { formInitialState } from "../../components/Vehicle/VehicleForm.data.js"
-import { useParams } from 'react-router-dom';
-
+import { formInitialState } from '../../components/Vehicle/VehicleForm.data';
 
 export default function VehicleEdit() {
-  const {id} = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initialData, setInitialData] = useState<{
-  plate: string;
-  year: string;
-  brandId: string;
-  modelId: string;
-  insuranceId: string;
-    }>();
-    const [errorMsg, setErrorMsg] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-      
+    plate: string;
+    year: string;
+    brandId: string;
+    modelId: string;
+    insuranceId: string;
+  }>();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-      if (!id) {
-        setErrorMsg('No se encontró el vehiculo a editar.');
-        setLoading(false);
-        return;
-      }
+  useEffect(() => {
+    if (!id) {
+      setErrorMsg('No se encontró el vehiculo a editar.');
+      setLoading(false);
+      return;
+    }
 
-      
-  
-  const fetchUser = async () => {
+    const fetchVehicle = async () => {
       try {
-       const res = await getOneVehicle(id);
-        const VehicleData = res.data;
+        const res = await getOneVehicle(id);
+        const vehicleData = res.data;
 
-        setInitialData
-        ({
-          plate: VehicleData.plate || '',
-          year: VehicleData.year || '',
-          brandId: VehicleData.brand?.id || '',
-          modelId:VehicleData.model?.id || '',
-          insuranceId: VehicleData.insurance?.id || '',
-          
+        setInitialData({
+          plate: vehicleData.plate || '',
+          year: String(vehicleData.year || ''),
+          brandId: vehicleData.brand?.id || '',
+          modelId: vehicleData.model?.id || '',
+          insuranceId: vehicleData.insurance?.id || '',
         });
       } catch (err: any) {
         setErrorMsg(err.message);
@@ -54,45 +47,43 @@ export default function VehicleEdit() {
       }
     };
 
-    fetchUser();
+    fetchVehicle();
   }, [id]);
 
+  const handleUpdate = async (form: typeof formInitialState) => {
+    setError(null);
+    setIsSubmitting(true);
 
- const handleUpdate = async (form: typeof formInitialState) => {
-   setError(null);
-   setIsSubmitting(true);
- 
-   const payload: UpdateVehicle = {
-    plate: form.plate,
-    year: Number(form.year),
-    brandId: form.brandId,
-    modelId:form.modelId,
-    insuranceId: form.insuranceId,
-   };
- 
-   try {
-     await updateVehicle( id as string, payload);
-     navigate('/my-parkings');
-   } catch (err: any) {
-     const validationErrors = err.response?.data?.errors;
-     if (validationErrors) {
-       setError(validationErrors.map((e: any) => e.mensaje).join(' | '));
-     } else {
-       setError(err.response?.data?.error || err.response?.data?.message || 'Error al modificar los datos del vehiculo');
-     }
-   } finally {
-     setIsSubmitting(false);
-   }
- };
- 
+    const payload: UpdateVehicle = {
+      plate: form.plate,
+      year: Number(form.year),
+      brandId: form.brandId,
+      modelId: form.modelId,
+      insuranceId: form.insuranceId,
+    };
+
+    try {
+      await updateVehicle(id as string, payload);
+      navigate('/vehicles');
+    } catch (err: any) {
+      const validationErrors = err.response?.data?.errors;
+      if (validationErrors) {
+        setError(validationErrors.map((e: any) => e.mensaje).join(' | '));
+      } else {
+        setError(err.response?.data?.error || err.response?.data?.message || 'Error al modificar los datos del vehiculo');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="create-vehicle-container bg-zinc-950">
       <div className="create-vehicle-card">
         <header className="management-header">
           <div className="header-info">
-            <h1 className="text-white">Vehiculo</h1>
-            <p className="text-zinc-400">Completá los datos que deseas camniar de su Vehiculo</p>
+            <h1 className="text-white">Vehículo</h1>
+            <p className="text-zinc-400">Completá los datos que deseas cambiar de tu Vehículo</p>
           </div>
         </header>
 
@@ -104,7 +95,7 @@ export default function VehicleEdit() {
 
         {isSubmitting && (
           <div className="state-container">
-            <p className="text-zinc-400">Actualizando vehiculo...</p>
+            <p className="text-zinc-400">Actualizando vehículo...</p>
           </div>
         )}
 
@@ -113,9 +104,9 @@ export default function VehicleEdit() {
             <p className="text-destructive">{errorMsg}</p>
           </div>
         ) : initialData ? (
-          <VehicleForm initialData={initialData} onSubmit={handleUpdate} submitLabel="Actualizar vehiculo" />
+          <VehicleForm initialData={initialData} onSubmit={handleUpdate} submitLabel="Actualizar vehículo" />
         ) : (
-          <p>{loading ? 'Cargando...' : 'No se encontraron datos del vehiculo.'}</p>
+          <p>{loading ? 'Cargando...' : 'No se encontraron datos del vehículo.'}</p>
         )}
 
         <button type="button" onClick={() => navigate('/vehicles')} className="btn-ghost">
@@ -125,3 +116,4 @@ export default function VehicleEdit() {
     </div>
   );
 }
+

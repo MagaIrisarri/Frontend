@@ -1,12 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getBrands, getInsurances, getModels, createVehicle} from '../../services/vehicleService';
+import { getBrands, getInsurances, getModels, createVehicle} from '../../services/vehicle.service';
 import { useNavigate } from 'react-router-dom';
-import { PhoneIcon } from '../../components/icons/PhoneIcon';
-import { ShineBorder } from '../../components/ui/shine-border';
-import { Lottie } from 'lottie-react';
-import carAnimation from '../../assets/carAnimation.json';
+import { ArrowLeft, Car, Shield } from 'lucide-react';
 import { useCurrentUser } from '../../hooks/useCurrentUser.js';
-import './Vehicle.scss';
 
 export default function VehicleRegister() {
   const navigate = useNavigate();
@@ -75,94 +71,133 @@ export default function VehicleRegister() {
   };
 
   return (
-    <div className="create-vehicle-container bg-[#faf9f5]">
-      <ShineBorder
-        className="create-vehicle-card bg-zinc-900/90 border border-zinc-800 shadow-2xl backdrop-blur-md text-white"
-        color={['#2563EB', '#38BDF8', '#818CF8']}
-        borderRadius={16}
-        borderWidth={1.5}
-        duration={10}
-      >
-        <header className="card-header flex items-center justify-between">
-          <div>
-            <h2 className="text-white">Registrar Vehículo</h2>
-            <p className="text-zinc-400">Ingresá los detalles del vehículo para asociarlo a tu cuenta.</p>
-          </div>
-          <div className="w-20 h-20 hidden sm:block">
-            <Lottie src={carAnimation} autoplay loop={true} />
-          </div>
-        </header>
+    <div className="min-h-screen bg-[#faf9f5] dark:bg-[#0B0F17] text-slate-900 dark:text-white p-6 md:p-10 transition-colors">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <button
+          type="button"
+          onClick={() => navigate('/vehicles')}
+          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Volver a Mis Vehículos</span>
+        </button>
 
-        <div className="owner-contact-banner">
-          <div className="owner-info">
-            <span>Propietario</span>
-            <span>{userName ? userName : `Cliente ID: ${userId.slice(0, 8)}...`}</span>
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 md:p-8 shadow-sm">
+          <header className="flex items-center justify-between pb-6 mb-6 border-b border-slate-100 dark:border-zinc-800">
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Registrar Vehículo</h1>
+              <p className="text-sm text-slate-600 dark:text-zinc-400 mt-1">Ingresá los detalles del vehículo para asociarlo a tu cuenta.</p>
+            </div>
+            <div className="w-14 h-14 hidden sm:flex items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm transition-transform hover:scale-105">
+              <Car className="h-7 w-7 animate-pulse" />
+            </div>
+          </header>
+
+          <div className="mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-slate-700 dark:text-zinc-300">
+                Titular: <strong className="text-slate-900 dark:text-white font-bold">{userName || `Usuario (${userId.slice(0, 8)}...)`}</strong>
+              </span>
+            </div>
           </div>
-          <button type="button" className="btn-contact" onClick={() => alert('Soporte')}>
-            <PhoneIcon size={18} /> Contactar
-          </button>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-zinc-400 mb-1.5">
+                  Patente / Placa
+                </label>
+                <input 
+                  type="text"
+                  placeholder="Ej. AB123CD"
+                  value={plate} 
+                  onChange={(e) => setPlate(e.target.value.toUpperCase())} 
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono uppercase"
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-zinc-400 mb-1.5">
+                  Año
+                </label>
+                <input 
+                  type="number" 
+                  min="1900"
+                  max={new Date().getFullYear() + 1}
+                  value={year} 
+                  onChange={(e) => setYear(Number(e.target.value))} 
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  required 
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-zinc-400 mb-1.5">
+                  Marca
+                </label>
+                <select
+                  value={selectedBrand}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Seleccioná una marca</option>
+                  {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-zinc-400 mb-1.5">
+                  Modelo
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-50"
+                  required
+                  disabled={!selectedBrand}
+                >
+                  <option value="">{selectedBrand ? "Seleccioná un modelo" : "Elegí una marca primero"}</option>
+                  {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-zinc-400 mb-1.5">
+                Seguro (Opcional)
+              </label>
+              <select
+                value={selectedInsurance}
+                onChange={(e) => setSelectedInsurance(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              >
+                <option value="">Sin seguro especificado</option>
+                {insurances.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              </select>
+            </div>
+
+            <div className="pt-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/vehicles')}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm font-semibold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? 'Guardando...' : 'Guardar Vehículo'}
+              </button>
+            </div>
+          </form>
         </div>
-
-        <form onSubmit={handleSubmit} className="vehicle-form">
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label className="text-zinc-400">Patente / Placa</label>
-              <input 
-                type="text"
-                placeholder="Ej. AB123CD"
-                value={plate} 
-                onChange={(e) => setPlate(e.target.value.toUpperCase())} 
-                required 
-              />
-            </div>
-            <div className="form-group">
-              <label className="text-zinc-400">Año</label>
-              <input 
-                type="number" 
-                min="1900"
-                max={new Date().getFullYear() + 1}
-                value={year} 
-                onChange={(e) => setYear(Number(e.target.value))} 
-                required 
-              />
-            </div>
-          </div>
-
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label className="text-zinc-400">Marca</label>
-              <select value={selectedBrand} onChange={(e) => setSelectedBrand(e.target.value)} required>
-                <option value="">Seleccioná una marca</option>
-                {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="text-zinc-400">Modelo</label>
-              <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} required disabled={!selectedBrand}>
-                <option value="">{selectedBrand ? "Seleccioná un modelo" : "Elegí una marca primero"}</option>
-                {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="text-zinc-400">Seguro (Opcional)</label>
-            <select value={selectedInsurance} onChange={(e) => setSelectedInsurance(e.target.value)}>
-              <option value="">Sin seguro especificado</option>
-              {insurances.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
-          </div>
-
-          <div className="form-actions">
-            <button type="submit" disabled={loading} className="btn-primary">
-              {loading ? 'Guardando...' : 'Guardar Vehículo'}
-            </button>
-            <button type="button" onClick={() => navigate('/profile')} className="btn-ghost">
-              ← Volver al Perfil
-            </button>
-          </div>
-        </form>
-      </ShineBorder>
+      </div>
     </div>
   );
 }
