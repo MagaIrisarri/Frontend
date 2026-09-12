@@ -57,7 +57,7 @@ export const OwnerBranchToolbar: React.FC<OwnerDashboardProps> = ({
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm active:scale-95 transition-all cursor-pointer"
         >
           <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>+ Registrar Nueva Sucursal</span>
+          <span>Registrar Nueva Sucursal</span>
         </button>
       </div>
     </div>

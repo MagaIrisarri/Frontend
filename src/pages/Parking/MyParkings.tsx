@@ -143,7 +143,7 @@ export default function MyParkings() {
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => navigate(`/my-parkings/edit/${p.id}`)}
+                            onClick={() => navigate(`/my-parkings/${p.id}/edit`)}
                             className="p-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-white transition cursor-pointer"
                             title="Editar Datos"
                           >
@@ -151,7 +151,7 @@ export default function MyParkings() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => navigate(`/parking-space/${p.id}`)}
+                            onClick={() => navigate(`/my-parkings/${p.id}/spaces`)}
                             className="p-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:text-emerald-500 transition cursor-pointer"
                             title="Gestionar Plazas"
                           >

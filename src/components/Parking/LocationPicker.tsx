@@ -13,11 +13,37 @@ export interface LocationData {
   postalCode?: string;
 }
 
+const ROSARIO_ZONES = new Set([
+  'centro',
+  'distrito centro',
+  'pichincha',
+  'abasto',
+  'martin',
+  'barrio martin',
+  'echesortu',
+  'alberdi',
+  'arroyito',
+  'belgrano',
+  'fisherton',
+  'tiro suizo',
+  'las delicias',
+  'parque casado',
+  'tablada',
+  'distrito sur',
+  'distrito norte',
+  'distrito oeste',
+  'distrito noroeste',
+  'distrito sudoeste',
+  'republica de la sexta',
+]);
+
 interface LocationPickerProps {
   lat: number;
   lng: number;
   onChangeLocation: (locationData: LocationData) => void;
   className?: string;
+  defaultLocality?: string;
+  defaultPostalCode?: string;
 }
 
 export function LocationPicker({
@@ -25,6 +51,8 @@ export function LocationPicker({
   lng,
   onChangeLocation,
   className = '',
+  defaultLocality,
+  defaultPostalCode,
 }: LocationPickerProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -51,14 +79,38 @@ export function LocationPicker({
           const result = await maptilersdk.geocoding.reverse([newLng, newLat]);
           if (result && result.features && result.features.length > 0) {
             const feat = result.features[0];
-            address = feat.place_name || feat.text || '';
+
+            // Extraer calle y altura limpias sin ensuciar con toda la jerarquía
+            if (feat.text && feat.address) {
+              address = `${feat.text} ${feat.address}`.trim();
+            } else if (feat.text && !feat.id?.startsWith('place') && !feat.id?.startsWith('locality')) {
+              address = feat.text.trim();
+            } else if (feat.place_name) {
+              address = feat.place_name.split(',')[0].trim();
+            }
+
             const context = feat.context || [];
-            const placeContext = context.find(
-              (c: any) => c.id?.startsWith('place') || c.id?.startsWith('municipality')
-            );
+            const placeContext = context.find((c: any) => c.id?.startsWith('place'));
+            const municipalityContext = context.find((c: any) => c.id?.startsWith('municipality'));
             const postalContext = context.find((c: any) => c.id?.startsWith('postal_code'));
-            locality = placeContext?.text || '';
-            postalCode = postalContext?.text || '';
+
+            const rawLocality = placeContext?.text || municipalityContext?.text || '';
+            const rawPostal = postalContext?.text || '';
+            postalCode = rawPostal.replace(/\D/g, ''); // Extraer solo dígitos numéricos (S2000 -> 2000)
+
+            // Detección de Rosario para que 'Centro' no sobreescriba la localidad
+            const isRosarioCoords = newLng >= -60.85 && newLng <= -60.50 && newLat >= -33.15 && newLat <= -32.80;
+            if (
+              !rawLocality ||
+              ROSARIO_ZONES.has(rawLocality.toLowerCase().trim()) ||
+              postalCode === '2000' ||
+              isRosarioCoords
+            ) {
+              locality = 'Rosario';
+              if (!postalCode) postalCode = '2000';
+            } else {
+              locality = rawLocality;
+            }
           }
         } else {
           // Fallback a Nominatim si no hay key configurada
@@ -69,14 +121,31 @@ export function LocationPicker({
           if (data && data.address) {
             address = data.address.road
               ? `${data.address.road} ${data.address.house_number || ''}`.trim()
-              : data.display_name?.split(',')[0] || '';
-            locality =
+              : data.display_name?.split(',')[0]?.trim() || '';
+
+            const rawPostal = data.address.postcode || '';
+            postalCode = rawPostal.replace(/\D/g, '');
+
+            const candidateLocality =
               data.address.city ||
               data.address.town ||
               data.address.village ||
               data.address.municipality ||
               '';
-            postalCode = data.address.postcode || '';
+
+            const isRosarioCoords = newLng >= -60.85 && newLng <= -60.50 && newLat >= -33.15 && newLat <= -32.80;
+            if (
+              !candidateLocality ||
+              ROSARIO_ZONES.has(candidateLocality.toLowerCase().trim()) ||
+              postalCode === '2000' ||
+              (data.address.suburb && ROSARIO_ZONES.has(data.address.suburb.toLowerCase())) ||
+              isRosarioCoords
+            ) {
+              locality = 'Rosario';
+              if (!postalCode) postalCode = '2000';
+            } else {
+              locality = candidateLocality;
+            }
           }
         }
       } catch (error) {
@@ -103,7 +172,7 @@ export function LocationPicker({
       style: getMapStyle(theme),
       center: [initialLng, initialLat],
       zoom: DEFAULT_MAP_ZOOM,
-      navigationControl: 'top-right',
+      navigationControl: 'bottom-right',
     });
 
     map.on('styleimagemissing', () => {});
@@ -171,28 +240,66 @@ export function LocationPicker({
     }
   }, [theme]);
 
-  // Búsqueda de dirección (Geocodificación directa)
+  // Búsqueda de dirección (Geocodificación directa con sesgo de proximidad y código postal)
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!searchQuery.trim() || !mapRef.current || !markerRef.current) return;
+    const query = searchQuery.trim();
+    if (!query || !mapRef.current || !markerRef.current) return;
 
     setIsSearching(true);
     try {
+      const lower = query.toLowerCase();
+      const hasCitySpecified =
+        lower.includes('rosario') ||
+        lower.includes('buenos aires') ||
+        lower.includes('caba') ||
+        lower.includes('cordoba') ||
+        lower.includes('mendoza') ||
+        lower.includes('santa fe') ||
+        lower.includes('funes') ||
+        lower.includes('roldan') ||
+        lower.includes('baigorria') ||
+        lower.includes('galvez');
+
+      const locToUse = defaultLocality?.trim() || 'Rosario';
+      const postalToUse = defaultPostalCode?.trim() || '2000';
+      const targetQuery = hasCitySpecified
+        ? query
+        : `${query}, ${postalToUse} ${locToUse}, Santa Fe, Argentina`;
+
+      const currentCenter = mapRef.current.getCenter();
+      const proximityPos: [number, number] = [currentCenter.lng, currentCenter.lat];
+
       if (MAPTILER_API_KEY) {
-        const result = await maptilersdk.geocoding.forward(searchQuery, {
+        let result = await maptilersdk.geocoding.forward(targetQuery, {
           country: ['ar'],
-          bbox: [-73.5, -55.0, -53.5, -21.5],
+          proximity: proximityPos,
         });
+
+        // Si la búsqueda contextualizada no arrojó resultados, probar búsqueda directa con proximidad
+        if (!result || !result.features || result.features.length === 0) {
+          result = await maptilersdk.geocoding.forward(query, {
+            country: ['ar'],
+            proximity: proximityPos,
+          });
+        }
+
         if (result && result.features && result.features.length > 0) {
           const [foundLng, foundLat] = result.features[0].center;
           mapRef.current.flyTo({ center: [foundLng, foundLat], zoom: 16, duration: 1000 });
           markerRef.current.setLngLat([foundLng, foundLat]);
-          handlePositionChange(foundLng, foundLat);
+          await handlePositionChange(foundLng, foundLat);
+        } else {
+          alert('No se encontraron resultados para la dirección buscada. Probá agregando la altura exacta o la calle.');
         }
       } else {
+        const nominatimQuery = hasCitySpecified
+          ? query
+          : `${query}, ${postalToUse} ${locToUse}, Santa Fe, Argentina`;
+
         const response = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            searchQuery
+            nominatimQuery
           )}&countrycodes=ar&limit=1`
         );
         const data = await response.json();
@@ -201,7 +308,9 @@ export function LocationPicker({
           const foundLng = parseFloat(data[0].lon);
           mapRef.current.flyTo({ center: [foundLng, foundLat], zoom: 16, duration: 1000 });
           markerRef.current.setLngLat([foundLng, foundLat]);
-          handlePositionChange(foundLng, foundLat);
+          await handlePositionChange(foundLng, foundLat);
+        } else {
+          alert('No se encontraron resultados para la dirección buscada.');
         }
       }
     } catch (error) {
@@ -235,8 +344,8 @@ export function LocationPicker({
 
   return (
     <div className={`w-full flex flex-col gap-3 ${className}`}>
-      {/* Barra de búsqueda sobre el mapa */}
-      <form onSubmit={handleSearch} className="flex gap-2">
+      {/* Barra de búsqueda sobre el mapa (div sin anidar form para no disparar el submit del formulario padre) */}
+      <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-500" />
           <input
@@ -244,11 +353,23 @@ export function LocationPicker({
             placeholder="Buscar calle y altura en el mapa..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSearch();
+              }
+            }}
             className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
           />
         </div>
         <button
-          type="submit"
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSearch();
+          }}
           disabled={isSearching}
           className="px-3.5 py-2 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-sm flex items-center gap-1.5"
         >
@@ -256,14 +377,18 @@ export function LocationPicker({
         </button>
         <button
           type="button"
-          onClick={handleGeolocation}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleGeolocation();
+          }}
           disabled={isGeolocating}
           title="Usar mi ubicación actual"
           className="p-2 text-slate-600 dark:text-zinc-300 bg-white dark:bg-zinc-950 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 rounded-xl transition-colors disabled:opacity-50 inline-flex items-center justify-center cursor-pointer shadow-sm"
         >
           <Locate className={`h-4 w-4 ${isGeolocating ? 'animate-spin text-blue-500' : ''}`} />
         </button>
-      </form>
+      </div>
 
       {/* Contenedor del mapa interactivo */}
       <div className="h-72 lg:h-80 w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 relative z-0 shadow-sm">

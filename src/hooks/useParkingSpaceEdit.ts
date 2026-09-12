@@ -5,12 +5,21 @@ import {
   updateParkingSpace,
   removeParkingSpace,
   createParkingSpace,
+  createBulkParkingSpaces,
 } from '../services/parkingSpace.service';
 import { getOneParking, getParkingsByOwner } from '../services/parking.service';
 import { getReservationsByOwner } from '../services/reservation.service';
 import { useAuthStore } from '../stores/authStore';
 import type { Parking } from '../types/parking.types';
 import type { ParkingSpace } from '../types/parkingSpace.types';
+
+export const getCanonicalVehicleCategory = (rawType?: string): 'Auto' | 'Moto' | 'Camioneta' | 'Otro' => {
+  const t = (rawType || '').trim().toUpperCase();
+  if (t.includes('MOTO') || t.includes('BICI')) return 'Moto';
+  if (t.includes('CAMION') || t.includes('UTIL') || t.includes('VAN') || t.includes('PICK') || t.includes('SUV')) return 'Camioneta';
+  if (t.includes('AUTO') || t.includes('CAR') || t.includes('SEDAN') || !t) return 'Auto';
+  return 'Otro';
+};
 
 export function useParkingSpaceEdit() {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +46,7 @@ export function useParkingSpaceEdit() {
 
   // Modal para Agregar Nueva Plaza
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newSpaceCode, setNewSpaceCode] = useState('');
+  const [newSpaceCount, setNewSpaceCount] = useState<number>(1);
   const [newSpaceVehicleType, setNewSpaceVehicleType] = useState('Auto');
   const [isCreatingSpace, setIsCreatingSpace] = useState(false);
   const [addModalError, setAddModalError] = useState<string | null>(null);
@@ -97,7 +106,7 @@ export function useParkingSpaceEdit() {
 
   const handleSelectParking = (newId: string) => {
     if (newId !== id) {
-      navigate(`/parking-space/${newId}`);
+      navigate(`/my-parkings/${newId}/spaces`);
     }
   };
 
@@ -114,8 +123,8 @@ export function useParkingSpaceEdit() {
   // Filtrado de plazas
   const filteredSpaces = useMemo(() => {
     return spaces.filter((s) => {
-      const vType = s.vehicleType || (s as any).vehicle_type || 'Auto';
-      if (vehicleFilter !== 'all' && vType !== vehicleFilter) return false;
+      const category = getCanonicalVehicleCategory(s.vehicleType || (s as any).vehicle_type);
+      if (vehicleFilter !== 'all' && category !== vehicleFilter) return false;
       const state = s.state || 'LIBRE';
       if (statusFilter !== 'all' && state !== statusFilter) return false;
       return true;
@@ -124,10 +133,11 @@ export function useParkingSpaceEdit() {
 
   // Agrupación por sector
   const sectors = useMemo(() => {
-    const autos = filteredSpaces.filter((s) => (s.vehicleType || (s as any).vehicle_type || 'Auto') === 'Auto');
-    const motos = filteredSpaces.filter((s) => (s.vehicleType || (s as any).vehicle_type) === 'Moto');
-    const utilitarios = filteredSpaces.filter((s) => (s.vehicleType || (s as any).vehicle_type) === 'Camioneta');
-    return { autos, motos, utilitarios };
+    const autos = filteredSpaces.filter((s) => getCanonicalVehicleCategory(s.vehicleType || (s as any).vehicle_type) === 'Auto');
+    const motos = filteredSpaces.filter((s) => getCanonicalVehicleCategory(s.vehicleType || (s as any).vehicle_type) === 'Moto');
+    const utilitarios = filteredSpaces.filter((s) => getCanonicalVehicleCategory(s.vehicleType || (s as any).vehicle_type) === 'Camioneta');
+    const otros = filteredSpaces.filter((s) => getCanonicalVehicleCategory(s.vehicleType || (s as any).vehicle_type) === 'Otro');
+    return { autos, motos, utilitarios, otros };
   }, [filteredSpaces]);
 
   // Plaza seleccionada y su reserva activa
@@ -191,26 +201,23 @@ export function useParkingSpaceEdit() {
 
   const handleCreateSpace = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !newSpaceCode.trim()) {
-      setAddModalError('Ingresá un código o número de plaza.');
+    if (!id || Number(newSpaceCount) < 1) {
+      setAddModalError('Ingresá una cantidad válida de plazas (mínimo 1).');
       return;
     }
     setIsCreatingSpace(true);
     setAddModalError(null);
     try {
-      const created = await createParkingSpace(id, {
-        spaceCode: newSpaceCode.trim().toUpperCase(),
+      await createBulkParkingSpaces(id, {
         vehicleType: newSpaceVehicleType,
-        state: 'LIBRE',
+        count: Number(newSpaceCount),
       });
-      const newSpaceItem = (created as any)?.data || created;
-      setSpaces((prev) => [...prev, newSpaceItem]);
+      await loadData(id);
       setIsAddModalOpen(false);
-      setNewSpaceCode('');
+      setNewSpaceCount(1);
       setNewSpaceVehicleType('Auto');
-      setSelectedSpaceId(newSpaceItem.id || newSpaceItem._id);
     } catch (err: any) {
-      setAddModalError(err.response?.data?.message || 'Error al crear la plaza');
+      setAddModalError(err.response?.data?.message || 'Error al crear las plazas');
     } finally {
       setIsCreatingSpace(false);
     }
@@ -310,8 +317,8 @@ export function useParkingSpaceEdit() {
     setStatusFilter,
     isAddModalOpen,
     setIsAddModalOpen,
-    newSpaceCode,
-    setNewSpaceCode,
+    newSpaceCount,
+    setNewSpaceCount,
     newSpaceVehicleType,
     setNewSpaceVehicleType,
     isCreatingSpace,

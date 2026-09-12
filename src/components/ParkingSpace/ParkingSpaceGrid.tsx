@@ -1,6 +1,6 @@
 import React from 'react';
 import { Car, Bike, Truck } from 'lucide-react';
-import type { ParkingSpaceEditProps } from '../../hooks/useParkingSpaceEdit';
+import { type ParkingSpaceEditProps, getCanonicalVehicleCategory } from '../../hooks/useParkingSpaceEdit';
 import type { ParkingSpace } from '../../types/parkingSpace.types';
 
 export const ParkingSpaceGrid: React.FC<ParkingSpaceEditProps> = ({
@@ -16,8 +16,8 @@ export const ParkingSpaceGrid: React.FC<ParkingSpaceEditProps> = ({
     const isLibre = state === 'LIBRE';
     const isOcupado = state === 'OCUPADO';
 
-    const vType = space.vehicleType || (space as any).vehicle_type || 'Auto';
-    const VehicleIcon = vType === 'Moto' ? Bike : vType === 'Camioneta' ? Truck : Car;
+    const vCategory = getCanonicalVehicleCategory(space.vehicleType || (space as any).vehicle_type);
+    const VehicleIcon = vCategory === 'Moto' ? Bike : vCategory === 'Camioneta' ? Truck : Car;
 
     return (
       <button
@@ -125,6 +125,19 @@ export const ParkingSpaceGrid: React.FC<ParkingSpaceEditProps> = ({
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {sectors.utilitarios.map(renderSpaceCard)}
+              </div>
+            </div>
+          )}
+
+          {/* Otros Sectores */}
+          {sectors.otros && sectors.otros.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                <Car className="h-4 w-4 text-amber-500" />
+                <span>Otras Plazas ({sectors.otros.length})</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                {sectors.otros.map(renderSpaceCard)}
               </div>
             </div>
           )}

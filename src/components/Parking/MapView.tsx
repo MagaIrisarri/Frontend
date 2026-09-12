@@ -192,7 +192,7 @@ function MapViewComponent({
       style: getMapStyle(theme),
       center: DEFAULT_MAP_CENTER,
       zoom: DEFAULT_MAP_ZOOM,
-      navigationControl: 'top-right',
+      navigationControl: 'bottom-right',
     });
 
     map.on('styleimagemissing', () => {});

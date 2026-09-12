@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import HomePage from './pages/Home/HomePage';
 import MyParkings from './pages/Parking/MyParkings';
 import ParkingCreate from './pages/Parking/ParkingCreate';
@@ -21,6 +21,19 @@ import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
 import MyInvoices from './pages/Invoice/MyInvoices';
 import MetricsView from './pages/Owner/MetricsView';
 import MyReservations from './pages/Reservation/MyReservations';
+
+/**
+ * Componentes de redirección para preservar compatibilidad con enlaces y marcadores previos
+ */
+function RedirectToParkingEdit() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/my-parkings/${id}/edit`} replace />;
+}
+
+function RedirectToParkingSpaces() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/my-parkings/${id}/spaces`} replace />;
+}
 
 export function App() {
   return (
@@ -85,7 +98,10 @@ export function App() {
           }
         />
 
-        {/* Rutas Protegidas - Solo DUEÑO */}
+        {/* =========================================================
+            RUTAS DE DUEÑO (DUEÑO)
+           ========================================================= */}
+        {/* Panel principal de control */}
         <Route
           path="/owner"
           element={
@@ -94,6 +110,8 @@ export function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Gestión de reservas de sus cocheras */}
         <Route
           path="/owner/reservations"
           element={
@@ -102,6 +120,8 @@ export function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Listado y gestión de estacionamientos */}
         <Route
           path="/my-parkings"
           element={
@@ -110,14 +130,8 @@ export function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/parkings/:id/metrics"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <MetricsView />
-            </ProtectedRoute>
-          }
-        />
+
+        {/* Alta de nuevo estacionamiento */}
         <Route
           path="/my-parkings/create"
           element={
@@ -126,42 +140,20 @@ export function App() {
             </ProtectedRoute>
           }
         />
-        {/* Unificación de rutas de edición de sucursal */}
+
+        {/* Edición de estacionamiento (Ruta canónica RESTful) */}
         <Route
-          path="/my-parkings/edit/:id"
+          path="/my-parkings/:id/edit"
           element={
             <ProtectedRoute allowedRoles={['DUEÑO']}>
               <EditParkingForm />
             </ProtectedRoute>
           }
         />
+
+        {/* Distribución y edición de plazas (Ruta canónica RESTful) */}
         <Route
-          path="/my-parkings/update/:id"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <EditParkingForm />
-            </ProtectedRoute>
-          }
-        />
-        {/* Unificación de rutas de distribución de plazas */}
-        <Route
-          path="/parking-space/:id"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <ParkingSpaceEdit />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/my-parkings/edit/:id/space"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <ParkingSpaceEdit />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/my-parkings/update/:id/space"
+          path="/my-parkings/:id/spaces"
           element={
             <ProtectedRoute allowedRoles={['DUEÑO']}>
               <ParkingSpaceEdit />
@@ -169,7 +161,26 @@ export function App() {
           }
         />
 
-        {/* Fallback */}
+        {/* Métricas y reportes de facturación */}
+        <Route
+          path="/parkings/:id/metrics"
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <MetricsView />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Redirecciones de compatibilidad para edición de cocheras */}
+        <Route path="/my-parkings/edit/:id" element={<RedirectToParkingEdit />} />
+        <Route path="/my-parkings/update/:id" element={<RedirectToParkingEdit />} />
+
+        {/* Redirecciones de compatibilidad para plazas */}
+        <Route path="/parking-space/:id" element={<RedirectToParkingSpaces />} />
+        <Route path="/my-parkings/edit/:id/space" element={<RedirectToParkingSpaces />} />
+        <Route path="/my-parkings/update/:id/space" element={<RedirectToParkingSpaces />} />
+
+        {/* Fallback general */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

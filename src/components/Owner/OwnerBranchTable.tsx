@@ -106,7 +106,7 @@ export const OwnerBranchTable: React.FC<OwnerDashboardProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigate(`/parking-space/${p.id}`)}
+                      onClick={() => navigate(`/my-parkings/${p.id}/spaces`)}
                       title="Gestionar distribución de plazas"
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-semibold text-xs transition cursor-pointer"
                     >
@@ -115,7 +115,7 @@ export const OwnerBranchTable: React.FC<OwnerDashboardProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigate(`/my-parkings/edit/${p.id}`)}
+                      onClick={() => navigate(`/my-parkings/${p.id}/edit`)}
                       className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
                       title="Editar Sucursal"
                     >

@@ -11,8 +11,11 @@ import {
   Hash,
   Plus,
   Minus,
-  Upload,
   X,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Info,
+  Layers,
 } from 'lucide-react';
 import { formInitialState } from './ParkingForm.data.js';
 import { LocationPicker, type LocationData } from './LocationPicker';
@@ -31,7 +34,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
   isSubmitting = false,
 }) => {
   const [form, setForm] = useState(initialData ?? formInitialState);
-  const [imagePreview, setImagePreview] = useState<string>(form.image || '');
+  const [imageLoadError, setImageLoadError] = useState(false);
   const [is24Hours, setIs24Hours] = useState(() => {
     const init = initialData ?? formInitialState;
     return init.openingTime === '00:00' && (init.closingTime === '23:59' || init.closingTime === '24:00');
@@ -40,7 +43,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
   useEffect(() => {
     if (initialData) {
       setForm(initialData);
-      setImagePreview(initialData.image || '');
+      setImageLoadError(false);
       if (initialData.openingTime === '00:00' && (initialData.closingTime === '23:59' || initialData.closingTime === '24:00')) {
         setIs24Hours(true);
       }
@@ -51,7 +54,11 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
     e: React.ChangeEvent<HTMLInputElement>,
     attr: keyof typeof formInitialState
   ) => {
-    setForm((prev) => ({ ...prev, [attr]: e.target.value }));
+    const val = e.target.value;
+    if (attr === 'image') {
+      setImageLoadError(false);
+    }
+    setForm((prev) => ({ ...prev, [attr]: val }));
   };
 
   const handleCapacityStep = (field: 'carCapacity' | 'motorcycleCapacity' | 'truckCapacity', delta: number) => {
@@ -80,22 +87,8 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor seleccioná un archivo de imagen válido (JPG, PNG, WebP).');
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setImagePreview(objectUrl);
-    setForm((prev) => ({ ...prev, image: objectUrl }));
-  };
-
   const handleClearImage = () => {
-    setImagePreview('');
+    setImageLoadError(false);
     setForm((prev) => ({ ...prev, image: '' }));
   };
 
@@ -117,6 +110,11 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
 
   const inputClass =
     'w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 py-2.5 text-sm focus:border-blue-500 focus:outline-none transition-colors';
+
+  const carCap = Math.max(0, parseInt(form.carCapacity || '0', 10) || 0);
+  const motoCap = Math.max(0, parseInt(form.motorcycleCapacity || '0', 10) || 0);
+  const truckCap = Math.max(0, parseInt(form.truckCapacity || '0', 10) || 0);
+  const totalSpaces = carCap + motoCap + truckCap;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -154,59 +152,66 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
               </div>
             </div>
 
-            {/* Input file simple con preview local vía URL.createObjectURL() */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                Foto de Portada / Fachada
-              </label>
-
-              {imagePreview ? (
-                <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-950 group h-44 flex items-center justify-center">
-                  <img
-                    src={imagePreview}
-                    alt="Vista previa"
-                    className="w-full h-full object-cover"
+            {/* Input URL de Imagen con preview en vivo */}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1.5">
+                  URL de la Foto de Portada / Fachada
+                </label>
+                <div className="relative">
+                  <LinkIcon className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400 dark:text-zinc-500" />
+                  <input
+                    type="url"
+                    value={form.image}
+                    onChange={(e) => handleChange(e, 'image')}
+                    placeholder="https://images.unsplash.com/... o enlace directo a imagen"
+                    className={`${inputClass} pl-10 pr-10`}
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <label className="px-3 py-1.5 rounded-xl bg-white/90 dark:bg-zinc-900/90 hover:bg-white text-slate-900 dark:text-white text-xs font-bold shadow-lg transition-transform active:scale-95 cursor-pointer">
-                      Cambiar Foto
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
+                  {form.image && (
                     <button
                       type="button"
                       onClick={handleClearImage}
-                      className="p-1.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white shadow-lg transition-transform active:scale-95 cursor-pointer"
-                      title="Eliminar imagen"
+                      className="absolute right-3 top-3 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 transition cursor-pointer"
+                      title="Limpiar URL"
                     >
                       <X className="h-4 w-4" />
                     </button>
-                  </div>
+                  )}
                 </div>
-              ) : (
-                <label className="h-36 rounded-2xl border-2 border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950/60 hover:bg-slate-100 dark:hover:bg-zinc-900 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer p-4 text-center">
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm">
-                    <Upload className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                      Seleccionar imagen local
-                    </span>
-                    <span className="text-[11px] text-slate-400 dark:text-zinc-500">
-                      JPG, PNG o WebP (preview instantáneo)
-                    </span>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
+                <p className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500">
+                  Ingresá el enlace directo a una imagen pública (Unsplash, Imgur, Cloudinary, etc.)
+                </p>
+              </div>
+
+              {/* Preview de la imagen si hay URL */}
+              {form.image && (
+                <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 p-2 overflow-hidden">
+                  {!imageLoadError ? (
+                    <div className="relative h-44 rounded-xl overflow-hidden group bg-slate-100 dark:bg-zinc-900">
+                      <img
+                        src={form.image}
+                        alt="Vista previa de la cochera"
+                        className="w-full h-full object-cover"
+                        onError={() => setImageLoadError(true)}
+                      />
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={handleClearImage}
+                          className="p-1.5 rounded-xl bg-black/60 hover:bg-red-600 text-white shadow-lg transition cursor-pointer"
+                          title="Eliminar imagen"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-28 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center gap-2 p-3 text-amber-600 dark:text-amber-400 text-xs text-center">
+                      <ImageIcon className="h-5 w-5 shrink-0" />
+                      <span>No se pudo cargar la imagen desde la URL ingresada. Verificá que el enlace sea directo y público.</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -276,26 +281,46 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
             </div>
           </div>
 
-          {/* SECCIÓN 3: CAPACIDAD INICIAL (AUTOS, MOTOS, UTILITARIOS) */}
+          {/* SECCIÓN 3: ASIGNACIÓN INICIAL DE PLAZAS */}
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
-              <div className="p-2 rounded-xl bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
-                <Car className="h-5 w-5" />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                    Asignación Inicial de Plazas
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    Definí la cantidad de plazas físicas con las que empezará tu cochera
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                  Capacidad de Plazas
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-zinc-400">Cantidad de espacios disponibles por categoría</p>
+
+              {/* Badge Contador Total */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 self-start sm:self-auto">
+                <span className="text-xs font-semibold">Total a generar:</span>
+                <span className="text-xs font-black bg-emerald-600 text-white px-2 py-0.5 rounded-lg">
+                  {totalSpaces} {totalSpaces === 1 ? 'plaza' : 'plazas'}
+                </span>
               </div>
+            </div>
+
+            {/* Banner explicativo de asignación automática */}
+            <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 flex items-start gap-2.5">
+              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+                El sistema creará automáticamente cada plaza individual con su código correlativo (ej: <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">A-01, M-01, C-01</span>). Desde el panel de administración podrás sumar más plazas o modificar su estado cuando lo desees.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Plazas Autos */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-2">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
-                    <Car className="h-4 w-4 text-blue-500" /> Autos
+                    <Car className="h-4 w-4 text-blue-500" /> Autos / Sedanes
                   </span>
                   <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded-md">
                     Mín. 1
@@ -326,13 +351,19 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
                     <Plus className="h-3.5 w-3.5" />
                   </button>
                 </div>
+                <div className="text-[11px] text-center text-slate-500 dark:text-zinc-400 font-mono">
+                  {carCap > 0 ? `A-01 a A-${String(carCap).padStart(2, '0')}` : 'Sin plazas'}
+                </div>
               </div>
 
               {/* Plazas Motos */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-2">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
                     <Bike className="h-4 w-4 text-emerald-500" /> Motos
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium bg-slate-200/60 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                    Opcional
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -360,13 +391,19 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
                     <Plus className="h-3.5 w-3.5" />
                   </button>
                 </div>
+                <div className="text-[11px] text-center text-slate-500 dark:text-zinc-400 font-mono">
+                  {motoCap > 0 ? `M-01 a M-${String(motoCap).padStart(2, '0')}` : 'Sin plazas'}
+                </div>
               </div>
 
               {/* Plazas Utilitarios */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-2">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
-                    <Truck className="h-4 w-4 text-purple-500" /> Utilitarios
+                    <Truck className="h-4 w-4 text-purple-500" /> Utilitarios / SUVs
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium bg-slate-200/60 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                    Opcional
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -392,6 +429,9 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
+                </div>
+                <div className="text-[11px] text-center text-slate-500 dark:text-zinc-400 font-mono">
+                  {truckCap > 0 ? `C-01 a C-${String(truckCap).padStart(2, '0')}` : 'Sin plazas'}
                 </div>
               </div>
             </div>
@@ -538,6 +578,8 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
             <LocationPicker
               lat={Number(form.latitude)}
               lng={Number(form.longitude)}
+              defaultLocality={form.locality}
+              defaultPostalCode={form.postalCode}
               onChangeLocation={handleLocationChange}
             />
           </div>

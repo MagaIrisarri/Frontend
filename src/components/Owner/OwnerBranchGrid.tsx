@@ -96,7 +96,7 @@ export const OwnerBranchGrid: React.FC<OwnerDashboardProps> = ({
                           type="button"
                           onClick={() => {
                             setActiveMenuId(null);
-                            navigate(`/parking-space/${p.id}`);
+                            navigate(`/my-parkings/${p.id}/spaces`);
                           }}
                           className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 text-left font-medium text-slate-700 dark:text-zinc-200 cursor-pointer"
                         >
@@ -107,7 +107,7 @@ export const OwnerBranchGrid: React.FC<OwnerDashboardProps> = ({
                           type="button"
                           onClick={() => {
                             setActiveMenuId(null);
-                            navigate(`/my-parkings/edit/${p.id}`);
+                            navigate(`/my-parkings/${p.id}/edit`);
                           }}
                           className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 text-left font-medium text-slate-700 dark:text-zinc-200 cursor-pointer border-t border-slate-100 dark:border-zinc-800"
                         >
@@ -191,7 +191,7 @@ export const OwnerBranchGrid: React.FC<OwnerDashboardProps> = ({
 
               <button
                 type="button"
-                onClick={() => navigate(`/parking-space/${p.id}`)}
+                onClick={() => navigate(`/my-parkings/${p.id}/spaces`)}
                 className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-semibold transition cursor-pointer"
               >
                 <Sliders className="h-3.5 w-3.5 text-slate-500 dark:text-zinc-400" />
