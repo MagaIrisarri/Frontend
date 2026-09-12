@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { getReservationsByClientId, cancelReservation } from '../../services/reservation.service';
 import type { Reservation } from '../../types/reservation.types';
 import { ArrowLeft, Clock, MapPin, XCircle } from 'lucide-react';
+import { ReservationStatusBadge } from '../../components/Shared/ReservationStatusBadge';
+import { formatReservationDate } from '../../utils/date';
 
 export default function MyReservations() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -39,23 +41,6 @@ export default function MyReservations() {
       fetchReservations(currentUserId);
     } catch (error) {
       alert('Error al cancelar la reserva');
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PENDIENTE':
-        return 'text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/40';
-      case 'CONFIRMADA':
-        return 'text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/40';
-      case 'EN CURSO':
-        return 'text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/40';
-      case 'FINALIZADA':
-        return 'text-slate-700 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700';
-      case 'CANCELADA':
-        return 'text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/50 border border-red-200 dark:border-red-800/40';
-      default:
-        return 'text-slate-700 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700';
     }
   };
 
@@ -97,9 +82,7 @@ export default function MyReservations() {
               >
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(res.status || '')}`}>
-                      {res.status}
-                    </span>
+                    <ReservationStatusBadge status={res.status} />
                     <span className="text-sm text-slate-500 dark:text-zinc-400">
                       ID: {res.id?.slice(0, 8)}
                     </span>
@@ -110,7 +93,7 @@ export default function MyReservations() {
                   </h3>
                   <div className="text-slate-600 dark:text-zinc-400 flex items-center gap-2 text-sm">
                     <Clock className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-                    {new Date(res.startTime).toLocaleString()} - {new Date(res.endTime).toLocaleString()}
+                    {formatReservationDate(res.startTime)} - {formatReservationDate(res.endTime)}
                   </div>
                   <div className="text-sm text-slate-500 dark:text-zinc-400">
                     Vehículo: <strong className="text-slate-700 dark:text-zinc-300 font-semibold">{res.vehicle?.plate || 'Sin patente'}</strong>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, MapPin, Car, CheckCircle, AlertTriangle, Trash2, AlertCircle } from 'lucide-react';
 import type { Reservation } from '../../types/reservation.types';
+import { ReservationStatusBadge } from '../Shared/ReservationStatusBadge';
+import { formatReservationDate } from '../../utils/date';
 
 interface ReservationsModalProps {
   isOpen: boolean;
@@ -41,59 +43,6 @@ export function ReservationsModal({
   const currentList = tab === 'active' ? activeReservations : historyReservations;
 
   if (!isOpen) return null;
-
-  const formatDate = (dateString: string) => {
-    try {
-      const d = new Date(dateString);
-      return d.toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const getStatusBadge = (status: Reservation['status']) => {
-    switch (status) {
-      case 'EN CURSO':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-green-500/15 text-green-600 dark:text-green-400 border border-green-500/30 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            En curso
-          </span>
-        );
-      case 'CONFIRMADA':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
-            Confirmada
-          </span>
-        );
-      case 'PENDIENTE':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-            Pendiente
-          </span>
-        );
-      case 'FINALIZADA':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-            Finalizada
-          </span>
-        );
-      case 'CANCELADA':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
-            Cancelada
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
 
   const handleConfirmCancel = async () => {
     if (!confirmingReservation || !onCancelReservation) return;
@@ -239,7 +188,7 @@ export function ReservationsModal({
                         </p>
                       )}
                     </div>
-                    {getStatusBadge(res.status)}
+                    <ReservationStatusBadge status={res.status} />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-white dark:bg-zinc-900/80 p-3 rounded-xl border border-zinc-200/70 dark:border-zinc-800">
@@ -247,7 +196,7 @@ export function ReservationsModal({
                       <Clock className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
                       <div className="min-w-0">
                         <span className="text-[10px] text-zinc-400 block font-medium">Desde</span>
-                        <span className="font-semibold truncate block">{formatDate(res.startTime)}</span>
+                        <span className="font-semibold truncate block">{formatReservationDate(res.startTime)}</span>
                       </div>
                     </div>
 
@@ -255,7 +204,7 @@ export function ReservationsModal({
                       <Clock className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
                       <div className="min-w-0">
                         <span className="text-[10px] text-zinc-400 block font-medium">Hasta</span>
-                        <span className="font-semibold truncate block">{formatDate(res.endTime)}</span>
+                        <span className="font-semibold truncate block">{formatReservationDate(res.endTime)}</span>
                       </div>
                     </div>
 
@@ -339,7 +288,7 @@ export function ReservationsModal({
               <div className="flex justify-between">
                 <span className="text-zinc-500">Fecha y Hora:</span>
                 <span className="font-semibold text-zinc-900 dark:text-white">
-                  {formatDate(confirmingReservation.startTime)}
+                  {formatReservationDate(confirmingReservation.startTime)}
                 </span>
               </div>
               {confirmingReservation.parkingSpace?.spaceCode && (

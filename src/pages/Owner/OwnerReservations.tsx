@@ -20,6 +20,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/Shared/ThemeToggle';
+import { ReservationStatusBadge } from '../../components/Shared/ReservationStatusBadge';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { useTheme } from '../../context/ThemeContext';
 import { getReservationsByOwner, cancelReservation } from '../../services/reservation.service';
@@ -224,47 +225,6 @@ export const OwnerReservations: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'EN CURSO':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            En Curso
-          </span>
-        );
-      case 'CONFIRMADA':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-            <CheckCircle2 className="h-3 w-3" />
-            Confirmada
-          </span>
-        );
-      case 'PENDIENTE':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-            <Clock className="h-3 w-3" />
-            Pendiente
-          </span>
-        );
-      case 'FINALIZADA':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-            Finalizada
-          </span>
-        );
-      case 'CANCELADA':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-            <XCircle className="h-3 w-3" />
-            Cancelada
-          </span>
-        );
-      default:
-        return <span className="text-xs text-zinc-500">{status}</span>;
-    }
   };
 
   const shineColors = theme === 'dark'
@@ -525,7 +485,7 @@ export const OwnerReservations: React.FC = () => {
                       >
                         {/* Estado */}
                         <td className="py-3.5 px-4">
-                          {getStatusBadge(r.status)}
+                          <ReservationStatusBadge status={r.status} />
                         </td>
 
                         {/* Cochera y Plaza */}
