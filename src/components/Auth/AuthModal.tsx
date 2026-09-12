@@ -34,6 +34,7 @@ interface FormErrors {
   password?: string;
   confirmPassword?: string;
   general?: string;
+  type?: string;
 }
 
 const REGISTER_FIELD_ORDER = [
@@ -45,6 +46,7 @@ const REGISTER_FIELD_ORDER = [
   'email',
   'password',
   'confirmPassword',
+  'type',
 ] as const;
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -72,6 +74,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     email: '',
     password: '',
     confirmPassword: '',
+    type: '',
   });
   const [registerTouched, setRegisterTouched] = useState<Record<string, boolean>>({});
   const [registerErrors, setRegisterErrors] = useState<FormErrors>({});
@@ -106,11 +109,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       case 'phone':
         if (!value.trim() || value.trim().length < 6) return 'Ingresá un número de teléfono válido';
         break;
-      case 'date_of_birth':
+      case 'date_of_birth': {
         if (!value) return 'Seleccioná tu fecha de nacimiento';
         const birthDate = new Date(value);
         if (isNaN(birthDate.getTime()) || birthDate >= new Date()) return 'La fecha de nacimiento no puede ser futura';
+
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        if (age < 18) return 'Debés ser mayor de 18 años para registrarte';
         break;
+}
       case 'email':
         if (!value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return 'Ingresá un correo electrónico válido';
         break;
@@ -120,6 +132,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       case 'confirmPassword':
         if (!value) return 'Repetí tu contraseña';
         if (value !== currentForm.password) return 'Las contraseñas no coinciden';
+        break;
+      case 'type':
+        if (!value) return 'Ingresa el tipo de usuario';
+        if (value !== 'CLIENTE' && value !== 'DUEÑO') return 'Ingrese una opcion valida';
         break;
     }
     return undefined;
@@ -225,7 +241,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         date_of_birth: registerForm.date_of_birth,
         email: registerForm.email.trim().toLowerCase(),
         password: registerForm.password,
-        type: 'CLIENTE',
+        type: registerForm.type.trim(),
       };
 
       const response = await fetch('http://localhost:3000/api/users', {
@@ -647,6 +663,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   )}
                 </div>
               </div>
+              
+
+             
+                <div className="flex flex-col justify-start">
+                  <label htmlFor="modal-reg-type" className="block text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1">
+                    Tipo de cuenta
+                  </label>
+                  <select
+                    id="modal-reg-type"
+                    name="type"
+                    value={registerForm.type}
+                    onChange={(e) => setRegisterForm({ ...registerForm, type: e.target.value })}
+                    className={`${inputClass(false)} px-3 py-2`}
+                  >
+                    <option value="CLIENTE">Cliente</option>
+                    <option value="DUEÑO">Dueño de cochera</option>
+                  </select>
+                  </div>
+                
 
               <button
                 type="submit"
