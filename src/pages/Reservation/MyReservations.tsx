@@ -2,13 +2,17 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getReservationsByClientId, cancelReservation } from '../../services/reservation.service';
 import type { Reservation } from '../../types/reservation.types';
-import { ArrowLeft, Clock, MapPin, XCircle } from 'lucide-react';
-import { ReservationStatusBadge } from '../../components/Shared/ReservationStatusBadge';
-import { formatReservationDate } from '../../utils/date';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ReservationCard } from '../../components/Reservation/ReservationCard';
+import { CancelReservationDialog } from '../../components/Reservation/CancelReservationDialog';
 
 export default function MyReservations() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmingReservation, setConfirmingReservation] = useState<Reservation | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const userString = localStorage.getItem('user');
@@ -34,13 +38,20 @@ export default function MyReservations() {
     }
   };
 
-  const handleCancel = async (id: string) => {
-    if (!window.confirm('¿Estás seguro de que deseas cancelar esta reserva?')) return;
+  const handleConfirmCancel = async () => {
+    if (!confirmingReservation || !currentUserId) return;
     try {
-      await cancelReservation(id, currentUserId);
-      fetchReservations(currentUserId);
-    } catch (error) {
-      alert('Error al cancelar la reserva');
+      setCancelling(true);
+      setCancelError(null);
+      await cancelReservation(confirmingReservation.id, currentUserId);
+      setCancelSuccess('La reserva fue dada de baja correctamente.');
+      setConfirmingReservation(null);
+      await fetchReservations(currentUserId);
+      setTimeout(() => setCancelSuccess(null), 4000);
+    } catch (err: any) {
+      setCancelError(err.response?.data?.message || err.message || 'Error al dar de baja la reserva');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -69,6 +80,14 @@ export default function MyReservations() {
           </h1>
         </div>
 
+        {/* Mensaje de éxito tras cancelar */}
+        {cancelSuccess && (
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+            <CheckCircle className="h-4 w-4 shrink-0" />
+            <span>{cancelSuccess}</span>
+          </div>
+        )}
+
         {reservations.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm">
             <p className="text-slate-500 dark:text-zinc-400">No tienes reservas realizadas.</p>
@@ -76,45 +95,32 @@ export default function MyReservations() {
         ) : (
           <div className="space-y-4">
             {reservations.map((res) => (
-              <div 
-                key={res.id} 
-                className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-colors"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <ReservationStatusBadge status={res.status} />
-                    <span className="text-sm text-slate-500 dark:text-zinc-400">
-                      ID: {res.id?.slice(0, 8)}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                    <MapPin className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-                    {res.parkingSpace?.parking?.name || 'Estacionamiento Desconocido'} - Plaza {res.parkingSpace?.spaceCode || 'N/A'}
-                  </h3>
-                  <div className="text-slate-600 dark:text-zinc-400 flex items-center gap-2 text-sm">
-                    <Clock className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
-                    {formatReservationDate(res.startTime)} - {formatReservationDate(res.endTime)}
-                  </div>
-                  <div className="text-sm text-slate-500 dark:text-zinc-400">
-                    Vehículo: <strong className="text-slate-700 dark:text-zinc-300 font-semibold">{res.vehicle?.plate || 'Sin patente'}</strong>
-                  </div>
-                </div>
-
-                {(res.status === 'PENDIENTE' || res.status === 'CONFIRMADA') && new Date(res.startTime) > new Date() && (
-                  <button
-                    type="button"
-                    onClick={() => handleCancel(res.id)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/20 text-sm font-semibold transition-colors cursor-pointer shrink-0"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    <span>Cancelar</span>
-                  </button>
-                )}
-              </div>
+              <ReservationCard
+                key={res.id}
+                reservation={res}
+                onCancel={(reservation) => {
+                  setCancelError(null);
+                  setConfirmingReservation(reservation);
+                }}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación de cancelación */}
+      <CancelReservationDialog
+        isOpen={!!confirmingReservation}
+        reservation={confirmingReservation}
+        onClose={() => {
+          setConfirmingReservation(null);
+          setCancelError(null);
+        }}
+        onConfirm={handleConfirmCancel}
+        loading={cancelling}
+        error={cancelError}
+      />
     </div>
   );
 }
+
