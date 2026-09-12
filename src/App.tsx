@@ -17,6 +17,10 @@ import AdminPanel from './pages/Admin/AdminPanel';
 import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes';
 import AdminService from './pages/Admin/AdminService';
 import { ParkingSpaceEdit } from './pages/ParkingSpace/ParkingSpaceEdit';
+import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
+import MyInvoices from './pages/Invoice/MyInvoices';
+import MetricsView from './pages/Owner/MetricsView';
+import MyReservations from './pages/Reservation/MyReservations';
 
 export function App() {
   return (
@@ -37,11 +41,23 @@ export function App() {
           <Route path="/parkings/:id/reservar" element={<ParkingSpaceMap />} />
         </Route>
 
-        {/* Rutas Protegidas Generales (Perfil y Vehículos) */}
+        {/* Rutas Protegidas Generales (Perfil, Vehículos, Facturas y Reservas) */}
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/vehicles" element={<ProtectedRoute><VehicleManagement /></ProtectedRoute>} />
         <Route path="/vehicles/new" element={<ProtectedRoute><VehicleRegister /></ProtectedRoute>} />
         <Route path="/vehicles/:id/edit" element={<ProtectedRoute><VehicleEdit /></ProtectedRoute>} />
+        <Route path="/invoices" element={<ProtectedRoute><MyInvoices /></ProtectedRoute>} />
+        <Route path="/reservations" element={<ProtectedRoute><MyReservations /></ProtectedRoute>} />
+
+        {/* Rutas Protegidas - Solo EMPLEADO */}
+        <Route
+          path="/employee"
+          element={
+            <ProtectedRoute allowedRoles={['EMPLEADO']}>
+              <EmployeeDashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Rutas Protegidas - Solo ADMINISTRADOR */}
         <Route
@@ -91,6 +107,14 @@ export function App() {
           element={
             <ProtectedRoute allowedRoles={['DUEÑO']}>
               <MyParkings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/parkings/:id/metrics"
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <MetricsView />
             </ProtectedRoute>
           }
         />

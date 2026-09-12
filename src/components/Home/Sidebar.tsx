@@ -14,6 +14,7 @@ import {
   Store,
   HelpCircle,
   LogOut,
+  UserCheck,
 } from 'lucide-react';
 
 export const Sidebar: React.FC<any> = (props: any) => {
@@ -206,6 +207,30 @@ export const Sidebar: React.FC<any> = (props: any) => {
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-amber-500 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+          )}
+
+          {(props.isEmployee || (user?.type && user.type.toUpperCase().includes('EMP')) || (user?.role && user.role.toUpperCase().includes('EMP'))) && (
+            <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
+              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Rol Empleado
+              </div>
+              <Link
+                to="/employee"
+                onClick={() => setIsSidebarOpen(false)}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/25 text-zinc-900 dark:text-white transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    <UserCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold block">Panel de Empleado</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Turnos y check-in</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           )}

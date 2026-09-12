@@ -17,6 +17,14 @@ export const createReservation = (payload: {
 }).then(res => res.data);
 
 export const getReservationsByClient = (clientId: string) => api.get('/api/reservations/client/' + clientId).then(res => res.data);
+export const getReservationsByClientId = getReservationsByClient;
+
+export const checkInReservation = (reservationId: string, employeeId: string) =>
+  api.post(`/api/reservations/${reservationId}/check-in`, { employeeId }, { headers: { 'x-user-id': employeeId } }).then(res => res.data);
+
+export const checkOutReservation = (reservationId: string, employeeId: string) =>
+  api.post(`/api/reservations/${reservationId}/check-out`, { employeeId }, { headers: { 'x-user-id': employeeId } }).then(res => res.data);
+
 export const getReservationsByOwner = (ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
 export const cancelReservation = (reservationId: string, userId: string) =>
   api
@@ -31,3 +39,4 @@ export const cancelReservation = (reservationId: string, userId: string) =>
       })
     )
     .then((res) => res.data);
+

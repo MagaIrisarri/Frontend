@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Search, X, Layers, Building2, HelpCircle, User, Settings, Bell, LogOut } from 'lucide-react';
+import { Menu, Search, X, Layers, Building2, HelpCircle, User, Settings, Bell, LogOut, UserCheck, Calendar, FileText } from 'lucide-react';
 import { ThemeToggle } from '../Shared/ThemeToggle';
 import { VehicleMapFilter } from '../Parking/VehicleMapFilter';
 
@@ -96,9 +96,17 @@ export const TopBar: React.FC<any> = (props: any) => {
         />
       </div>
 
-      {/* Derecha: Ofrecé tu estacionamiento / Panel Dueño + Ayuda + ThemeToggle + Píldora de Usuario */}
+      {/* Derecha: Ofrecé tu estacionamiento / Panel Dueño / Panel Empleado + Ayuda + ThemeToggle + Píldora de Usuario */}
       <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-        {props.isOwner || (user?.type && (user.type.toUpperCase().includes('DUE') || user.type.toUpperCase().includes('OWNER'))) ? (
+        {props.isEmployee || (user?.type && user.type.toUpperCase().includes('EMP')) || (user?.role && user.role.toUpperCase().includes('EMP')) ? (
+          <Link
+            to="/employee"
+            className="hidden lg:flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 shadow-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+            title="Ir al Panel de Empleado"
+          >
+            <span>Panel Empleado ↗</span>
+          </Link>
+        ) : props.isOwner || (user?.type && (user.type.toUpperCase().includes('DUE') || user.type.toUpperCase().includes('OWNER'))) ? (
           <Link
             to="/owner"
             className="hidden lg:flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 shadow-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
@@ -176,6 +184,38 @@ export const TopBar: React.FC<any> = (props: any) => {
                       <User className="h-4 w-4 text-zinc-400" />
                       <span>Mi perfil</span>
                     </Link>
+
+                    {/* Mis reservas */}
+                    <Link
+                      to="/reservations"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors"
+                    >
+                      <Calendar className="h-4 w-4 text-zinc-400" />
+                      <span>Mis reservas</span>
+                    </Link>
+
+                    {/* Facturación y pagos */}
+                    <Link
+                      to="/invoices"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors"
+                    >
+                      <FileText className="h-4 w-4 text-zinc-400" />
+                      <span>Facturación y pagos</span>
+                    </Link>
+
+                    {/* Panel Empleado (si corresponde) */}
+                    {(props.isEmployee || (user?.type && user.type.toUpperCase().includes('EMP')) || (user?.role && user.role.toUpperCase().includes('EMP'))) && (
+                      <Link
+                        to="/employee"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold transition-colors"
+                      >
+                        <UserCheck className="h-4 w-4" />
+                        <span>Panel de Empleado</span>
+                      </Link>
+                    )}
 
                     {/* Configuración */}
                     <Link

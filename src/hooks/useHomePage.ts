@@ -22,6 +22,7 @@ export function useHomePage() {
   const user = useAuthStore((state) => state.user);
   const isOwner = useAuthStore((state) => state.isOwner);
   const isAdmin = useAuthStore((state) => state.isAdmin);
+  const isEmployee = useAuthStore((state) => state.isEmployee);
   const logout = useAuthStore((state) => state.logout);
   const { theme } = useTheme();
 
@@ -299,6 +300,7 @@ export function useHomePage() {
     theme,
     isOwner,
     isAdmin,
+    isEmployee,
     parkings,
     filteredParkings,
     favoriteParkings,

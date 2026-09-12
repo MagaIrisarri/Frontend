@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { getParkingsByOwner, deleteParking } from '../../services/parking.service';
 import ConfirmDialog from '../../components/Shared/ConfirmDialog/ConfirmDialog';
 import { useAuthStore } from '../../stores/authStore.js';
-import { Pencil, Trash2, LayoutGrid, Plus, Building2, ArrowLeft, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, LayoutGrid, Plus, Building2, ArrowLeft, Loader2, BarChart2 } from 'lucide-react';
 
 export default function MyParkings() {
   const navigate = useNavigate();
@@ -156,6 +156,14 @@ export default function MyParkings() {
                             title="Gestionar Plazas"
                           >
                             <LayoutGrid className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/parkings/${p.id}/metrics`)}
+                            className="p-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:text-purple-500 dark:hover:text-purple-400 transition cursor-pointer"
+                            title="Ver Métricas"
+                          >
+                            <BarChart2 className="h-4 w-4" />
                           </button>
                           <button
                             type="button"

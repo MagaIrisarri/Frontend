@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, AlertCircle, CheckCircle2, Car, Plus, ArrowRight } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Car, Calendar, FileText, ArrowRight } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
 import { ProfileHeader } from '../../components/Profile/ProfileHeader';
 import { ProfileIdentityCard } from '../../components/Profile/ProfileIdentityCard';
@@ -37,6 +37,60 @@ export const ProfilePage: React.FC = () => {
 
         {/* Tarjeta de Identidad Superior */}
         <ProfileIdentityCard {...profileProps} />
+
+        {/* Accesos Rápidos: Reservas, Facturas y Vehículos */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <button
+            type="button"
+            onClick={() => navigate('/reservations')}
+            className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm hover:border-blue-500/50 hover:shadow-md transition-all text-left cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Mis Reservas</h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">Ver reservas activas y pasadas</p>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/invoices')}
+            className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all text-left cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Facturación y Pagos</h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">Mis facturas y comprobantes</p>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 group-hover:text-emerald-500 transition-all" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/vehicles')}
+            className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm hover:border-purple-500/50 hover:shadow-md transition-all text-left cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform">
+                <Car className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Mis Vehículos</h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">Administrar flota registrada</p>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 group-hover:text-purple-500 transition-all" />
+          </button>
+        </div>
 
         {/* Notificaciones globales de feedback */}
         {errorMsg && (

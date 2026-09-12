@@ -22,7 +22,15 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     if (!normalizedAllowed.includes(userRole)) {
       return (
         <Navigate
-          to={userRole === 'DUEÑO' ? '/owner' : userRole === 'ADMINISTRADOR' ? '/admin' : '/'}
+          to={
+            userRole === 'DUEÑO'
+              ? '/owner'
+              : userRole === 'ADMINISTRADOR'
+              ? '/admin'
+              : userRole === 'EMPLEADO'
+              ? '/employee'
+              : '/'
+          }
           replace
         />
       );
