@@ -12,6 +12,8 @@ import { ParkingSpaceMap } from './pages/ParkingSpace/ParkingSpaceMap';
 import EditParkingForm from './pages/Parking/EditParkingForm';
 import OwnerDashboard from './pages/Owner/OwnerDashboard';
 import OwnerReservations from './pages/Owner/OwnerReservations';
+import OwnerEmployees from './pages/Owner/OwnerEmployees';
+import OwnerShifts from './pages/Owner/OwnerShifts';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import AdminPanel from './pages/Admin/AdminPanel';
 import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes';
@@ -117,6 +119,26 @@ export function App() {
           element={
             <ProtectedRoute allowedRoles={['DUEÑO']}>
               <OwnerReservations />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Gestión de empleados */}
+        <Route
+          path="/owner/employees"
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <OwnerEmployees />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Asignación de turnos */}
+        <Route
+          path="/owner/shifts"
+          element={
+            <ProtectedRoute allowedRoles={['DUEÑO']}>
+              <OwnerShifts />
             </ProtectedRoute>
           }
         />

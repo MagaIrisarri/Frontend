@@ -16,6 +16,9 @@ export const createReservation = (payload: {
   endTime: toLocalISOString(payload.endTime),
 }).then(res => res.data);
 
+export const confirmReservation = (reservationId: string) => 
+  api.patch(`/api/reservations/${reservationId}/confirm`).then(res => res.data);
+
 export const getReservationsByClient = (clientId: string) => api.get('/api/reservations/client/' + clientId).then(res => res.data);
 export const getReservationsByClientId = getReservationsByClient;
 
