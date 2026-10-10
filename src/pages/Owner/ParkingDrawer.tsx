@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Minus, Plus } from 'lucide-react';
 import { Drawer } from '../../components/Owner/ui/Layer';
 import { Field, Input, apiError } from '../../components/Owner/ui/Field';
@@ -22,6 +23,7 @@ const hm = (t?: string) => (t ?? '').slice(0, 5);
 export default function ParkingDrawer({ parking, onClose }: { parking: Parking | null; onClose: () => void }) {
   const { ownerId, refresh } = useOwner();
   const toast = useToast();
+  const navigate = useNavigate();
   const edit = !!parking;
   const [v, setV] = useState(() => parking ? {
     name: parking.name, image: parking.imageUrl || parking.image || '', address: parking.address, locality: parking.locality, postalCode: parking.postalCode,
@@ -52,8 +54,10 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
     if (v.address.trim().length < 5) e.address = 'Ingresá calle y altura.';
     if (v.locality.trim().length < 3) e.locality = 'Ingresá la localidad.';
     if (!/^(\d{4}|[A-Z]\d{4}[A-Z]{3})$/.test(v.postalCode.trim().toUpperCase())) e.postalCode = 'Usá 4 dígitos o formato CPA (S2000ABC).';
-    if (!(num('car') >= 1)) e.car = 'Mínimo 1 plaza de auto.';
-    (['moto', 'truck'] as const).forEach(k => { if (!(num(k) >= 0)) e[k] = 'Número inválido.'; });
+    if (!edit) { // las plazas solo se cargan al crear; después se gestionan en Plazas (R-18)
+      if (!(num('car') >= 1)) e.car = 'Mínimo 1 plaza de auto.';
+      (['moto', 'truck'] as const).forEach(k => { if (!(num(k) >= 0)) e[k] = 'Número inválido.'; });
+    }
     if (!v.is24 && !(v.open && v.close && v.open < v.close)) e.close = 'El cierre debe ser posterior a la apertura.';
     if (!(num('min') >= 1)) e.min = 'Mínimo 1 h.';
     if (!(num('max') >= num('min'))) e.max = 'Debe ser ≥ al mínimo.';
@@ -69,14 +73,13 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
     setBusy(true);
     const data = {
       name: v.name.trim(), address: v.address.trim(), locality: v.locality.trim(), postalCode: v.postalCode.trim().toUpperCase(),
-      carCapacity: n('car'), motorcycleCapacity: n('moto'), truckCapacity: n('truck'),
       openingTime: v.is24 ? '00:00' : v.open, closingTime: v.is24 ? '23:59' : v.close,
       minReservationHours: num('min'), maxReservationHours: num('max'), reservationMargin: num('margin'),
       latitude: Number(v.lat), longitude: Number(v.lng), imageUrl: v.image.trim(),
     };
     try {
       if (parking) { await putParking(data, parking.id); toast(`Cambios guardados en “${data.name}”.`); }
-      else { await createParking({ ...data, ownerId }); toast(`Sucursal “${data.name}” creada con ${plural(total, 'plaza', 'plazas')}. Falta cargar sus tarifas.`); }
+      else { await createParking({ ...data, carCapacity: n('car'), motorcycleCapacity: n('moto'), truckCapacity: n('truck'), ownerId }); toast(`Sucursal “${data.name}” creada con ${plural(total, 'plaza', 'plazas')}. Falta cargar sus tarifas.`); }
       await refresh();
       onClose();
     } catch (x) { toast(apiError(x), 'err'); } finally { setBusy(false); }
@@ -100,8 +103,14 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
             <LocationPicker lat={Number(v.lat)} lng={Number(v.lng)} defaultLocality={v.locality} defaultPostalCode={v.postalCode} onChangeLocation={onLocation} />
           </div>
         </section>
+        {edit ? (
+          <section className="fs"><div className="fh"><h3>Plazas</h3><span className="total">Total: <b>{plural(total, 'plaza', 'plazas')}</b></span></div>
+            <p className="ctx" style={{ margin: 0 }}>Para agregar, pasar a mantenimiento o dar de baja plazas, usá la pestaña{' '}
+              <button type="button" className="link" onClick={() => { onClose(); navigate(`/owner/spaces?p=${parking!.id}`); }}>Plazas</button>.</p>
+          </section>
+        ) : (
         <section className="fs"><div className="fh"><h3>Plazas</h3><span className="total">Total: <b>{plural(total, 'plaza', 'plazas')}</b></span></div>
-          <p className="ctx" style={{ marginTop: -6 }}>{edit ? 'Podés sumar plazas o ajustar la capacidad por tipo.' : 'Se crean automáticamente con código correlativo por tipo de vehículo.'}</p>
+          <p className="ctx" style={{ marginTop: -6 }}>Se crean automáticamente con código correlativo por tipo de vehículo. Después las gestionás desde Plazas.</p>
           <div className="g3">{VT.map(t => {
             const k = FIELD[t.k], I = VICON[t.k], c = CODE[t.k], cnt = n(k);
             return (
@@ -118,6 +127,7 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
             );
           })}</div>
         </section>
+        )}
         <section className="fs"><div className="fh"><h3>Horario</h3>
           <label className="switch"><input type="checkbox" checked={v.is24} onChange={e => setV({ ...v, is24: e.target.checked })} /><span className="t" />Abierto 24 horas</label></div>
           <div className="g2">

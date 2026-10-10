@@ -12,6 +12,9 @@ export const getBrands = () => api.get('/api/brands').then(res => res.data);
 export const getModels = (brandId?: string) => api.get('/api/models', { params: brandId ? { brandId } : undefined }).then(res => res.data);
 export const getInsurances = () => api.get('/api/insurances').then(res => res.data);
 export const getOneVehicle = (id: string) => api.get(`/api/vehicles/${id}`).then(res => res.data);
+// Panel del administrador: todos los vehículos registrados y alta de aseguradoras.
+export const getVehicles = () => api.get('/api/vehicles').then(res => res.data);
+export const createInsurance = (data: { name: string }) => api.post('/api/insurances', data).then(res => res.data);
 
 
 

@@ -165,15 +165,20 @@ export interface ParkingLike {
   id: string; isActive: boolean; openingTime: string; closingTime: string;
   carCapacity?: number; motorcycleCapacity?: number; truckCapacity?: number;
   availableCarSpaces?: number; availableMotorcycleSpaces?: number; availableTruckSpaces?: number;
+  maintenanceCarSpaces?: number; maintenanceMotorcycleSpaces?: number; maintenanceTruckSpaces?: number;
   prices?: { id: string; vehicleType: string; price: number }[];
 }
+const MAINT = { AUTO: 'maintenanceCarSpaces', MOTO: 'maintenanceMotorcycleSpaces', CAMIONETA: 'maintenanceTruckSpaces' } as const;
 export const capOf = (p: ParkingLike, k: VehicleKey) => Number(p[VT.find(t => t.k === k)!.cap] ?? 0);
+export const maintOf = (p: ParkingLike, k: VehicleKey) => Number(p[MAINT[k]] ?? 0);
+// En servicio: capacidad menos las plazas en mantenimiento (ni libres ni ocupadas). La ocupación se mide sobre estas.
+export const svcOf = (p: ParkingLike, k: VehicleKey) => Math.max(0, capOf(p, k) - maintOf(p, k));
 export const occOf = (p: ParkingLike, k: VehicleKey) => {
   const t = VT.find(x => x.k === k)!;
   const free = p[t.free];
-  return free == null ? 0 : Math.max(0, capOf(p, k) - Number(free));
+  return free == null ? 0 : Math.max(0, svcOf(p, k) - Number(free));
 };
-export const tot = (p: ParkingLike) => VT.reduce((a, t) => a + capOf(p, t.k), 0);
+export const tot = (p: ParkingLike) => VT.reduce((a, t) => a + svcOf(p, t.k), 0);
 export const oc = (p: ParkingLike) => VT.reduce((a, t) => a + occOf(p, t.k), 0);
 export const pct = (p: ParkingLike) => (tot(p) ? Math.round((oc(p) / tot(p)) * 100) : 0);
 export const priceOf = (p: ParkingLike, k: VehicleKey) => p.prices?.find(x => x.vehicleType === k);
@@ -218,7 +223,21 @@ export interface Res {
   date: string; endDate: string; start: string; end: string; hours: number;
   plate: string; vtype: string; client: { n: string; ph: string; em: string };
   eid: string | null; amount: number | null;
+  bill: Bill | null; // detalle del cobro; null si no hay factura o es anterior al detalle
 }
+
+// Detalle del cobro guardado en la factura al hacer el check-out (R-14).
+export interface Bill { reservedHours: number; extraHours: number; hourlyRate: number; servicesAmount: number }
+export const toBill = (inv: any): Bill | null => inv?.reservedHours == null ? null : {
+  reservedHours: Number(inv.reservedHours), extraHours: Number(inv.extraHours ?? 0),
+  hourlyRate: Number(inv.hourlyRate ?? 0), servicesAmount: Number(inv.servicesAmount ?? 0),
+};
+// Líneas [concepto, importe] que suman el total: horas reservadas, horas extra (si hubo) y servicios (si hubo).
+export const billLines = (b: Bill): [string, number][] => [
+  [`${plural(b.reservedHours, 'hora reservada', 'horas reservadas')} × ${money(b.hourlyRate)}`, b.reservedHours * b.hourlyRate],
+  ...(b.extraHours ? [[`${plural(b.extraHours, 'hora extra', 'horas extra')} × ${money(b.hourlyRate)}`, b.extraHours * b.hourlyRate] as [string, number]] : []),
+  ...(b.servicesAmount ? [['Servicios', b.servicesAmount] as [string, number]] : []),
+];
 
 const clock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 export function normRes(r: any): Res {
@@ -237,6 +256,7 @@ export function normRes(r: any): Res {
     client: { n: [c.name, c.last_name].filter(Boolean).join(' ') || '—', ph: c.phone ?? '', em: c.email ?? '' },
     eid: r.attendedBy?.id ?? null,
     amount: r.amount == null ? null : Number(r.amount),
+    bill: toBill(r.invoice),
   };
 }
 

@@ -45,13 +45,11 @@ export interface CreateParkingInput {
   ownerId?: string;
 }
 
+// Sin capacidades: después del alta, las plazas se gestionan desde la pestaña Plazas (R-18).
 export interface UpdateParkingInput {
   locality: string;
   postalCode: string;
   address: string;
-  carCapacity: number;
-  motorcycleCapacity: number;
-  truckCapacity?: number;
   openingTime: string;
   closingTime: string;
   minReservationHours: number;

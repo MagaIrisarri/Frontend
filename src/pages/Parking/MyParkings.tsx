@@ -151,7 +151,7 @@ export default function MyParkings() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => navigate(`/my-parkings/${p.id}/spaces`)}
+                            onClick={() => navigate(`/owner/spaces?p=${p.id}`)}
                             className="p-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:text-emerald-500 transition cursor-pointer"
                             title="Gestionar Plazas"
                           >

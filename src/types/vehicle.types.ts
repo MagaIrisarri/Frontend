@@ -43,3 +43,6 @@ export interface UpdateVehicle {
   modelId: string;
   insuranceId?: string;
 }
+export interface VehicleTypeInput {
+  name: string;
+}

@@ -79,9 +79,6 @@ export default function ParkingEdit() {
       locality: form.locality.trim(),
       postalCode: form.postalCode.trim(),
       address: form.address.trim(),
-      carCapacity: Number(form.carCapacity),
-      motorcycleCapacity: Number(form.motorcycleCapacity),
-      truckCapacity: form.truckCapacity ? Number(form.truckCapacity) : undefined,
       openingTime: form.openingTime,
       closingTime: form.closingTime,
       minReservationHours: Number(form.minReservationHours || 1),
@@ -180,6 +177,7 @@ export default function ParkingEdit() {
               onSubmit={handleUpdate}
               submitLabel="Actualizar Estacionamiento"
               isSubmitting={isSubmitting}
+              showCapacity={false}
             />
           </>
         ) : (

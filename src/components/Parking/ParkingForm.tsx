@@ -25,6 +25,8 @@ type ParkingFormProps = {
   initialData?: typeof formInitialState;
   submitLabel?: string;
   isSubmitting?: boolean;
+  // Las plazas solo se cargan al crear la cochera; después se gestionan desde la pestaña Plazas del panel (R-18).
+  showCapacity?: boolean;
 };
 
 export const ParkingForm: React.FC<ParkingFormProps> = ({
@@ -32,6 +34,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
   initialData,
   submitLabel = 'Guardar Estacionamiento',
   isSubmitting = false,
+  showCapacity = true,
 }) => {
   const [form, setForm] = useState(initialData ?? formInitialState);
   const [imageLoadError, setImageLoadError] = useState(false);
@@ -282,6 +285,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
           </div>
 
           {/* SECCIÓN 3: ASIGNACIÓN INICIAL DE PLAZAS */}
+          {showCapacity && (
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100 dark:border-zinc-800">
               <div className="flex items-center gap-2.5">
@@ -436,6 +440,7 @@ export const ParkingForm: React.FC<ParkingFormProps> = ({
               </div>
             </div>
           </div>
+          )}
 
           {/* SECCIÓN 4: HORARIOS Y POLÍTICAS DE RESERVA */}
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">

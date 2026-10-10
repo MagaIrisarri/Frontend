@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getInvoicesByClientId } from '../../services/invoice.service';
 import { ArrowLeft, FileText, Clock } from 'lucide-react';
+import { billLines, money, toBill } from '../Owner/owner.lib';
 
 export default function MyInvoices() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -98,6 +99,14 @@ export default function MyInvoices() {
                   <div className="text-xs text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">
                     {inv.paymentMethod || 'No especificado'}
                   </div>
+                  {/* Detalle del cobro (horas reservadas, extra y servicios); las facturas viejas no lo tienen */}
+                  {toBill(inv) && (
+                    <dl className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-0.5">
+                      {billLines(toBill(inv)!).map(([l, v]) => (
+                        <div key={l} className="flex sm:justify-end gap-3"><dt>{l}</dt><dd className="tabular-nums">{money(v)}</dd></div>
+                      ))}
+                    </dl>
+                  )}
                 </div>
               </div>
             ))}
