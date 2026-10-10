@@ -10,7 +10,7 @@ Cada regla tiene un código para citarla en tareas: **R-** reglas de negocio, **
 
 **Cómo mantenerlo:** al resolver un L-xx o cerrar un D-xx, actualizar su columna Estado con el hash del commit. En el código, todo atajo se marca `// shortcut: L-xx, <límite>, <cuándo mejorar>`; `grep -rn "shortcut:" Backend/src Frontend/src` debe coincidir con las filas abiertas de este documento.
 
-Estado al 10/10/2026: fases 1 a 3 implementadas, **sin commit todavía** (se completa el hash al commitear).
+Estado al 10/10/2026: fases 1 a 3 implementadas. Commits: Backend `d8e7c10` (rama prueba-valen-bk), Frontend `fa0cdc9` (rama prueba-valen-fr). Los códigos R-01 a R-12, D-01, D-04, D-05, D-06, L-05 y L-22 quedan resueltos con esos commits; los marcados "Parcial" o "Abierta" siguen pendientes.
 
 ## Estados de un feriado
 
