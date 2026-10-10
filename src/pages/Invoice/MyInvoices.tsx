@@ -45,7 +45,7 @@ export default function MyInvoices() {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/')}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 text-sm font-semibold transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />

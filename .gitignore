@@ -41,3 +41,17 @@ Thumbs.db
 
 tsconfig.tsbuildinfo
 package-lock.json
+
+e2e/
+playwright.config.ts
+blob-report/
+playwright/.cache/
+
+# Claude: skills 
+.claude/settings.local.json
+
+# Ralph
+scripts/ralph/prd.json
+scripts/ralph/progress.txt
+scripts/ralph/archive/
+scripts/ralph/.last-branch

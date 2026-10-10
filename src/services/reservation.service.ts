@@ -1,5 +1,4 @@
 import axios from "axios";
-import type { Reservation } from '../types/reservation.types';
 import { toLocalISOString } from '../utils/date.js';
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
@@ -16,19 +15,14 @@ export const createReservation = (payload: {
   endTime: toLocalISOString(payload.endTime),
 }).then(res => res.data);
 
-export const confirmReservation = (reservationId: string) => 
-  api.patch(`/api/reservations/${reservationId}/confirm`).then(res => res.data);
-
 export const getReservationsByClient = (clientId: string) => api.get('/api/reservations/client/' + clientId).then(res => res.data);
 export const getReservationsByClientId = getReservationsByClient;
 
-export const checkInReservation = (reservationId: string, employeeId: string) =>
-  api.post(`/api/reservations/${reservationId}/check-in`, { employeeId }, { headers: { 'x-user-id': employeeId } }).then(res => res.data);
+// R-07: empleado asignado ("Registrada por"), editable mientras la reserva está en curso o reservada.
+export const assignReservationEmployee = (reservationId: string, employeeId: string) =>
+  api.put(`/api/reservations/${reservationId}`, { attendedById: employeeId }).then(res => res.data);
 
-export const checkOutReservation = (reservationId: string, employeeId: string) =>
-  api.post(`/api/reservations/${reservationId}/check-out`, { employeeId }, { headers: { 'x-user-id': employeeId } }).then(res => res.data);
-
-export const getReservationsByOwner = (ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
+export const getReservationsByOwner =(ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
 export const cancelReservation = (reservationId: string, userId: string) =>
   api
     .delete(`/api/reservations/${reservationId}/cancel`, {
@@ -42,4 +36,3 @@ export const cancelReservation = (reservationId: string, userId: string) =>
       })
     )
     .then((res) => res.data);
-

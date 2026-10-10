@@ -21,8 +21,6 @@ export function useHomePage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const isOwner = useAuthStore((state) => state.isOwner);
-  const isAdmin = useAuthStore((state) => state.isAdmin);
-  const isEmployee = useAuthStore((state) => state.isEmployee);
   const logout = useAuthStore((state) => state.logout);
   const { theme } = useTheme();
 
@@ -33,6 +31,7 @@ export function useHomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   // Filtros del mapa
   const [filters, setFilters] = useState<MapFilters>(DEFAULT_MAP_FILTERS);
@@ -92,12 +91,16 @@ export function useHomePage() {
   // Cargar cocheras sin auto-seleccionar ninguna al inicio
   const fetchParkings = useCallback(() => {
     setLoading(true);
+    setLoadError(false);
     getParking()
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.data || [];
         setParkings(list);
       })
-      .catch((err) => console.error('Error al cargar estacionamientos:', err))
+      .catch((err) => {
+        console.error('Error al cargar estacionamientos:', err);
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -121,12 +124,23 @@ export function useHomePage() {
       .finally(() => setLoadingReservations(false));
   }, [user?.id]);
 
+  // Se carga al entrar para mostrar el contador de reservas activas en el Sidebar
+  useEffect(() => {
+    fetchClientReservations();
+  }, [fetchClientReservations]);
+
   // Dar de baja / cancelar reserva
   const handleCancelReservation = async (reservationId: string) => {
     if (!user?.id) throw new Error('Usuario no identificado');
     await cancelReservation(reservationId, user.id);
     fetchClientReservations();
   };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Mismos estados que ACTIVE_RESERVATION_STATUSES del backend
+  const activeReservationsCount = clientReservations.filter((r) =>
+    ['PENDIENTE', 'CONFIRMADA', 'EN CURSO'].includes(r.status)
+  ).length;
 
   // Cocheras filtradas por buscador
   const filteredParkings = useMemo(() => {
@@ -288,7 +302,7 @@ export function useHomePage() {
     }
   }, [user, isOwner, navigate]);
 
-  const handleAuthSuccess = useCallback((loggedInUser: any) => {
+  const handleAuthSuccess = useCallback(() => {
     setIsAuthModalOpen(false);
     if (selectedParkingId && !isModalOpen) {
       setIsModalOpen(true);
@@ -299,8 +313,6 @@ export function useHomePage() {
     user,
     theme,
     isOwner,
-    isAdmin,
-    isEmployee,
     parkings,
     filteredParkings,
     favoriteParkings,
@@ -348,6 +360,9 @@ export function useHomePage() {
     authModalTab,
     setAuthModalTab,
     loading,
+    loadError,
+    unreadCount,
+    activeReservationsCount,
     fetchParkings,
     refreshSelectedParking,
     handleSelectSpot,

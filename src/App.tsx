@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import HomePage from './pages/Home/HomePage';
 import MyParkings from './pages/Parking/MyParkings';
 import ParkingCreate from './pages/Parking/ParkingCreate';
-import ProfilePage from './pages/Profile/ProfilePage';
+import { ProfileProvider } from './context/ProfileContext';
 import VehicleManagement from './pages/Vehicle/VehicleManagement';
 import VehicleRegister from './pages/Vehicle/VehicleRegister';
 import VehicleEdit from './pages/Vehicle/VehicleEdit';
@@ -13,13 +13,12 @@ import EditParkingForm from './pages/Parking/EditParkingForm';
 import OwnerDashboard from './pages/Owner/OwnerDashboard';
 import OwnerReservations from './pages/Owner/OwnerReservations';
 import OwnerEmployees from './pages/Owner/OwnerEmployees';
+import OwnerTariffs from './pages/Owner/OwnerTariffs';
+import OwnerServices from './pages/Owner/OwnerServices';
+import OwnerLayout from './pages/Owner/OwnerLayout';
 import OwnerShifts from './pages/Owner/OwnerShifts';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
-import AdminPanel from './pages/Admin/AdminPanel';
-import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes';
-import AdminService from './pages/Admin/AdminService';
 import { ParkingSpaceEdit } from './pages/ParkingSpace/ParkingSpaceEdit';
-import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
 import MyInvoices from './pages/Invoice/MyInvoices';
 import MetricsView from './pages/Owner/MetricsView';
 import MyReservations from './pages/Reservation/MyReservations';
@@ -40,6 +39,7 @@ function RedirectToParkingSpaces() {
 export function App() {
   return (
     <BrowserRouter>
+      <ProfileProvider>
       <Routes>
         {/* Ruta Principal: Mapa y Dashboard Unificado */}
         <Route path="/" element={<HomePage />} />
@@ -57,91 +57,33 @@ export function App() {
         </Route>
 
         {/* Rutas Protegidas Generales (Perfil, Vehículos, Facturas y Reservas) */}
-        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/vehicles" element={<ProtectedRoute><VehicleManagement /></ProtectedRoute>} />
         <Route path="/vehicles/new" element={<ProtectedRoute><VehicleRegister /></ProtectedRoute>} />
         <Route path="/vehicles/:id/edit" element={<ProtectedRoute><VehicleEdit /></ProtectedRoute>} />
         <Route path="/invoices" element={<ProtectedRoute><MyInvoices /></ProtectedRoute>} />
         <Route path="/reservations" element={<ProtectedRoute><MyReservations /></ProtectedRoute>} />
 
-        {/* Rutas Protegidas - Solo EMPLEADO */}
-        <Route
-          path="/employee"
-          element={
-            <ProtectedRoute allowedRoles={['EMPLEADO']}>
-              <EmployeeDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Rutas Protegidas - Solo ADMINISTRADOR */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-              <AdminPanel />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/vehicles"
-          element={
-            <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-              <AdminVehicleTypes />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/services"
-          element={
-            <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-              <AdminService />
-            </ProtectedRoute>
-          }
-        />
-
         {/* =========================================================
             RUTAS DE DUEÑO (DUEÑO)
            ========================================================= */}
-        {/* Panel principal de control */}
+        {/* Panel del dueño (owner-design/owner.html): una sola raíz con navegación propia */}
         <Route
           path="/owner"
           element={
             <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <OwnerDashboard />
+              <OwnerLayout />
             </ProtectedRoute>
           }
-        />
-
-        {/* Gestión de reservas de sus cocheras */}
-        <Route
-          path="/owner/reservations"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <OwnerReservations />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Gestión de empleados */}
-        <Route
-          path="/owner/employees"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <OwnerEmployees />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Asignación de turnos */}
-        <Route
-          path="/owner/shifts"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <OwnerShifts />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route index element={<OwnerDashboard />} />
+          <Route path="reservations" element={<OwnerReservations />} />
+          <Route path="tariffs" element={<OwnerTariffs />} />
+          <Route path="services" element={<OwnerServices />} />
+          <Route path="employees" element={<OwnerEmployees />} />
+          {/* el alta y la edición de empleados ahora son un panel lateral dentro de Personal */}
+          <Route path="employees/*" element={<Navigate to="/owner/employees" replace />} />
+          <Route path="shifts" element={<OwnerShifts />} />
+        </Route>
 
         {/* Listado y gestión de estacionamientos */}
         <Route
@@ -205,6 +147,7 @@ export function App() {
         {/* Fallback general */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ProfileProvider>
     </BrowserRouter>
   );
 }

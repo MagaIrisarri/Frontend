@@ -1,0 +1,255 @@
+// Lógica pura del rol dueño portada de owner-design/owner.html: formatos, normalización de datos y edición del calendario de turnos.
+// Sin React ni red: se prueba con `node tests/owner.lib.test.ts`.
+
+// ---------- formatos ----------
+export const money = (n: number) => '$' + Number(n).toLocaleString('es-AR');
+const pad = (n: number) => String(n).padStart(2, '0');
+export const isoD = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+// shortcut: L-04, "hoy" sale del reloj del navegador, tomarlo del servidor con la zona de la sucursal
+export const today = () => isoD(new Date());
+export const addD = (iso: string, n: number) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return isoD(d); };
+export const cap = (t: string) => t ? t[0]!.toUpperCase() + t.slice(1) : t;
+export const fmtD = (iso: string) => new Date(iso + 'T12:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+export const shD = (iso: string) => iso.slice(8) + '/' + iso.slice(5, 7);
+export const fmtH = (h: number) => String(Math.round(h * 10) / 10).replace('.', ',') + ' h';
+// shortcut: L-17, neto = importe / 1,21 (IVA 21 % supuesto), tomar neto e IVA de la facturación real
+export const net = (amount: number | null) => (amount == null ? null : Math.round(amount / 1.21));
+export const initials = (name = '', last = '') => ((name[0] ?? '') + (last[0] ?? '')).toUpperCase();
+export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+// ---------- vehículos ----------
+export type VehicleKey = 'AUTO' | 'MOTO' | 'CAMIONETA';
+export const VT: { k: VehicleKey; n: string; pl: string; cap: 'carCapacity' | 'motorcycleCapacity' | 'truckCapacity'; free: 'availableCarSpaces' | 'availableMotorcycleSpaces' | 'availableTruckSpaces' }[] = [
+  { k: 'AUTO', n: 'Auto', pl: 'Autos', cap: 'carCapacity', free: 'availableCarSpaces' },
+  { k: 'MOTO', n: 'Moto', pl: 'Motos', cap: 'motorcycleCapacity', free: 'availableMotorcycleSpaces' },
+  { k: 'CAMIONETA', n: 'Camioneta', pl: 'Camionetas', cap: 'truckCapacity', free: 'availableTruckSpaces' },
+];
+export const lvl = (pct: number) => (pct >= 100 ? 'err' : pct >= 90 ? 'warn' : '');
+
+// ---------- tiempo ----------
+export const SLOT = 30;
+// shortcut: L-09, '23:59' hace de 24:00 y no hay turnos que crucen medianoche, guardar minutos o fecha de fin
+export const mm = (t: string) => (t.startsWith('23:59') || t.startsWith('24:00') ? 1440 : +t.slice(0, 2) * 60 + +t.slice(3, 5));
+export const hhmm = (m: number) => `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`;
+export const tstr = (m: number) => (m >= 1440 ? '23:59' : hhmm(m)); // para el backend
+export const tm = (m: number) => (m >= 1440 ? '24:00' : hhmm(m)); // para mostrar
+export const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+export const DAYS_LONG = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+export const DOW = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'] as const;
+export const wdOf = (iso: string) => (new Date(iso + 'T12:00').getDay() + 6) % 7;
+export const monday = (iso: string) => addD(iso, -wdOf(iso));
+export const dayStr = (days: number[]) => {
+  const d = [...days].sort((a, b) => a - b);
+  if (d.length === 7) return 'Todos los días';
+  const rng = d.length >= 3 && d.every((v, i) => i === 0 || v === d[i - 1]! + 1);
+  return rng ? `${DAYS[d[0]!]}–${DAYS[d[d.length - 1]!]}` : d.map(i => DAYS[i]).join(', ');
+};
+
+// ---------- calendario de turnos ----------
+// Un día es una lista de bloques sin solapes: un empleado o "Cerrado" (se coloca igual que un empleado, R-05).
+export const CLOSED = '__closed';
+export interface Block { who: string; a: number; b: number }
+export type Day = Block[];
+export interface ServerDay { shifts: { employeeId: string; from: string; to: string }[]; closures: { from: string; to: string }[] }
+
+const sortDay = (d: Day) => [...d].sort((x, y) => x.a - y.a || x.b - y.b);
+
+export const fromServer = (s: ServerDay): Day => sortDay([
+  ...s.shifts.map(x => ({ who: x.employeeId, a: mm(x.from), b: mm(x.to) })),
+  ...s.closures.map(x => ({ who: CLOSED, a: mm(x.from), b: mm(x.to) })),
+]);
+
+export const toServer = (d: Day): ServerDay => ({
+  shifts: d.filter(x => x.who !== CLOSED).map(x => ({ employeeId: x.who, from: hhmm(x.a), to: tstr(x.b) })),
+  closures: d.filter(x => x.who === CLOSED).map(x => ({ from: hhmm(x.a), to: tstr(x.b) })),
+});
+
+// R-04: contiguos del mismo empleado (o cierres contiguos) se fusionan.
+export function merge(d: Day): Day {
+  const out: Block[] = [];
+  for (const x of sortDay(d)) {
+    const last = out[out.length - 1];
+    if (last && last.who === x.who && last.b === x.a) last.b = x.b;
+    else out.push({ ...x });
+  }
+  return out;
+}
+
+// R-02: el bloque colocado se queda con el horario; lo que queda debajo se recorta, se divide o desaparece.
+export function place(d: Day, blk: Block): Day {
+  const out: Block[] = [];
+  for (const x of d) {
+    if (x.b <= blk.a || x.a >= blk.b) { out.push(x); continue; }
+    if (x.a < blk.a) out.push({ ...x, b: blk.a });
+    if (x.b > blk.b) out.push({ ...x, a: blk.b });
+  }
+  out.push(blk);
+  return merge(out);
+}
+
+// Huecos dentro del horario de la sucursal (ni empleado ni cierre): no admiten reservas (R-01).
+export function gaps(d: Day, s: number, e: number): [number, number][] {
+  const out: [number, number][] = [];
+  let cur = s;
+  for (const x of sortDay(d)) {
+    if (x.b <= cur) continue;
+    if (x.a > cur) out.push([cur, Math.min(x.a, e)]);
+    cur = Math.max(cur, x.b);
+    if (cur >= e) break;
+  }
+  if (cur < e) out.push([cur, e]);
+  return out.filter(([a, b]) => b > a);
+}
+
+export type DropResult = { day: Day; msg: string } | { error: string };
+
+// R-03: soltar sobre un turno lo divide 50/50 (el nuevo toma la mitad donde se soltó); sobre un hueco, lo cubre entero.
+export function dropOn(d: Day, who: string, m: number, s: number, e: number, name = 'El empleado'): DropResult {
+  const x = d.find(z => z.a <= m && m < z.b);
+  if (x) {
+    if (x.who === who) return { error: `${name} ya tiene ese horario. Soltalo sobre otro lugar.` };
+    if (x.b - x.a < 2 * SLOT) return { error: 'Ese turno es demasiado corto para dividirlo.' };
+    const mid = x.a + Math.floor((x.b - x.a) / 2 / SLOT) * SLOT;
+    const [a, b] = m < mid ? [x.a, mid] : [mid, x.b];
+    return { day: place(d, { who, a, b }), msg: `${hhmm(a)} a ${tm(b)}` };
+  }
+  const g = gaps(d, s, e).find(([a, b]) => a <= m && m < b);
+  if (!g) return { error: 'Ese horario está fuera del horario de la sucursal.' };
+  return { day: place(d, { who, a: g[0], b: g[1] }), msg: `${hhmm(g[0])} a ${tm(g[1])}` };
+}
+
+export const hoursOf = (d: Day, who: string) => d.filter(x => x.who === who).reduce((h, x) => h + (x.b - x.a) / 60, 0);
+
+// Cobertura de la semana sobre el horario de apertura, sin contar cierres ni días cerrados (null).
+export function coverage(week: (Day | null)[], s: number, e: number) {
+  let req = 0, ok = 0;
+  const holes: { d: number; a: number; b: number }[] = [];
+  week.forEach((day, d) => {
+    if (!day) return;
+    const closed = day.filter(x => x.who === CLOSED).reduce((t, x) => t + Math.max(0, Math.min(x.b, e) - Math.max(x.a, s)), 0);
+    const g = gaps(day, s, e);
+    const miss = g.reduce((t, [a, b]) => t + (b - a), 0);
+    req += e - s - closed;
+    ok += e - s - closed - miss;
+    g.forEach(([a, b]) => holes.push({ d, a, b }));
+  });
+  return { pct: req ? Math.round((ok / req) * 100) : 100, gaps: holes };
+}
+
+export function gapGroups(holes: { d: number; a: number; b: number }[]) {
+  const m = new Map<string, { a: number; b: number; days: number[] }>();
+  holes.forEach(g => { const k = g.a + '-' + g.b; if (!m.has(k)) m.set(k, { a: g.a, b: g.b, days: [] }); m.get(k)!.days.push(g.d); });
+  return [...m.values()].sort((x, y) => x.days[0]! - y.days[0]! || x.a - y.a).map(g => `${dayStr(g.days)} ${hhmm(g.a)}–${tm(g.b)}`);
+}
+
+// R-08: aviso de jornada, ámbar por encima de 8 h y rojo por encima de 12 h. No bloquea.
+// shortcut: L-14, topes fijos sin tope semanal ni descanso entre jornadas, parametrizar según el convenio real
+export const MAX_DAY = 8, MAX_HARD = 12;
+export function workWarnings(week: (Day | null)[], emps: { id: string; name: string }[]) {
+  const out: { c: 'warn' | 'err'; t: string }[] = [];
+  for (const e of emps) {
+    const dh = week.map(d => (d ? hoursOf(d, e.id) : 0));
+    const hard = dh.flatMap((h, d) => (h > MAX_HARD ? [d] : []));
+    const soft = dh.flatMap((h, d) => (h > MAX_DAY && h <= MAX_HARD ? [d] : []));
+    if (hard.length) out.push({ c: 'err', t: `${e.name}: más de 12 h el ${dayStr(hard).toLowerCase()} (hasta ${fmtH(Math.max(...dh))})` });
+    if (soft.length) out.push({ c: 'warn', t: `${e.name}: más de 8 h el ${dayStr(soft).toLowerCase()}` });
+  }
+  return out;
+}
+
+// Quién cubre todo un tramo en un día (para proponer la transferencia de reservas, R-06).
+export const coveredBy = (d: Day, a: number, b: number) => d.find(x => x.who !== CLOSED && x.a <= a && b <= x.b)?.who;
+
+// ---------- sucursales ----------
+export interface ParkingLike {
+  id: string; isActive: boolean; openingTime: string; closingTime: string;
+  carCapacity?: number; motorcycleCapacity?: number; truckCapacity?: number;
+  availableCarSpaces?: number; availableMotorcycleSpaces?: number; availableTruckSpaces?: number;
+  prices?: { id: string; vehicleType: string; price: number }[];
+}
+export const capOf = (p: ParkingLike, k: VehicleKey) => Number(p[VT.find(t => t.k === k)!.cap] ?? 0);
+export const occOf = (p: ParkingLike, k: VehicleKey) => {
+  const t = VT.find(x => x.k === k)!;
+  const free = p[t.free];
+  return free == null ? 0 : Math.max(0, capOf(p, k) - Number(free));
+};
+export const tot = (p: ParkingLike) => VT.reduce((a, t) => a + capOf(p, t.k), 0);
+export const oc = (p: ParkingLike) => VT.reduce((a, t) => a + occOf(p, t.k), 0);
+export const pct = (p: ParkingLike) => (tot(p) ? Math.round((oc(p) / tot(p)) * 100) : 0);
+export const priceOf = (p: ParkingLike, k: VehicleKey) => p.prices?.find(x => x.vehicleType === k);
+export const missing = (p: ParkingLike) => VT.filter(t => capOf(p, t.k) > 0 && !priceOf(p, t.k));
+export const span = (p: ParkingLike): [number, number] => [mm(p.openingTime), mm(p.closingTime)];
+export const hrs = (p: ParkingLike) => (mm(p.openingTime) === 0 && mm(p.closingTime) === 1440 ? 'Abierto 24 h' : `${p.openingTime.slice(0, 5)} – ${p.closingTime.slice(0, 5)} h`);
+
+// Avisos de una sucursal activa: falta tarifa, casi llena, turnos incompletos (R-01).
+export function issues(p: ParkingLike, week: Day[] | undefined) {
+  if (!p.isActive) return [];
+  const o: { l: string; d: string }[] = [];
+  const m = missing(p), n = pct(p), free = tot(p) - oc(p);
+  if (m.length) o.push({ l: 'Falta tarifa', d: 'Sin precio para ' + m.map(t => t.pl.toLowerCase()).join(' y ') });
+  if (n >= 90) o.push({ l: n >= 100 ? 'Completa' : 'Casi llena', d: `${n} % ocupada · ${plural(free, 'plaza libre', 'plazas libres')}` });
+  if (week?.some(d => d.length)) {
+    const c = coverage(week, ...span(p));
+    if (c.pct < 100) o.push({ l: 'Turnos incompletos', d: `Cobertura semanal ${c.pct} %. Sin empleado no se pueden registrar reservas` });
+  }
+  return o;
+}
+
+// Texto de los turnos de un empleado en la semana tipo, agrupando días con el mismo horario.
+export function shiftsText(week: Day[] | undefined, who: string) {
+  const m = new Map<string, number[]>();
+  (week ?? []).forEach((d, i) => d.filter(x => x.who === who).forEach(x => {
+    const k = `${hhmm(x.a)}–${tm(x.b)}`;
+    m.set(k, [...(m.get(k) ?? []), i]);
+  }));
+  return [...m.entries()].map(([k, days]) => `${dayStr(days)} ${k}`);
+}
+
+// ---------- reservas ----------
+export type ResState = 'curso' | 'reservada' | 'finalizada' | 'cancelada';
+export const resState = (status: string): ResState =>
+  status === 'EN CURSO' ? 'curso' : status === 'FINALIZADA' ? 'finalizada' : status === 'CANCELADA' ? 'cancelada' : 'reservada';
+export const RS: Record<ResState, { l: string; c: string }> = {
+  curso: { l: 'En curso', c: 'ac' }, reservada: { l: 'Reservada', c: 'mute' }, finalizada: { l: 'Finalizada', c: 'mute' }, cancelada: { l: 'Cancelada', c: 'mute' },
+};
+
+export interface Res {
+  id: string; code: string; st: ResState; pid: string; pname: string; space: string;
+  date: string; endDate: string; start: string; end: string; hours: number;
+  plate: string; vtype: string; client: { n: string; ph: string; em: string };
+  eid: string | null; amount: number | null;
+}
+
+const clock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+export function normRes(r: any): Res {
+  const s = new Date(r.startTime), e = new Date(r.endTime), c = r.vehicle?.client ?? {};
+  return {
+    id: r.id,
+    code: 'R-' + String(r.id).slice(0, 6).toUpperCase(),
+    st: resState(r.status),
+    pid: r.parkingSpace?.parking?.id ?? '',
+    pname: r.parkingSpace?.parking?.name ?? '—',
+    space: r.parkingSpace?.spaceCode ?? '—',
+    date: isoD(s), endDate: isoD(e), start: clock(s), end: clock(e),
+    hours: (e.getTime() - s.getTime()) / 3_600_000,
+    plate: r.vehicle?.plate ?? '—',
+    vtype: r.vehicle?.vehicleType?.name ?? '',
+    client: { n: [c.name, c.last_name].filter(Boolean).join(' ') || '—', ph: c.phone ?? '', em: c.email ?? '' },
+    eid: r.attendedBy?.id ?? null,
+    amount: r.amount == null ? null : Number(r.amount),
+  };
+}
+
+// L-18: CSV en el navegador, separador punto y coma y BOM para Excel en español.
+// shortcut: L-18, se arma en el navegador, generarlo en el servidor si el volumen crece
+export function downloadCsv(name: string, rows: (string | number | null)[][]) {
+  const q = (v: unknown) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 500);
+}

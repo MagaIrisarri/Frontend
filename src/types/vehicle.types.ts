@@ -9,19 +9,6 @@ export interface VehicleType {
   isActive?: boolean;
 }
 
-export interface CreateVehicleTypeInput {
-  name: string;
-}
-
-export type UpdateVehicleTypeInput = Partial<CreateVehicleTypeInput>;
-
-export interface Model {
-  id: string;
-  name: string;
-  brand: Brand;
-  vehicleType: VehicleType;
-}
-
 export interface Client {
   id: string;
   name: string;

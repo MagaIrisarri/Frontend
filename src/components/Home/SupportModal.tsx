@@ -69,7 +69,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isSupportOpen, setIs
               <span>🅿️</span> ¿Cómo puedo ofrecer mi estacionamiento?
             </h4>
             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Hacé click en "Ofrecé tu estacionamiento" en la barra superior. Podrás dar de alta tu espacio, definir tus tarifas por hora y comenzar a recibir clientes de inmediato.
+              Abrí el menú principal y, en la sección "Paneles", hacé click en "Ofrecé tu estacionamiento". Podrás dar de alta tu espacio, definir tus tarifas por hora y comenzar a recibir clientes de inmediato.
             </p>
           </div>
 

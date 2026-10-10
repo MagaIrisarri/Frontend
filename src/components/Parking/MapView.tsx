@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, memo, useCallback } from 'react';
+import { useEffect, useRef, memo, useCallback } from 'react';
 import * as maptilersdk from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import type { Parking } from '../../types/parking.types';
@@ -11,17 +11,14 @@ interface MapViewProps {
   spots: Parking[];
   selectedId: string | null;
   onSelect?: (id: string) => void;
-  prices?: Record<string, number>;
   selectedVehicleType?: VehicleFilterType | null;
 }
 
-const EMPTY_PRICES: Record<string, number> = {};
 
 function MapViewComponent({
   spots,
   selectedId,
   onSelect,
-  prices = EMPTY_PRICES,
   selectedVehicleType = null,
 }: MapViewProps) {
   const { theme } = useTheme();

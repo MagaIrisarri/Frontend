@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X,
   Car,
-  Calendar,
   Clock,
   Sparkles,
   CheckCircle2,
-  AlertCircle,
   Plus,
   ArrowRight,
   ArrowLeft,
@@ -166,8 +164,8 @@ export function ReservationBookingModal({
   }, [date, todayStr, tomorrowStr, availableEntryHours, parking, entryTime, step]);
 
   // Reset al abrir (evita resetear el ticket de éxito cuando se refrescan las cocheras)
-  const prevOpenRef = React.useRef(false);
-  const prevParkingIdRef = React.useRef<string | null>(null);
+  const prevOpenRef = useRef(false);
+  const prevParkingIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isOpen || !parking) {

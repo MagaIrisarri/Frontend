@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Vehicle, UpdateVehicle, CreateVehicle } from '@/types/vehicle.types.js';
+import type { UpdateVehicle, CreateVehicle } from '@/types/vehicle.types.js';
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 

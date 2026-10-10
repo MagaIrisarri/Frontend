@@ -1,4 +1,3 @@
-﻿import React from 'react';
 import { X, Star, MapPin, Clock, Trash2, ChevronRight, Car } from 'lucide-react';
 import type { Parking } from '../../types/parking.types';
 

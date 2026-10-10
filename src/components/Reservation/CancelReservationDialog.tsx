@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle, AlertCircle, Trash2 } from 'lucide-react';
 import type { Reservation } from '../../types/reservation.types';
 import { formatReservationDate } from '../../utils/date';

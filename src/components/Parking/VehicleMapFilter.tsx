@@ -58,22 +58,27 @@ export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border shadow-xl text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 ${
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        className={`flex items-center gap-2 h-11 px-3.5 rounded-2xl border shadow-xl text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 ${
           selectedVehicleType
             ? 'bg-blue-600 text-white border-blue-500 shadow-blue-600/20'
             : 'bg-white/95 dark:bg-zinc-900/95 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white border-zinc-200 dark:border-zinc-800'
         }`}
-        title="Filtrar precio por tipo de vehículo"
-      >
+        >
         {activeOption ? (
           <>
             <activeOption.icon className="h-4 w-4 shrink-0" />
-            <span className="font-bold">{activeOption.label}</span>
+            <span className="font-bold">
+              <span className="hidden sm:inline">Vehículo: </span>
+              {activeOption.label}
+            </span>
           </>
         ) : (
           <>
             <SlidersHorizontal className="h-4 w-4 text-blue-500 dark:text-blue-400 shrink-0" />
-            <span className="hidden sm:inline">Filtrar precio</span>
+            <span className="hidden sm:inline">Vehículo: Todos</span>
+            <span className="sr-only sm:hidden">Filtrar por vehículo</span>
           </>
         )}
 
@@ -86,13 +91,13 @@ export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
 
       {/* Menú Desplegable */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 p-2 text-xs animate-in fade-in zoom-in-95 duration-150">
+        <div role="menu" aria-label="Tipo de vehículo" className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 p-2 text-xs animate-in fade-in zoom-in-95 duration-150">
           <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 mb-1">
             <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">
-              Filtrar precio en el mapa
+              Filtrar por vehículo
             </span>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              Seleccioná un vehículo para ver su tarifa
+            <span className="text-[11px] text-zinc-600 dark:text-zinc-400">
+              Mostrá solo las cocheras con lugar y tarifa para tu vehículo.
             </span>
           </div>
 
@@ -100,8 +105,10 @@ export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
             {/* Opción: Sin filtro / Todos (Precio más bajo) */}
             <button
               type="button"
+              role="menuitemradio"
+              aria-checked={selectedVehicleType === null}
               onClick={() => handleSelect(null)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-left cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3 min-h-11 rounded-xl transition-all text-left cursor-pointer ${
                 selectedVehicleType === null
                   ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold'
                   : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
@@ -112,7 +119,7 @@ export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
                 <div>
                   <span className="block font-semibold">Todos los vehículos</span>
                   <span className="block text-[10px] text-zinc-400 dark:text-zinc-500 font-normal">
-                    Muestra el precio mínimo (Desde $X/h)
+                    Sin filtrar: precio mínimo (Desde $X/h)
                   </span>
                 </div>
               </div>
@@ -129,8 +136,10 @@ export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
                 <button
                   key={opt.type}
                   type="button"
+                  role="menuitemradio"
+                  aria-checked={isSelected}
                   onClick={() => handleSelect(opt.type)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-left cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 min-h-11 rounded-xl transition-all text-left cursor-pointer ${
                     isSelected
                       ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold'
                       : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'

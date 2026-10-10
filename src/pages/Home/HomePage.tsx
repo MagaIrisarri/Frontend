@@ -1,4 +1,3 @@
-import React from 'react';
 import { MapView } from '../../components/Parking/MapView';
 import { Sidebar } from '../../components/Home/Sidebar';
 import { ListDrawer } from '../../components/Home/ListDrawer';

@@ -31,8 +31,6 @@ export interface AuthState {
   user: CurrentUser | null;
   isAuthenticated: boolean;
   isOwner: boolean;
-  isAdmin: boolean;
-  isEmployee: boolean;
   isClient: boolean;
   setUser: (user: CurrentUser | null) => void;
   logout: () => void;
@@ -55,8 +53,6 @@ export const useAuthStore = create<AuthState>()(
       user: getInitialUser(),
       isAuthenticated: !!getInitialUser(),
       isOwner: normalizeRole(getInitialUser()?.type || getInitialUser()?.role) === 'DUEÑO',
-      isAdmin: normalizeRole(getInitialUser()?.type || getInitialUser()?.role) === 'ADMINISTRADOR',
-      isEmployee: normalizeRole(getInitialUser()?.type || getInitialUser()?.role) === 'EMPLEADO',
       isClient:
         !!getInitialUser() &&
         normalizeRole(getInitialUser()?.type || getInitialUser()?.role) !== 'DUEÑO' &&
@@ -74,8 +70,6 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             isOwner: false,
-            isAdmin: false,
-            isEmployee: false,
             isClient: false,
           });
           return;
@@ -99,8 +93,6 @@ export const useAuthStore = create<AuthState>()(
           user: enrichedUser,
           isAuthenticated: true,
           isOwner: normalized === 'DUEÑO',
-          isAdmin: normalized === 'ADMINISTRADOR',
-          isEmployee: normalized === 'EMPLEADO',
           isClient: normalized === 'CLIENTE' || !normalized,
         });
       },
@@ -115,8 +107,6 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           isAuthenticated: false,
           isOwner: false,
-          isAdmin: false,
-          isEmployee: false,
           isClient: false,
         });
       },
@@ -129,8 +119,6 @@ export const useAuthStore = create<AuthState>()(
           const normalized = normalizeRole(state.user.type || state.user.role);
           state.isAuthenticated = true;
           state.isOwner = normalized === 'DUEÑO';
-          state.isAdmin = normalized === 'ADMINISTRADOR';
-          state.isEmployee = normalized === 'EMPLEADO';
           state.isClient = normalized === 'CLIENTE' || !normalized;
         }
       },

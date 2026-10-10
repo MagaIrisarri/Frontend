@@ -4,7 +4,6 @@ import {
   getParkingSpace,
   updateParkingSpace,
   removeParkingSpace,
-  createParkingSpace,
   createBulkParkingSpaces,
 } from '../services/parkingSpace.service';
 import { getOneParking, getParkingsByOwner } from '../services/parking.service';

@@ -9,8 +9,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Shield,
-  Calendar,
-  Layers,
   ArrowLeft,
 } from 'lucide-react';
 import {
@@ -46,7 +44,6 @@ export const VehicleManagerModal: React.FC<VehicleManagerModalProps> = ({
 
   const [activeTab, setActiveTab] = useState<'list' | 'create' | 'edit'>(initialTab);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -94,14 +91,11 @@ export const VehicleManagerModal: React.FC<VehicleManagerModalProps> = ({
   const loadVehicles = async () => {
     if (!userId) return;
     try {
-      setLoading(true);
       const data = await getUserVehicle(userId);
       const list = Array.isArray(data) ? data : data?.data || [];
       setVehicles(list);
     } catch (err: any) {
       console.error('Error al cargar vehículos:', err);
-    } finally {
-      setLoading(false);
     }
   };
 

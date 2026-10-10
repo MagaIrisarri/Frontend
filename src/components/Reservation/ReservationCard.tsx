@@ -1,4 +1,3 @@
-import React from 'react';
 import { Clock, MapPin, Car, Trash2, Sparkles } from 'lucide-react';
 import type { Reservation } from '../../types/reservation.types';
 import { ReservationStatusBadge } from '../Shared/ReservationStatusBadge';

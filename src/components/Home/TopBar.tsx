@@ -1,10 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, Search, X, Layers, Building2, HelpCircle, User, Settings, Bell, LogOut, UserCheck, Calendar, FileText } from 'lucide-react';
+import { useOpenProfile } from '../../context/ProfileContext';
+import { Menu, Search, X, Layers, HelpCircle, User, Bell, LogOut } from 'lucide-react';
 import { ThemeToggle } from '../Shared/ThemeToggle';
 import { VehicleMapFilter } from '../Parking/VehicleMapFilter';
 
 export const TopBar: React.FC<any> = (props: any) => {
+  const openProfile = useOpenProfile();
   const {
     user,
     setIsSidebarOpen,
@@ -17,16 +18,18 @@ export const TopBar: React.FC<any> = (props: any) => {
     setIsUserMenuOpen,
     isUserMenuOpen,
     setIsNotificationsOpen,
+    unreadCount = 0,
     filters,
     setVehicleFilter,
     handleOpenLogin,
     handleOpenRegister,
     handleLogout,
-    handleHostClick,
     handleOpenSupport,
   } = props;
 
   const isPanelOpen = isListDrawerOpen || !!selectedParkingId;
+  const menuItem =
+    'w-full flex items-center gap-2.5 px-4 min-h-11 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors cursor-pointer text-left';
 
   return (
     <header className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between pointer-events-none gap-3">
@@ -35,8 +38,8 @@ export const TopBar: React.FC<any> = (props: any) => {
         <button
           type="button"
           onClick={() => setIsSidebarOpen(true)}
-          className="p-3 rounded-2xl bg-white/95 dark:bg-zinc-900/95 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white border border-zinc-200 dark:border-zinc-800 shadow-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
-          title="Abrir menú principal"
+          className="h-11 w-11 rounded-2xl bg-white/95 dark:bg-zinc-900/95 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white border border-zinc-200 dark:border-zinc-800 shadow-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
+          aria-label="Abrir menú principal"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -45,19 +48,21 @@ export const TopBar: React.FC<any> = (props: any) => {
       {/* Centro: Buscador de Cocheras + Ver Lista + Filtro Desplegable de Vehículo */}
       <div className="flex items-center gap-2 pointer-events-auto w-full max-w-2xl">
         <div className="relative flex-1 min-w-[140px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" aria-hidden="true" />
           <input
-            type="text"
+            type="search"
+            aria-label="Buscar cochera o zona"
             placeholder="Buscar cochera o zona..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white/95 dark:bg-zinc-900/95 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 border border-zinc-200 dark:border-zinc-800 shadow-xl focus:outline-none focus:border-blue-500 transition-colors"
+            className="w-full h-11 pl-10 pr-11 rounded-2xl bg-white/95 dark:bg-zinc-900/95 text-sm text-zinc-900 dark:text-white placeholder-zinc-500 border border-zinc-200 dark:border-zinc-800 shadow-xl focus:outline-none focus:border-blue-500 transition-colors [&::-webkit-search-cancel-button]:appearance-none"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+              aria-label="Limpiar búsqueda"
+              className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -67,6 +72,7 @@ export const TopBar: React.FC<any> = (props: any) => {
         {/* Botón Ver Lista */}
         <button
           type="button"
+          aria-pressed={isPanelOpen}
           onClick={() => {
             if (isPanelOpen) {
               setIsListDrawerOpen(false);
@@ -76,60 +82,30 @@ export const TopBar: React.FC<any> = (props: any) => {
               setIsListDrawerOpen(true);
             }
           }}
-          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border shadow-xl text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
+          className={`flex items-center justify-center gap-2 h-11 px-3.5 rounded-2xl border shadow-xl text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
             isPanelOpen
               ? 'bg-blue-600 text-white border-blue-500 shadow-blue-600/20'
               : 'bg-white/95 dark:bg-zinc-900/95 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white border-zinc-200 dark:border-zinc-800'
           }`}
-          title="Ver listado de cocheras"
         >
           <Layers className="h-4 w-4" />
-          <span className="hidden sm:inline">
-            {isPanelOpen ? 'Ocultar' : 'Ver Lista'}
-          </span>
+          <span className="hidden sm:inline">{isPanelOpen ? 'Ocultar' : 'Ver Lista'}</span>
+          <span className="sr-only sm:hidden">{isPanelOpen ? 'Ocultar listado' : 'Ver listado'}</span>
         </button>
 
-        {/* Filtro desplegable de vehículo a la derecha de Ver Lista */}
         <VehicleMapFilter
           selectedVehicleType={filters?.vehicleType ?? null}
           onSelectVehicleType={setVehicleFilter}
         />
       </div>
 
-      {/* Derecha: Ofrecé tu estacionamiento / Panel Dueño / Panel Empleado + Ayuda + ThemeToggle + Píldora de Usuario */}
+      {/* Derecha: Ayuda + ThemeToggle + Cuenta. Los paneles por rol viven en el Sidebar. */}
       <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-        {props.isEmployee || (user?.type && user.type.toUpperCase().includes('EMP')) || (user?.role && user.role.toUpperCase().includes('EMP')) ? (
-          <Link
-            to="/employee"
-            className="hidden lg:flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 shadow-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
-            title="Ir al Panel de Empleado"
-          >
-            <span>Panel Empleado ↗</span>
-          </Link>
-        ) : props.isOwner || (user?.type && (user.type.toUpperCase().includes('DUE') || user.type.toUpperCase().includes('OWNER'))) ? (
-          <Link
-            to="/owner"
-            className="hidden lg:flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 shadow-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
-            title="Ir al Panel de Dueño"
-          >
-            <span>Panel de Dueño ↗</span>
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={handleHostClick}
-            className="hidden lg:flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white/95 dark:bg-zinc-900/95 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white border border-zinc-200 dark:border-zinc-800 shadow-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
-          >
-            <Building2 className="h-4 w-4 text-blue-500" />
-            <span>Ofrecé tu estacionamiento</span>
-          </button>
-        )}
-
         <button
           type="button"
           onClick={handleOpenSupport}
-          className="p-2.5 rounded-2xl bg-white/95 dark:bg-zinc-900/95 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 shadow-xl transition-all active:scale-95 cursor-pointer shrink-0"
-          title="Centro de Ayuda y Soporte"
+          className="h-11 w-11 flex items-center justify-center rounded-2xl bg-white/95 dark:bg-zinc-900/95 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 shadow-xl transition-all active:scale-95 cursor-pointer shrink-0"
+          aria-label="Centro de Ayuda y Soporte"
         >
           <HelpCircle className="h-4 w-4" />
         </button>
@@ -138,15 +114,21 @@ export const TopBar: React.FC<any> = (props: any) => {
           <ThemeToggle />
         </div>
 
-        {/* Menú flotante arriba a la derecha -> Cuenta y Acciones Personales */}
+        {/* Menú de cuenta */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full bg-white/95 dark:bg-zinc-900/95 hover:shadow-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl text-zinc-800 dark:text-white transition-all cursor-pointer"
-            title="Menú de usuario"
+            aria-haspopup="menu"
+            aria-expanded={isUserMenuOpen}
+            aria-label={
+              user
+                ? `Cuenta de ${user.name || 'usuario'}${unreadCount > 0 ? `, ${unreadCount} notificaciones sin leer` : ''}`
+                : 'Cuenta'
+            }
+            className="relative h-11 flex items-center gap-2 pl-3 pr-2 rounded-full bg-white/95 dark:bg-zinc-900/95 hover:shadow-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl text-zinc-800 dark:text-white transition-all cursor-pointer"
           >
-            <Menu className="h-3.5 w-3.5 text-zinc-500" />
+            <Menu className="h-3.5 w-3.5 text-zinc-500" aria-hidden="true" />
             {user ? (
               <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">
                 {user.name ? user.name[0].toUpperCase() : 'U'}
@@ -156,154 +138,100 @@ export const TopBar: React.FC<any> = (props: any) => {
                 <User className="h-4 w-4" />
               </div>
             )}
+            {user && unreadCount > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white border-2 border-white dark:border-zinc-900 text-[11px] font-bold leading-4 text-center"
+              >
+                {unreadCount}
+              </span>
+            )}
           </button>
 
-          {/* Dropdown flotante arriba a la derecha */}
           {isUserMenuOpen && (
             <>
+              <div className="fixed inset-0 z-30" onClick={() => setIsUserMenuOpen(false)} />
               <div
-                className="fixed inset-0 z-30"
-                onClick={() => setIsUserMenuOpen(false)}
-              />
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-40 py-2 text-xs animate-in fade-in zoom-in-95 duration-150">
+                role="menu"
+                aria-label="Cuenta"
+                className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-40 py-2 text-xs animate-in fade-in zoom-in-95 duration-150"
+              >
                 {user ? (
                   <>
                     <div className="px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800">
                       <p className="font-bold text-zinc-900 dark:text-white truncate">
                         {user.name} {user.last_name || ''}
                       </p>
-                      <p className="text-[11px] text-zinc-500 truncate">{user.email}</p>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400 truncate">{user.email}</p>
                     </div>
 
-                    {/* Mi perfil */}
-                    <Link
-                      to="/profile"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors"
-                    >
-                      <User className="h-4 w-4 text-zinc-400" />
-                      <span>Mi perfil</span>
-                    </Link>
-
-                    {/* Mis reservas */}
-                    <Link
-                      to="/reservations"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors"
-                    >
-                      <Calendar className="h-4 w-4 text-zinc-400" />
-                      <span>Mis reservas</span>
-                    </Link>
-
-                    {/* Facturación y pagos */}
-                    <Link
-                      to="/invoices"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors"
-                    >
-                      <FileText className="h-4 w-4 text-zinc-400" />
-                      <span>Facturación y pagos</span>
-                    </Link>
-
-                    {/* Panel Empleado (si corresponde) */}
-                    {(props.isEmployee || (user?.type && user.type.toUpperCase().includes('EMP')) || (user?.role && user.role.toUpperCase().includes('EMP'))) && (
-                      <Link
-                        to="/employee"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold transition-colors"
-                      >
-                        <UserCheck className="h-4 w-4" />
-                        <span>Panel de Empleado</span>
-                      </Link>
-                    )}
-
-                    {/* Configuración */}
-                    <Link
-                      to="/profile"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors"
-                    >
-                      <Settings className="h-4 w-4 text-zinc-400" />
-                      <span>Configuración</span>
-                    </Link>
-
-                    {/* Notificaciones */}
                     <button
                       type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        openProfile();
+                      }}
+                      className={menuItem}
+                    >
+                      <User className="h-4 w-4 text-zinc-500" />
+                      <span>Mi perfil y configuración</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      role="menuitem"
                       onClick={() => {
                         setIsUserMenuOpen(false);
                         if (setIsNotificationsOpen) setIsNotificationsOpen(true);
                       }}
-                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors cursor-pointer text-left"
+                      className={`${menuItem} justify-between`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <Bell className="h-4 w-4 text-zinc-400" />
+                      <span className="flex items-center gap-2.5">
+                        <Bell className="h-4 w-4 text-zinc-500" />
                         <span>Notificaciones</span>
-                      </div>
+                      </span>
+                      {unreadCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 text-[11px] font-bold">
+                          {unreadCount} {unreadCount === 1 ? 'nueva' : 'nuevas'}
+                        </span>
+                      )}
                     </button>
 
-                    {/* Ayuda */}
+                    <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
+
                     <button
                       type="button"
-                      onClick={handleOpenSupport}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors cursor-pointer text-left"
-                    >
-                      <HelpCircle className="h-4 w-4 text-zinc-400" />
-                      <span>Ayuda</span>
-                    </button>
-
-                    <div className="h-[1px] bg-zinc-100 dark:border-zinc-800 my-1" />
-
-                    {/* Cerrar sesión */}
-                    <button
-                      type="button"
+                      role="menuitem"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-red-500/10 text-red-600 dark:text-red-400 font-semibold transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-2.5 px-4 min-h-11 hover:bg-red-500/10 text-red-700 dark:text-red-400 font-semibold transition-colors cursor-pointer text-left"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Cerrar sesión</span>
                     </button>
                   </>
                 ) : (
-                  <>
+                  <div className="px-3 pb-1 space-y-2">
+                    <p className="px-1 pt-1 text-[13px] text-zinc-600 dark:text-zinc-400">
+                      Ingresá para reservar y guardar tus cocheras.
+                    </p>
                     <button
                       type="button"
+                      role="menuitem"
                       onClick={handleOpenLogin}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white font-bold transition-colors cursor-pointer text-left"
+                      className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors cursor-pointer"
                     >
-                      <User className="h-4 w-4 text-blue-500" />
-                      <span>Iniciar sesión</span>
+                      Iniciar sesión
                     </button>
-
                     <button
                       type="button"
+                      role="menuitem"
                       onClick={handleOpenRegister}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors cursor-pointer text-left"
+                      className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white text-sm font-bold transition-colors cursor-pointer"
                     >
-                      <User className="h-4 w-4 text-zinc-400" />
-                      <span>Registrarse</span>
+                      Registrarse
                     </button>
-
-                    <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800 my-1" />
-
-                    <button
-                      type="button"
-                      onClick={handleHostClick}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors cursor-pointer text-left"
-                    >
-                      <Building2 className="h-4 w-4 text-blue-500" />
-                      <span>Ofrecé tu estacionamiento</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleOpenSupport}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium transition-colors cursor-pointer text-left"
-                    >
-                      <HelpCircle className="h-4 w-4 text-zinc-400" />
-                      <span>Centro de Ayuda</span>
-                    </button>
-                  </>
+                  </div>
                 )}
               </div>
             </>

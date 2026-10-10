@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUserVehicle } from '../../services/vehicle.service';
 import { useAuthStore } from '../../stores/authStore';
-import { Vehicle } from '../../types/vehicle.types';
+import type { Vehicle } from '../../types/vehicle.types';
 import { ArrowLeft, Plus, Car } from 'lucide-react';
 
 const normalizeVehicleType = (rawType: any): string => {
@@ -53,11 +53,11 @@ export default function VehicleSelect() {
       <div className="max-w-5xl mx-auto space-y-6">
         <button
           type="button"
-          onClick={() => navigate('/profile')}
+          onClick={() => navigate('/')}
           className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Volver a Mi Perfil</span>
+          <span>Volver al mapa</span>
         </button>
 
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 md:p-8 shadow-sm">

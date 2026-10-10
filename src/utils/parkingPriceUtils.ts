@@ -94,3 +94,23 @@ export const formatSpotPrice = (
   };
 };
 
+// Plazas libres de la categoría; si el backend no manda el dato, cae a la capacidad total.
+export const getCategorySpaces = (parking: Parking, category: VehicleFilterType): number => {
+  const free =
+    category === 'MOTO'
+      ? parking.availableMotorcycleSpaces ?? parking.motorcycleCapacity
+      : category === 'CAMIONETA'
+      ? parking.availableTruckSpaces ?? parking.truckCapacity
+      : parking.availableCarSpaces ?? parking.carCapacity;
+  return free ?? 0;
+};
+
+/** Por qué una cochera no sirve para la categoría; null si sirve. */
+export const getUnavailableReason = (
+  parking: Parking,
+  category: VehicleFilterType
+): 'NO_PRICE' | 'NO_SPACE' | null => {
+  if (getParkingPriceForCategory(parking, category) === null) return 'NO_PRICE';
+  if (getCategorySpaces(parking, category) <= 0) return 'NO_SPACE';
+  return null;
+};

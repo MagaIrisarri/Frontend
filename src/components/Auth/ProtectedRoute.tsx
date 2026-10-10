@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { JSX } from "react";
+import type { JSX } from "react";
 import { useAuthStore, normalizeRole } from '../../stores/authStore';
 
 interface ProtectedRouteProps {
@@ -22,15 +22,7 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     if (!normalizedAllowed.includes(userRole)) {
       return (
         <Navigate
-          to={
-            userRole === 'DUEÑO'
-              ? '/owner'
-              : userRole === 'ADMINISTRADOR'
-              ? '/admin'
-              : userRole === 'EMPLEADO'
-              ? '/employee'
-              : '/'
-          }
+          to={userRole === 'DUEÑO' ? '/owner' : '/'}
           replace
         />
       );
