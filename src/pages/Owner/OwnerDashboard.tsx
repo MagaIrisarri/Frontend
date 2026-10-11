@@ -23,6 +23,8 @@ import {
 import { matchesQuery } from '../../utils/search';
 import { VICON } from '../../components/Owner/ui/vehicles';
 type Filter = 'all' | 'ok' | 'alert' | 'paused';
+// Localidad de una sucursal, con su provincia: hay localidades con el mismo nombre en distintas provincias.
+const locOf = (p: Parking) => [p.locality, p.province].filter(Boolean).join(', ');
 
 export function WarnBtn({ list }: { list: { l: string; d: string }[] }) {
   if (!list.length) return null;
@@ -44,26 +46,32 @@ export default function OwnerDashboard() {
   const toast = useToast();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [loc, setLoc] = useState(''); // '' = todas las localidades
   const [detail, setDetail] = useState<Parking | null>(null);
   const [params, setParams] = useSearchParams();
   const [pform, setPform] = useState<Parking | 'new' | null>(params.get('new') ? 'new' : null);
   useEffect(() => { if (params.get('new')) setParams({}, { replace: true }); }, [params, setParams]);
 
-  const T = parkings.reduce((a, p) => a + tot(p), 0), O = parkings.reduce((a, p) => a + oc(p), 0), pc = T ? Math.round((O / T) * 100) : 0;
+  // La localidad elegida limita la lista y también los indicadores (ocupación, facturado hoy y reservas en curso).
+  const localities = useMemo(() => [...new Set(parkings.map(locOf))].sort((a, b) => a.localeCompare(b)), [parkings]);
+  const scoped = loc ? parkings.filter(p => locOf(p) === loc) : parkings;
+  const inScope = new Set(scoped.map(p => p.id));
+  const scopedRes = loc ? reservations.filter(r => inScope.has(r.pid)) : reservations;
+  const T = scoped.reduce((a, p) => a + tot(p), 0), O = scoped.reduce((a, p) => a + oc(p), 0), pc = T ? Math.round((O / T) * 100) : 0;
   const now = today();
   // Solo las que tienen factura vigente: una factura anulada deja `amount` en null.
-  const fin = reservations.filter(r => r.st === 'finalizada' && r.endDate === now && r.amount != null);
+  const fin = scopedRes.filter(r => r.st === 'finalizada' && r.endDate === now && r.amount != null);
   const revenue = fin.reduce((a, r) => a + (r.amount ?? 0), 0);
-  const active = reservations.filter(r => r.st === 'curso').length;
+  const active = scopedRes.filter(r => r.st === 'curso').length;
   const alerts = useMemo(() => Object.fromEntries(parkings.map(p => [p.id, issues(p, templates[p.id])])), [parkings, templates]);
 
   const stOf = (p: Parking) => (p.isActive ? 'ok' : 'paused');
-  const list = parkings.filter(p =>
+  const list = scoped.filter(p =>
     (filter === 'all' || (filter === 'ok' && stOf(p) === 'ok') || (filter === 'alert' && alerts[p.id]!.length) || (filter === 'paused' && stOf(p) === 'paused'))
     && matchesQuery(q, p.name, p.address, p.neighborhood, p.locality, p.province));
   const cnt: Record<Filter, number> = {
-    all: parkings.length, ok: parkings.filter(p => p.isActive).length,
-    alert: parkings.filter(p => alerts[p.id]!.length).length, paused: parkings.filter(p => !p.isActive).length,
+    all: scoped.length, ok: scoped.filter(p => p.isActive).length,
+    alert: scoped.filter(p => alerts[p.id]!.length).length, paused: scoped.filter(p => !p.isActive).length,
   };
 
   const toggle = async (p: Parking) => {
@@ -100,7 +108,7 @@ export default function OwnerDashboard() {
     </Empty>);
   else if (!list.length) body = (
     <Empty icon={<Search className="i" />} title="Sin resultados"
-      action={<button type="button" className="btn" onClick={() => { setQ(''); setFilter('all'); }}>Limpiar filtros</button>}>
+      action={<button type="button" className="btn" onClick={() => { setQ(''); setFilter('all'); setLoc(''); }}>Limpiar filtros</button>}>
       Ninguna sucursal coincide con el filtro o la búsqueda actual.
     </Empty>);
   else body = (
@@ -140,9 +148,9 @@ export default function OwnerDashboard() {
       {loading ? <SkeletonRows n={2} cols={2} /> : (
         <div className="kpis">
           <section className="panel occ" aria-label="Ocupación actual">
-            <div><div className="lab">Ocupación actual</div><div className="big">{pc}<span>%</span></div><div className="ctx">{O} de {T} plazas ocupadas · {T - O} libres</div></div>
+            <div><div className="lab">Ocupación actual{loc && ` · ${loc}`}</div><div className="big">{pc}<span>%</span></div><div className="ctx">{O} de {T} plazas ocupadas · {T - O} libres</div></div>
             <div className="types">{T ? VT.map(t => {
-              const c = parkings.reduce((a, p) => a + svcOf(p, t.k), 0), o = parkings.reduce((a, p) => a + occOf(p, t.k), 0), I = VICON[t.k];
+              const c = scoped.reduce((a, p) => a + svcOf(p, t.k), 0), o = scoped.reduce((a, p) => a + occOf(p, t.k), 0), I = VICON[t.k];
               return c ? <div className="trow" key={t.k}><span className="n"><I className="i" />{t.pl}</span><OccBar value={Math.round((o / c) * 100)} label={`${t.pl}: ${o} de ${c} ocupadas`} /><span className="v">{o}/{c}</span></div> : null;
             }) : <span className="ctx">Todavía no hay plazas configuradas.</span>}</div>
           </section>
@@ -155,11 +163,17 @@ export default function OwnerDashboard() {
 
       <section>
         <div className="sechead">
-          <div><h2>Sucursales<span className="count">{parkings.length}</span></h2><p>Monitoreá cada cochera, configurá tarifas y gestioná plazas.</p></div>
+          <div><h2>Sucursales<span className="count">{scoped.length}</span></h2><p>Monitoreá cada cochera, configurá tarifas y gestioná plazas.</p></div>
           <button type="button" className="btn pri" onClick={() => setPform('new')}><Plus className="i sm" />Nueva sucursal</button>
         </div>
         <div className="toolbar">
           <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar por nombre o dirección" aria-label="Buscar sucursal" value={q} onChange={e => setQ(e.target.value)} /></div>
+          {localities.length > 1 && (
+            <select className="sel" aria-label="Filtrar por localidad" style={{ width: 'auto', minWidth: 200 }} value={loc} onChange={e => setLoc(e.target.value)}>
+              <option value="">Todas las localidades</option>
+              {localities.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+          )}
           <div className="seg" role="group" aria-label="Filtrar por estado">
             {([['all', 'Todas'], ['ok', 'Operativas'], ['alert', 'Con alertas'], ['paused', 'Pausadas']] as [Filter, string][]).map(([k, l]) => (
               <button type="button" key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l}<b>{cnt[k]}</b></button>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 import { ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
-import { getStatsSummary, type StatsSummary } from '../../services/stats.service';
+import { getStatsSummary, type Locality, type StatsSummary } from '../../services/stats.service';
 import { money, plural } from '../Owner/owner.lib';
 
 const RES_ST: [string, string][] = [['FINALIZADA', 'Finalizadas'], ['EN CURSO', 'En curso'], ['CONFIRMADA', 'Confirmadas'], ['PENDIENTE', 'Pendientes'], ['CANCELADA', 'Canceladas']];
@@ -28,17 +28,35 @@ function Bars({ rows, total }: { rows: [string, number][]; total: number }) {
 }
 
 // Inicio del administrador: usuarios, cocheras y plazas hoy; reservas y facturación del último mes.
+// Una localidad se identifica con su provincia: hay localidades con el mismo nombre en distintas provincias.
+const locKey = (l: Locality) => `${l.locality}, ${l.province}`;
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [s, setS] = useState<StatsSummary | null>(null);
   const [failed, setFailed] = useState(false);
-  const load = useCallback(() => { setFailed(false); getStatsSummary().then(setS).catch(() => setFailed(true)); }, []);
+  const [loc, setLoc] = useState(''); // '' = todo el sistema
+  const [localities, setLocalities] = useState<Locality[]>([]);
+  const scope = localities.find(l => locKey(l) === loc) ?? null;
+  const province = scope?.province, locality = scope?.locality;
+  const load = useCallback(() => {
+    setFailed(false); setS(null);
+    getStatsSummary(province && locality ? { province, locality } : null)
+      .then(r => { setS(r); setLocalities(r.localities); }).catch(() => setFailed(true));
+  }, [province, locality]);
   useEffect(() => { load(); }, [load]);
 
   const days = s?.periodDays ?? 30;
+  const where = scope ? ` en ${scope.locality}` : ' del sistema';
   return (
     <>
-      <PageHead title="Panel" sub={`Estado actual del sistema y movimiento de los últimos ${days} días.`} />
+      <PageHead title="Panel" sub={`Estado actual${where} y movimiento de los últimos ${days} días.`}
+        actions={localities.length > 1 && (
+          <select className="sel" aria-label="Filtrar por localidad" style={{ width: 'auto', minWidth: 220 }} value={loc} onChange={e => setLoc(e.target.value)}>
+            <option value="">Todas las localidades</option>
+            {localities.map(l => <option key={locKey(l)} value={locKey(l)}>{locKey(l)}</option>)}
+          </select>
+        )} />
       {failed ? <ErrorBox what="el resumen" onRetry={load} /> : !s ? <SkeletonRows n={3} cols={2} /> : <>
         <div className="kpis">
           <section className="panel occ" aria-label="Facturación del último mes" style={{ gridTemplateColumns: '1fr' }}>
@@ -53,7 +71,7 @@ export default function AdminDashboard() {
           </section>
           <section className="panel stats" aria-label="Indicadores">
             <div className="srow"><div><div className="lab">Reservas · últimos {days} días</div><Delta now={s.reservations.total} prev={s.reservations.previousTotal} days={days} /></div><div className="val">{s.reservations.total}</div></div>
-            <div className="srow"><div><div className="lab">Usuarios activos</div><div className="ctx">{plural(s.users.byRole.CLIENTE ?? 0, 'cliente', 'clientes')} · {plural(s.users.byRole['DUEÑO'] ?? 0, 'dueño', 'dueños')}</div></div>
+            <div className="srow"><div><div className="lab">Usuarios activos{scope && ' · todo el sistema'}</div><div className="ctx">{plural(s.users.byRole.CLIENTE ?? 0, 'cliente', 'clientes')} · {plural(s.users.byRole['DUEÑO'] ?? 0, 'dueño', 'dueños')}</div></div>
               <div className="val"><button type="button" aria-label={`${s.users.total} usuarios activos. Ver usuarios`} onClick={() => navigate('/admin/users')}>{s.users.total}</button></div></div>
             <div className="srow"><div><div className="lab">Cocheras</div><div className="ctx">{s.parkings.active} activas · {s.parkings.total - s.parkings.active} pausadas</div></div><div className="val">{s.parkings.total}</div></div>
             <div className="srow"><div><div className="lab">Plazas</div><div className="ctx">{s.spaces.occupied} ocupadas ahora · {s.spaces.maintenance} en mantenimiento</div></div><div className="val">{s.spaces.total}</div></div>
@@ -68,7 +86,7 @@ export default function AdminDashboard() {
               : <span className="ctx">No hubo reservas en el período.</span>}
           </section>
           <section className="panel" style={{ padding: '20px 24px' }} aria-label="Usuarios por rol">
-            <div className="lab" style={{ marginBottom: 14 }}>Usuarios activos por rol</div>
+            <div className="lab" style={{ marginBottom: 14 }}>Usuarios activos por rol{scope && <span className="ctx"> · de todo el sistema</span>}</div>
             <Bars rows={ROLES.map(([k, l]) => [l, s.users.byRole[k] ?? 0] as [string, number])} total={s.users.total} />
           </section>
         </div>
