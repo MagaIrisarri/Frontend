@@ -3,7 +3,8 @@
 export interface MapFilters {
   vehicleType: VehicleFilterType | null;
   // Preparado para extensiones futuras:
-  maxPrice?: number | null;
+  maxPrice?: number | null; // $ por hora; con vehículo elegido compara su tarifa, sin vehículo la menor
+  sort?: 'price-asc' | 'price-desc' | null;
   onlyAvailable?: boolean;
   minAvailableSpaces?: number;
   services?: string[];

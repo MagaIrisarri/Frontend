@@ -4,7 +4,7 @@ export interface MenuItem { label: string; icon?: ReactNode; onClick: () => void
 
 // Menú contextual del prototipo (.menu): se abre bajo el botón, Escape o clic afuera lo cierran y el foco vuelve al botón.
 export function Menu({ label, button, items, header, className = 'icon-btn' }: {
-  label: string; button: ReactNode; items: MenuItem[]; header?: string; className?: string;
+  label: string; button: ReactNode; items: MenuItem[]; header?: ReactNode; className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);

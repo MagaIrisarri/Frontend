@@ -1,6 +1,8 @@
 export interface Parking {
   id: string;
+  province?: string | null; // las sucursales previas pueden no tenerla
   locality: string;
+  neighborhood?: string | null; // barrio o zona (Centro, Pichincha…)
   postalCode: string;
   address: string;
   carCapacity: number;
@@ -26,7 +28,9 @@ export interface Parking {
 }
 
 export interface CreateParkingInput {
+  province?: string | null; // las sucursales previas pueden no tenerla
   locality: string;
+  neighborhood?: string | null;
   postalCode: string;
   address: string;
   carCapacity: number;
@@ -46,7 +50,9 @@ export interface CreateParkingInput {
 }
 
 export interface UpdateParkingInput {
+  province?: string | null; // las sucursales previas pueden no tenerla
   locality: string;
+  neighborhood?: string | null;
   postalCode: string;
   address: string;
   carCapacity: number;

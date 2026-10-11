@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, Bike, Building2, CalendarDays, Car, Check, DollarSign, Eye, LayoutGrid, Layers, Lock, MoreVertical,
-  Pause, Pencil, Plus, Power, Search, Truck, Users,
+  AlertTriangle, Building2, CalendarDays, Check, DollarSign, Eye, LayoutGrid, Layers, Lock, MoreVertical,
+  Pause, Pencil, Plus, Power, Search, Users,
 } from 'lucide-react';
 import { Drawer } from '../../components/Owner/ui/Layer';
+import { Shown } from '../../components/Owner/ui/Presence';
 import { Menu } from '../../components/Owner/ui/Menu';
 import { Empty, ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
 import { apiError } from '../../components/Owner/ui/Field';
@@ -19,7 +20,8 @@ import {
   type VehicleKey,
 } from './owner.lib';
 
-export const VICON: Record<VehicleKey, typeof Car> = { AUTO: Car, MOTO: Bike, CAMIONETA: Truck };
+import { matchesQuery } from '../../utils/search';
+import { VICON } from '../../components/Owner/ui/vehicles';
 type Filter = 'all' | 'ok' | 'alert' | 'paused';
 
 export function WarnBtn({ list }: { list: { l: string; d: string }[] }) {
@@ -55,10 +57,9 @@ export default function OwnerDashboard() {
   const alerts = useMemo(() => Object.fromEntries(parkings.map(p => [p.id, issues(p, templates[p.id])])), [parkings, templates]);
 
   const stOf = (p: Parking) => (p.isActive ? 'ok' : 'paused');
-  const ql = q.trim().toLowerCase();
   const list = parkings.filter(p =>
     (filter === 'all' || (filter === 'ok' && stOf(p) === 'ok') || (filter === 'alert' && alerts[p.id]!.length) || (filter === 'paused' && stOf(p) === 'paused'))
-    && (!ql || `${p.name} ${p.address} ${p.locality}`.toLowerCase().includes(ql)));
+    && matchesQuery(q, p.name, p.address, p.neighborhood, p.locality, p.province));
   const cnt: Record<Filter, number> = {
     all: parkings.length, ok: parkings.filter(p => p.isActive).length,
     alert: parkings.filter(p => alerts[p.id]!.length).length, paused: parkings.filter(p => !p.isActive).length,
@@ -167,9 +168,9 @@ export default function OwnerDashboard() {
         {body}
       </section>
 
-      {detail && <ParkingDetail p={parkings.find(x => x.id === detail.id) ?? detail} employees={employees} week={templates[detail.id]} alerts={alerts[detail.id] ?? []}
-        onClose={() => setDetail(null)} onToggle={() => toggle(detail)} onEdit={() => { setPform(detail); setDetail(null); }} />}
-      {pform && <ParkingDrawer parking={pform === 'new' ? null : pform} onClose={() => setPform(null)} />}
+      <Shown when={detail}>{d => <ParkingDetail p={parkings.find(x => x.id === d.id) ?? d} employees={employees} week={templates[d.id]} alerts={alerts[d.id] ?? []}
+        onClose={() => setDetail(null)} onToggle={() => toggle(d)} onEdit={() => { setPform(d); setDetail(null); }} />}</Shown>
+      <ParkingDrawer parking={pform} onClose={() => setPform(null)} />
     </>
   );
 }
@@ -205,7 +206,7 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
         </div>
         <div className="fs"><div className="fh"><h3>Datos de la sucursal</h3></div>
           <dl className="dl" style={{ margin: 0 }}>
-            <dt>Dirección</dt><dd>{p.address}, {p.locality} ({p.postalCode})</dd>
+            <dt>Dirección</dt><dd>{[p.address, p.neighborhood, p.locality].filter(Boolean).join(', ')} ({p.postalCode})</dd>
             <dt>Horario</dt><dd>{hrs(p)}</dd>
             <dt>Reserva</dt><dd>{p.minReservationHours} a {p.maxReservationHours} h · tolerancia {p.reservationMargin} h</dd>
           </dl>

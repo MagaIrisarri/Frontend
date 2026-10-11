@@ -83,6 +83,7 @@ Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado c
 | L-23 | Roles | Solo existe el rol dueño. | Permisos y dashboard de empleado. | Abierta. Las pantallas de empleado (check-in/out) y de administración (catálogo, tipos de vehículo) se eliminaron del frontend por estar mal hechas; el backend conserva sus endpoints. Hay que rehacerlas. |
 | L-24 | Horizonte | 52 semanas atrás y 26 adelante. | Acordar con negocio. | Abierta (mismos valores). |
 | L-25 | Empleados | Un empleado pertenece a una sola sucursal. | Confirmar rotación. | Parcial: el frontend no cambia de sucursal a quien tiene turnos o reservas pendientes. |
+| L-26 | Buscar en esta zona | El filtro del mapa es local e instantáneo; el spinner dura un mínimo fijo (500 ms) para que se perciba. | Atarlo a la carga real si la búsqueda pasa al servidor. | Abierta. |
 
 ## Decisiones
 

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
+import { useClosing } from './Presence';
 
 // Foco al primer campo, Escape cierra, bloquea el scroll y devuelve el foco al abridor (como openLayer/closeLayer del prototipo).
 function useLayer(onClose: () => void, focusSel = '[data-first],input:not([type=hidden]),select,textarea,.dfoot .btn') {
@@ -37,19 +38,28 @@ interface DrawerProps {
   children: ReactNode; // normalmente un <div className="dbody">
   footer?: ReactNode; // normalmente un <div className="dfoot">
   wide?: boolean;
+  left?: boolean; // se abre desde la izquierda (menú de Home)
+  size?: 'mid'; // un poco más ancho que el estándar (formularios largos con mapa)
+  onBack?: () => void; // vuelve a la vista anterior dentro del mismo panel (p. ej. del formulario a la lista)
   focusSel?: string;
 }
 
 // Panel lateral. Se renderiza dentro de .owner (sin portal) para heredar los tokens.
-export function Drawer({ title, sub, onClose, children, footer, wide, focusSel }: DrawerProps) {
+export function Drawer({ title, sub, onClose, children, footer, wide, left, size, onBack, focusSel }: DrawerProps) {
   const ref = useLayer(onClose, focusSel);
   const id = useId();
+  const closing = useClosing();
   return (
-    <div className="layer on" ref={ref}>
+    <div className={`layer on${closing ? ' out' : ''}`} ref={ref}>
       <div className="scrim" onClick={onClose} />
-      <aside className={`drawer${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={id}>
+      <aside className={`drawer${wide ? ' wide' : ''}${left ? ' left' : ''}${size ? ` ${size}` : ''}`} role="dialog" aria-modal="true" aria-labelledby={id}>
         <div className="dhead">
-          <div><h2 id={id}>{title}</h2>{sub && <p>{sub}</p>}</div>
+          {(() => {
+            const head = <div><h2 id={id}>{title}</h2>{sub && <p>{sub}</p>}</div>;
+            return onBack
+              ? <div className="tl"><button type="button" className="icon-btn" onClick={onBack} aria-label="Volver"><ArrowLeft className="i" /></button>{head}</div>
+              : head;
+          })()}
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar panel"><X className="i" /></button>
         </div>
         {children}
@@ -65,22 +75,24 @@ interface ConfirmProps {
   ok: string;
   back?: string;
   danger?: boolean;
+  busy?: boolean; // mientras la acción corre, evita el doble envío
   onConfirm: () => void;
   onClose: () => void;
 }
 
-export function ConfirmModal({ title, body, ok, back = 'Cancelar', danger, onConfirm, onClose }: ConfirmProps) {
+export function ConfirmModal({ title, body, ok, back = 'Cancelar', danger, busy, onConfirm, onClose }: ConfirmProps) {
   const ref = useLayer(onClose, '[data-first]');
   const id = useId();
+  const closing = useClosing();
   return (
-    <div className="modal-root on" ref={ref}>
+    <div className={`modal-root on${closing ? ' out' : ''}`} ref={ref}>
       <div className="scrim" onClick={onClose} />
       <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby={`${id}t`} aria-describedby={`${id}b`}>
         <h2 id={`${id}t`}>{title}</h2>
         <p id={`${id}b`}>{body}</p>
         <div className="row">
           <button type="button" className="btn" onClick={onClose}>{back}</button>
-          <button type="button" className={`btn ${danger ? 'danger' : 'pri'}`} data-first onClick={onConfirm}>{ok}</button>
+          <button type="button" className={`btn ${danger ? 'danger' : 'pri'}`} data-first disabled={busy} aria-busy={busy || undefined} onClick={onConfirm}>{ok}</button>
         </div>
       </div>
     </div>

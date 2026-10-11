@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Calendar, Car, FileText, Trash2 } from 'lucide-react';
 import { ConfirmModal, Drawer } from '../Owner/ui/Layer';
+import { Presence } from '../Owner/ui/Presence';
 import { Field, Input, Password, apiError } from '../Owner/ui/Field';
 import { useToast } from '../Owner/ui/Toasts';
 import { changePassword, removeUser, updateUser } from '../../services/user.service';
@@ -140,7 +141,7 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
           </section>
         </form>
       </Drawer>
-      {confirmDel && <ConfirmModal title="¿Eliminar tu cuenta?" body="Se borran tu cuenta y todos tus datos. No se puede deshacer." ok="Eliminar cuenta" danger onConfirm={del} onClose={() => setConfirmDel(false)} />}
+      <Presence open={confirmDel}><ConfirmModal title="¿Eliminar tu cuenta?" body="Se borran tu cuenta y todos tus datos. No se puede deshacer." ok="Eliminar cuenta" danger onConfirm={del} onClose={() => setConfirmDel(false)} /></Presence>
     </>
   );
 }

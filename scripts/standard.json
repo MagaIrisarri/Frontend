@@ -1,0 +1,35 @@
+{
+  "files": [
+    "src/pages/Home/HomePage.tsx",
+    "src/components/Home/TopBar.tsx",
+    "src/components/Home/Sidebar.tsx",
+    "src/components/Home/ListDrawer.tsx",
+    "src/components/Home/SupportModal.tsx",
+    "src/components/Parking/VehicleMapFilter.tsx",
+    "src/components/Parking/FavoritesDrawer.tsx",
+    "src/components/Reservation/ReservationsDrawer.tsx",
+    "src/components/Vehicle/VehiclesDrawer.tsx",
+    "src/components/Invoice/InvoicesDrawer.tsx",
+    "src/components/Shared/ConfirmDialog/ConfirmDialog.tsx",
+    "src/components/Shared/NotificationsDrawer.tsx",
+    "src/components/Auth/AuthDrawer.tsx",
+    "src/components/Reservation/ReservationBookingDrawer.tsx",
+    "src/components/Owner/ui/Layer.tsx",
+    "src/components/Owner/ui/FilterBar.tsx",
+    "src/components/Parking/LocationPicker.tsx",
+    "src/components/Parking/MapView.tsx",
+    "src/components/Owner/ui/Menu.tsx",
+    "src/styles/ui.scss",
+    "src/styles/home.scss"
+  ],
+  "forbiddenRoutes": [
+    "/profile"
+  ],
+  "panelRoutes": [
+    "/invoices",
+    "/reservations",
+    "/vehicles",
+    "/vehicles/new",
+    "/vehicles/:id/edit"
+  ]
+}

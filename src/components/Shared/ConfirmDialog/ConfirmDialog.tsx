@@ -1,4 +1,6 @@
-import './ConfirmDialog.scss';
+import { ConfirmModal } from '../../Owner/ui/Layer';
+import OwnerShell from '../../Owner/ui/OwnerShell';
+import { Presence } from '../../Owner/ui/Presence';
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -10,32 +12,15 @@ type ConfirmDialogProps = {
   onCancel: () => void;
 };
 
-const ConfirmDialog = ({
-  open,
-  title,
-  message,
-  confirmLabel = 'Confirmar',
-  cancelLabel = 'Cancelar',
-  onConfirm,
-  onCancel,
-}: ConfirmDialogProps) => {
-  if (!open) return null;
-
+// Confirmación destructiva del estándar (ConfirmModal). Se mantiene para las pantallas que aún no están migradas:
+// ellas heredan el formato sin tocar su código.
+const ConfirmDialog = ({ open, title, message, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', onConfirm, onCancel }: ConfirmDialogProps) => {
   return (
-    <div className="confirm-dialog-overlay" onClick={onCancel}>
-      <div className="confirm-dialog-card" onClick={(e) => e.stopPropagation()}>
-        <h2 className="confirm-dialog-title">{title}</h2>
-        <p className="confirm-dialog-message">{message}</p>
-        <div className="confirm-dialog-actions">
-          <button type="button" className="confirm-dialog-btn-cancel" onClick={onCancel}>
-            {cancelLabel}
-          </button>
-          <button type="button" className="confirm-dialog-btn-confirm" onClick={onConfirm}>
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    <Presence open={open}>
+      <OwnerShell bare>
+        <ConfirmModal title={title} body={message} ok={confirmLabel} back={cancelLabel} danger onConfirm={onConfirm} onClose={onCancel} />
+      </OwnerShell>
+    </Presence>
   );
 };
 

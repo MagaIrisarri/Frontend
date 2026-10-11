@@ -1,36 +1,42 @@
 import { useState, type FormEvent } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { Drawer } from '../../components/Owner/ui/Layer';
+import { Shown } from '../../components/Owner/ui/Presence';
 import { Field, Input, apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
-import { LocationPicker, type LocationData } from '../../components/Parking/LocationPicker';
+import { LocationPicker, type PlaceValue } from '../../components/Parking/LocationPicker';
 import { DEFAULT_MAP_CENTER } from '../../config/map';
 import { createParking, putParking } from '../../services/parking.service';
 import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
-import { VICON } from './OwnerDashboard';
+import { VICON } from '../../components/Owner/ui/vehicles';
 import { VT, plural } from './owner.lib';
 
 const CODE = { AUTO: 'A', MOTO: 'M', CAMIONETA: 'C' } as const;
-const NAME = { AUTO: 'Autos / Sedanes', MOTO: 'Motos', CAMIONETA: 'Camionetas' } as const;
+const NAME = { AUTO: 'Autos', MOTO: 'Motos', CAMIONETA: 'Camionetas' } as const;
 const FIELD = { AUTO: 'car', MOTO: 'moto', CAMIONETA: 'truck' } as const;
 type Key = 'car' | 'moto' | 'truck';
 
 const hm = (t?: string) => (t ?? '').slice(0, 5);
 
 // Alta y edición de sucursal en un panel lateral (owner-design/owner.html › openParkingForm).
-export default function ParkingDrawer({ parking, onClose }: { parking: Parking | null; onClose: () => void }) {
+// `parking`: la sucursal a editar, 'new' para el alta o null con el panel cerrado (el cierre se anima).
+export default function ParkingDrawer({ parking, onClose }: { parking: Parking | 'new' | null; onClose: () => void }) {
+  return <Shown when={parking}>{p => <ParkingForm parking={p === 'new' ? null : p} onClose={onClose} />}</Shown>;
+}
+
+function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: () => void }) {
   const { ownerId, refresh } = useOwner();
   const toast = useToast();
   const edit = !!parking;
   const [v, setV] = useState(() => parking ? {
-    name: parking.name, image: parking.imageUrl || parking.image || '', address: parking.address, locality: parking.locality, postalCode: parking.postalCode,
+    name: parking.name, image: parking.imageUrl || parking.image || '', address: parking.address, province: parking.province || 'Santa Fe' /* las previas a la provincia eran todas de Rosario */, locality: parking.locality, neighborhood: parking.neighborhood ?? '', postalCode: parking.postalCode,
     car: String(parking.carCapacity ?? 0), moto: String(parking.motorcycleCapacity ?? 0), truck: String(parking.truckCapacity ?? 0),
     is24: hm(parking.openingTime) === '00:00' && hm(parking.closingTime) === '23:59', open: hm(parking.openingTime), close: hm(parking.closingTime),
     min: String(parking.minReservationHours), max: String(parking.maxReservationHours), margin: String(parking.reservationMargin),
     lat: parking.latitude, lng: parking.longitude,
   } : {
-    name: '', image: '', address: '', locality: 'Rosario', postalCode: '', car: '10', moto: '0', truck: '0',
+    name: '', image: '', address: '', province: 'Santa Fe', locality: 'Rosario', neighborhood: '', postalCode: '', car: '0', moto: '0', truck: '0',
     is24: false, open: '08:00', close: '22:00', min: '1', max: '24', margin: '1', lat: DEFAULT_MAP_CENTER[1], lng: DEFAULT_MAP_CENTER[0],
   });
   const [err, setErr] = useState<Record<string, string>>({});
@@ -39,21 +45,22 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
   const num = (k: string) => parseInt((v as any)[k], 10);
   const n = (k: Key) => Math.max(0, num(k) || 0);
   const total = n('car') + n('moto') + n('truck');
-  const step = (k: Key, d: number) => setV({ ...v, [k]: String(Math.max(k === 'car' ? 1 : 0, n(k) + d)) });
+  const step = (k: Key, d: number) => setV({ ...v, [k]: String(Math.max(0, n(k) + d)) });
 
-  const onLocation = (l: LocationData) => setV(s => ({
-    ...s, lat: l.lat, lng: l.lng, address: s.address || l.address || '', locality: l.locality || s.locality, postalCode: s.postalCode || l.postalCode || '',
-  }));
+  // Provincia, localidad, calle, barrio, código postal y punto: los edita el selector, que los completa desde la búsqueda y el pin.
+  const onPlace = (patch: Partial<PlaceValue>) => {
+    setErr(e => ({ ...e, ...Object.fromEntries(Object.keys(patch).map(k => [k, ''])) }));
+    setV(s => ({ ...s, ...patch }));
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (v.name.trim().length < 3) e.name = 'Ingresá el nombre de la sucursal (mínimo 3 letras).';
     if (v.image && !/^https?:\/\//i.test(v.image)) e.image = 'La URL debe empezar con http:// o https://';
-    if (v.address.trim().length < 5) e.address = 'Ingresá calle y altura.';
-    if (v.locality.trim().length < 3) e.locality = 'Ingresá la localidad.';
+    if (v.address.trim().length < 5) e.address = 'Buscá la dirección o marcá el punto en el mapa.';
+    if (v.locality.trim().length < 3) e.locality = 'Elegí la ciudad o localidad.';
     if (!/^(\d{4}|[A-Z]\d{4}[A-Z]{3})$/.test(v.postalCode.trim().toUpperCase())) e.postalCode = 'Usá 4 dígitos o formato CPA (S2000ABC).';
-    if (!(num('car') >= 1)) e.car = 'Mínimo 1 plaza de auto.';
-    (['moto', 'truck'] as const).forEach(k => { if (!(num(k) >= 0)) e[k] = 'Número inválido.'; });
+    (['car', 'moto', 'truck'] as const).forEach(k => { if (!(num(k) >= 0)) e[k] = 'Número inválido.'; });
     if (!v.is24 && !(v.open && v.close && v.open < v.close)) e.close = 'El cierre debe ser posterior a la apertura.';
     if (!(num('min') >= 1)) e.min = 'Mínimo 1 h.';
     if (!(num('max') >= num('min'))) e.max = 'Debe ser ≥ al mínimo.';
@@ -68,7 +75,7 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
     if (Object.keys(e).length) return toast('Revisá los campos marcados.', 'err');
     setBusy(true);
     const data = {
-      name: v.name.trim(), address: v.address.trim(), locality: v.locality.trim(), postalCode: v.postalCode.trim().toUpperCase(),
+      name: v.name.trim(), address: v.address.trim(), province: v.province, locality: v.locality.trim(), neighborhood: v.neighborhood.trim() || null, postalCode: v.postalCode.trim().toUpperCase(),
       carCapacity: n('car'), motorcycleCapacity: n('moto'), truckCapacity: n('truck'),
       openingTime: v.is24 ? '00:00' : v.open, closingTime: v.is24 ? '23:59' : v.close,
       minReservationHours: num('min'), maxReservationHours: num('max'), reservationMargin: num('margin'),
@@ -83,7 +90,7 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
   };
 
   return (
-    <Drawer title={edit ? 'Editar sucursal' : 'Nueva sucursal'} sub={edit ? parking!.name : 'Completá los datos para publicar tu cochera.'} onClose={onClose}
+    <Drawer size="mid" title={edit ? 'Editar sucursal' : 'Nueva sucursal'} sub={edit ? parking!.name : 'Completá los datos para publicar tu cochera.'} onClose={onClose}
       footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn pri" type="submit" form="pform" aria-busy={busy}>{edit ? 'Guardar cambios' : 'Crear sucursal'}</button></div>}>
       <form id="pform" noValidate className="dbody" onSubmit={save}>
         <section className="fs"><div className="fh"><h3>Datos generales</h3></div>
@@ -91,14 +98,7 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
           <Input label="URL de la foto de portada (opcional)" type="url" placeholder="https://…" hint="Enlace directo a una imagen pública." value={v.image} onChange={set('image')} error={err.image} />
         </section>
         <section className="fs"><div className="fh"><h3>Dirección</h3></div>
-          <Input label="Calle y altura" placeholder="Ej. Av. Pellegrini 1540" value={v.address} onChange={set('address')} error={err.address} />
-          <div className="g2">
-            <Input label="Localidad" value={v.locality} onChange={set('locality')} error={err.locality} />
-            <Input label="Código postal" placeholder="2000 o S2000ABC" maxLength={8} autoCapitalize="characters" autoComplete="postal-code" value={v.postalCode} onChange={set('postalCode')} error={err.postalCode} />
-          </div>
-          <div style={{ borderRadius: 8, overflow: 'hidden' }} aria-label="Selector de ubicación">
-            <LocationPicker lat={Number(v.lat)} lng={Number(v.lng)} defaultLocality={v.locality} defaultPostalCode={v.postalCode} onChangeLocation={onLocation} />
-          </div>
+          <LocationPicker value={{ province: v.province, locality: v.locality, neighborhood: v.neighborhood, address: v.address, postalCode: v.postalCode, lat: Number(v.lat), lng: Number(v.lng) }} onChange={onPlace} errors={err} />
         </section>
         <section className="fs"><div className="fh"><h3>Plazas</h3><span className="total">Total: <b>{plural(total, 'plaza', 'plazas')}</b></span></div>
           <p className="ctx" style={{ marginTop: -6 }}>{edit ? 'Podés sumar plazas o ajustar la capacidad por tipo.' : 'Se crean automáticamente con código correlativo por tipo de vehículo.'}</p>
@@ -109,7 +109,7 @@ export default function ParkingDrawer({ parking, onClose }: { parking: Parking |
                 {(id, aria) => (<>
                   <div className="stepper">
                     <button type="button" aria-label={`Quitar una plaza de ${t.pl.toLowerCase()}`} onClick={() => step(k, -1)}><Minus className="i sm" /></button>
-                    <input id={id} type="number" inputMode="numeric" min={k === 'car' ? 1 : 0} value={v[k]} onChange={set(k)} {...aria} />
+                    <input id={id} type="number" inputMode="numeric" min={0} value={v[k]} onChange={set(k)} {...aria} />
                     <button type="button" aria-label={`Sumar una plaza de ${t.pl.toLowerCase()}`} onClick={() => step(k, 1)}><Plus className="i sm" /></button>
                   </div>
                   <div className="rng"><I className="i sm" style={{ verticalAlign: -2 }} /> {cnt ? `${c}-01 a ${c}-${String(cnt).padStart(2, '0')}` : 'Sin plazas'}</div>

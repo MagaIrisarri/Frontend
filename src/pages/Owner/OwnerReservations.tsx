@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
 import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
+import { Presence, Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
 import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
@@ -34,7 +35,7 @@ export default function OwnerReservations() {
         : status === 'loading' ? <SkeletonRows n={5} />
           : mode === 'day' ? <DayList reservations={reservations} initial={(params.get('s') as StFilter) || 'all'} onOpen={setOpenId} />
             : <MonthSummary reservations={reservations} employees={employees} onOpen={setOpenId} />}
-      {open && <ResDetail r={open} onClose={() => setOpenId(null)} />}
+      <Shown when={open}>{r => <ResDetail r={r} onClose={() => setOpenId(null)} />}</Shown>
     </>
   );
 }
@@ -263,7 +264,7 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
           </div>
         </div>
       </Drawer>
-      {confirm && <ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado." ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)} />}
+      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado." ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)} /></Presence>
     </>
   );
 }

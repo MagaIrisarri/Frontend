@@ -40,11 +40,11 @@ export default function MetricsView() {
         <div className="max-w-4xl mx-auto space-y-6">
           <button
             type="button"
-            onClick={() => navigate('/my-parkings')}
+            onClick={() => navigate('/owner')}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 text-sm font-semibold transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Volver a Mis Sucursales</span>
+            <span>Volver al panel</span>
           </button>
           <div className="text-center py-12 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm">
             <p className="text-slate-500 dark:text-zinc-400">No se encontraron métricas para este estacionamiento.</p>
@@ -60,11 +60,11 @@ export default function MetricsView() {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => navigate('/my-parkings')}
+            onClick={() => navigate('/owner')}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 text-sm font-semibold transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Volver a Mis Sucursales</span>
+            <span>Volver al panel</span>
           </button>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
             Métricas de Sucursal

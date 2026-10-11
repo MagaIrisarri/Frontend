@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent as RKeyboa
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Clock, Lock, Plus, Trash2 } from 'lucide-react';
 import { ConfirmModal } from '../../components/Owner/ui/Layer';
+import { Shown } from '../../components/Owner/ui/Presence';
 import { Empty, PageHead } from '../../components/Owner/ui/Page';
 import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
@@ -366,10 +367,10 @@ export default function OwnerShifts() {
       </div>
 
       {drag?.on && drag.kind === 'new' && <div className="dgh" style={{ left: drag.gx, top: drag.gy }}>{drag.label}</div>}
-      {pending && (
-        <ConfirmModal title={`${plural(pending.conflicts.length, 'reserva', 'reservas')} en este horario`} body={pending.text} ok="Transferir y aplicar"
-          onClose={() => setPending(null)} onConfirm={() => { const x = pending; setPending(null); commit(x.d, x.day, x.msg, x.transfers); }} />
-      )}
+      <Shown when={pending}>{x => (
+        <ConfirmModal title={`${plural(x.conflicts.length, 'reserva', 'reservas')} en este horario`} body={x.text} ok="Transferir y aplicar"
+          onClose={() => setPending(null)} onConfirm={() => { setPending(null); commit(x.d, x.day, x.msg, x.transfers); }} />
+      )}</Shown>
     </>
   );
 }
@@ -433,7 +434,7 @@ function Holidays({ parkingId, parkingName, onChange }: { parkingId: string; par
         <input className="inp" style={{ width: 260 }} placeholder="Nombre (ej. Feriado puente)" aria-label="Nombre de la fecha" maxLength={60} value={nn} onChange={ev => setNn(ev.target.value)} />
         <button type="button" className="btn" onClick={add}><Plus className="i sm" />Agregar a todas las sucursales</button>
       </div>
-      {del && <ConfirmModal title={`¿Quitar ${del.name}?`} body="Se quita de la lista de todas las sucursales. Las que lo tenían abierto vuelven a su semana tipo." ok="Quitar feriado" danger onConfirm={remove} onClose={() => setDel(null)} />}
+      <Shown when={del}>{h => <ConfirmModal title={`¿Quitar ${h.name}?`} body="Se quita de la lista de todas las sucursales. Las que lo tenían abierto vuelven a su semana tipo." ok="Quitar feriado" danger onConfirm={remove} onClose={() => setDel(null)} />}</Shown>
     </div>
   );
 }

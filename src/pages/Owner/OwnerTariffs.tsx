@@ -7,7 +7,7 @@ import { useToast } from '../../components/Owner/ui/Toasts';
 import { createParkingPrice, deleteParkingPrice } from '../../services/parking.service';
 import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
-import { VICON } from './OwnerDashboard';
+import { VICON } from '../../components/Owner/ui/vehicles';
 import { VT, capOf, missing, money, priceOf, type VehicleKey } from './owner.lib';
 
 export default function OwnerTariffs() {

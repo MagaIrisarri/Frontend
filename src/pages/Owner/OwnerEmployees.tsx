@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, MoreVertical, Pencil, Plus, RotateCcw, Search, Trash2, Unlink, Users } from 'lucide-react';
 import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
+import { Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
 import { Field, Input, Password, apiError } from '../../components/Owner/ui/Field';
 import { Menu } from '../../components/Owner/ui/Menu';
@@ -117,8 +118,8 @@ export default function OwnerEmployees() {
         </div>
       )}
       {body}
-      {form && <EmployeeDrawer emp={form === 'new' ? null : form} onClose={() => setForm(null)} />}
-      {del && <ConfirmModal title={`¿Dar de baja a ${del.name} ${del.last_name}?`} body="Pierde el acceso y deja de aparecer en tu personal. Podés reactivarlo más tarde." ok="Dar de baja" danger onConfirm={remove} onClose={() => setDel(null)} />}
+      <Shown when={form}>{f => <EmployeeDrawer emp={f === 'new' ? null : f} onClose={() => setForm(null)} />}</Shown>
+      <Shown when={del}>{d => <ConfirmModal title={`¿Dar de baja a ${d.name} ${d.last_name}?`} body="Pierde el acceso y deja de aparecer en tu personal. Podés reactivarlo más tarde." ok="Dar de baja" danger onConfirm={remove} onClose={() => setDel(null)} />}</Shown>
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { ToastProvider } from './Toasts';
 import '../../../styles/owner.scss';
+import '../../../styles/ui.scss';
 
 // Raíz del rol dueño: aplica los estilos con alcance .owner, avisos y el tooltip de [data-tip] del prototipo.
 // bare: sin fondo ni alto mínimo, para capas que se montan sobre otras pantallas (p. ej. Mi perfil en Home).

@@ -1,0 +1,164 @@
+// Componentes compartidos del sistema de diseño, más allá del prototipo del dueño: filas/tarjetas de lista, panel lateral con navegación,
+// objetivos táctiles de 44 px en móvil. Los usa cualquier pantalla dentro de <OwnerShell>; no se crean estilos por pantalla.
+// Va después de owner.scss (que importa OwnerShell) y todo queda bajo .owner.
+.owner{
+
+/* Barra de desplazamiento fina y con tokens en el cuerpo de los paneles */
+.dbody{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+
+/* ───── Barra de filtros (FilterBar) ───── */
+.ftool{display:grid;gap:8px}
+.ftool .search{width:100%}
+.ftool .frow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.ftool .frow .field{flex:1;min-width:150px}
+.ftool .sel{width:auto;min-width:150px}
+.ftool .fclear{justify-self:start}
+.ftool .seg button{white-space:nowrap}
+.search .i{top:calc((var(--ctl) - 16px)/2)}
+
+/* ───── Selector de ubicación (LocationPicker) ───── */
+.lp{display:grid;gap:24px;min-width:0}
+.lpstep{display:grid;gap:12px;min-width:0}
+.lpstep .eyebrow{margin:0}
+.lp .g2{align-items:start}
+.lpbar{display:flex;gap:8px;align-items:center}
+.lpbar .search{flex:1;width:auto;min-width:0}
+.lpmap{height:260px;border-radius:var(--r-md);overflow:hidden;position:relative;z-index:0;box-shadow:0 0 0 1px var(--soft)}
+.lpcanvas{width:100%;height:100%}
+.lpfoot{display:flex;justify-content:space-between;gap:12px;color:var(--tx3);font-size:12.5px}
+.lpfoot span{display:inline-flex;gap:6px;align-items:center}
+.opt[aria-selected=true]{background:var(--hover)}
+
+/* ───── Lista y tarjetas ───── */
+.tag.mute{color:var(--tx2);background:var(--soft)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+.pcard{display:flex;gap:12px;padding:12px;border:1px solid transparent;border-radius:var(--r-lg);background:var(--raised);cursor:pointer;transition:background .12s}
+.pcard:hover{background:var(--hover)}
+.pcard[aria-current=true]{border-color:var(--ac-h);background:color-mix(in srgb,var(--ac) 12%,var(--surface))}
+.pcard.dis{opacity:.7}
+.pcard.ld{cursor:default}.pcard.ld:hover{background:var(--raised)}
+.pcard img{width:72px;height:72px;border-radius:var(--r-md);object-fit:cover;flex:none;background:var(--hover)}
+.pcard .pb{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:6px;align-content:start}
+.pcard .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pcard .top{align-items:flex-start}
+.pcard .nmb{min-width:0;border:0;padding:0;background:none;text-align:left;color:var(--tx)}
+.pcard .nm{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .ad{display:flex;gap:4px;align-items:center;color:var(--tx2);font-size:12.5px;min-width:0}
+.pcard .ad span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .pr{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .tags{display:flex;gap:6px;flex-wrap:wrap}
+.pcard .pb>.tag{justify-self:start}
+.fav[aria-pressed=true]{color:var(--warn)}
+.fav[aria-pressed=true] .i{fill:currentColor}
+.pgroup{padding-top:6px}
+
+/* ───── Paneles del cliente (Favoritos, Reservas, Vehículos, Facturas) ───── */
+.dhead .tl{display:flex;gap:8px;align-items:flex-start}
+.dhead .tl .icon-btn{margin-left:-6px}
+.dbody.stack{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;padding-top:16px}
+.dbody.stack>.st{white-space:normal}
+.pcard.nc{cursor:default}.pcard.nc:hover{background:var(--raised)}
+.pcard .acts{display:flex;gap:8px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn.errtx{color:var(--err)}
+.rcard{display:grid;gap:10px;padding:14px;border-radius:var(--r-lg);background:var(--raised)}
+.rcard .rtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.rcard .rn{font-weight:600}
+.rcard .ad{display:flex;gap:4px;align-items:center;color:var(--tx2);font-size:12.5px}
+.rcard .dl{grid-template-columns:72px 1fr}
+.rcard .rfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:10px;border-top:1px solid var(--soft);color:var(--tx3);font-size:12.5px}
+.rcard .tags{display:flex;gap:6px;flex-wrap:wrap}
+.rcard .tag{display:inline-flex;align-items:center;gap:4px}
+.rcard .plate{display:inline}
+.rcard.read{opacity:.75}
+.rcard .nt{display:flex;gap:8px;align-items:center}
+.rfoot.nb{border-top:0;padding-top:0}
+.vrow{align-items:center}
+.vrow .l{align-items:center}
+.vrow .plate{padding:2px 8px;border-radius:var(--r-sm);background:var(--soft);display:inline-block}
+.vrow .sd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vrow .tag{display:inline-flex;align-items:center;gap:4px}
+.invrow{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:14px;border-radius:var(--r-lg);background:var(--raised)}
+.invrow .inm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:600}
+.invrow .isub{color:var(--tx2);font-size:12.5px;margin-top:4px;display:flex;gap:6px;align-items:center}
+.invrow .iamt{text-align:right;flex:none}
+.invrow .iamt b{display:block;font-size:17px;font-weight:600}
+.invrow .iamt span{color:var(--tx3);font-size:12.5px}
+.drawer .empty{background:var(--raised)}
+@media(max-width:720px){
+  .grid2{grid-template-columns:1fr}
+  .dhead .tl .icon-btn{margin-left:0}
+}
+
+/* ───── Disponibilidad, opciones elegibles y resumen de costo ───── */
+.acells{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.acell{background:var(--raised);border-radius:var(--r-md);padding:10px}
+.acell .lab{display:flex;gap:6px;align-items:center}
+.acell b{font-size:17px;font-weight:600}
+.acell .of{color:var(--tx3)}
+.optlist{display:grid;gap:8px}
+.opt{display:flex;align-items:center;gap:12px;width:100%;padding:12px;border:1px solid transparent;border-radius:var(--r-lg);background:var(--raised);color:var(--tx);text-align:left}
+.opt:hover{background:var(--hover)}
+.opt[aria-checked=true]{border-color:var(--ac-h);background:color-mix(in srgb,var(--ac) 12%,var(--surface))}
+.opt .grow{min-width:0}
+.opt small{display:block;font-weight:400;font-size:12.5px;color:var(--tx3)}
+.opt>.i:first-child{color:var(--tx3)}
+.opt[aria-checked=true] .i{color:var(--ac-tx)}
+.drow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.drow .inp{flex:1;min-width:140px;width:auto}
+.dl.sum{grid-template-columns:1fr auto}
+.dl.sum dd{font-weight:600;text-align:right}
+.tot{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;border-top:1px solid var(--soft)}
+.tot b{font-size:17px;font-weight:600}
+
+/* ───── Panel lateral: lado izquierdo, ancho medio y navegación ───── */
+.drawer.mid{width:min(680px,100%)}
+.drawer.left{left:0;right:auto;width:320px;max-width:calc(100vw - 48px);animation:slidel .16s ease-out}
+@keyframes slidel{from{transform:translateX(-24px);opacity:0}}
+.drawer.left .dfoot .btn{flex:1;justify-content:center}
+.drawer .brand{margin:0}
+.snav{display:grid;gap:20px;padding-top:16px;align-content:start}
+.sgrp{display:grid;gap:2px;align-content:start}
+.sgrp .eyebrow{padding:0 10px}
+.sitem{width:100%;height:auto;min-height:var(--ctl);padding:6px 10px;justify-content:flex-start;text-align:left}
+.sitem[aria-current=page]{background:var(--ac-soft);color:var(--ac-tx)}
+.sitem .grow{min-width:0}
+.sitem small{display:block;font-weight:400;font-size:12.5px;color:var(--tx3)}
+.sitem .i{color:var(--tx3)}.sitem[aria-current=page] .i{color:var(--ac-tx)}
+.pcta{display:flex;gap:12px;align-items:center;width:100%;padding:12px;border:0;border-radius:var(--r-lg);background:var(--raised);color:var(--tx);text-align:left;min-height:var(--ctl)}
+.pcta:hover{background:var(--hover)}
+.pcta .ib{width:32px;height:32px;border-radius:var(--r-md);background:var(--ac-soft);color:var(--ac-tx);display:grid;place-items:center;flex:none}
+.pcta small{display:block;color:var(--tx2);font-size:12.5px}
+
+/* ───── Ayuda ───── */
+.sup{display:grid;gap:4px;padding:14px 0}
+.sup+.sup{border-top:1px solid var(--soft)}
+.sup h3{font-size:14px;font-weight:600}
+.sup p{color:var(--tx2)}
+
+/* ───── Entrada y salida de paneles y modales (la salida es el espejo de la entrada; ver Presence.tsx) ───── */
+.scrim{animation:fadein .16s ease-out}
+@keyframes fadein{from{opacity:0}}
+.modal{animation:pop .16s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}}
+.layer.out,.modal-root.out{pointer-events:none}
+.layer.out .scrim,.modal-root.out .scrim{animation:fadeout .16s ease-in forwards}
+@keyframes fadeout{to{opacity:0}}
+.layer.out .drawer{animation:slideout .16s ease-in forwards}
+@keyframes slideout{to{transform:translateX(24px);opacity:0}}
+.layer.out .drawer.left{animation:slideoutl .16s ease-in forwards}
+@keyframes slideoutl{to{transform:translateX(-24px);opacity:0}}
+.modal-root.out .modal{animation:popout .16s ease-in forwards}
+@keyframes popout{to{opacity:0;transform:translateY(8px)}}
+
+/* ───── Móvil: objetivos táctiles de 44 px (todo lo que monta OwnerShell bare: Home y paneles del cliente) ───── */
+@media(max-width:720px){
+  &.bare{--ctl:44px}
+  &.bare .btn.sm,&.bare .seg button{height:44px}
+  &.bare .icon-btn,&.bare .icon-btn.sm{width:44px;height:44px}
+  &.bare .menu button{height:44px}
+  &.bare .vmenu button{height:auto;min-height:44px}
+}
+
+}

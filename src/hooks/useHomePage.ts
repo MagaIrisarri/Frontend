@@ -1,11 +1,13 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getParking, getOneParking } from '../services/parking.service';
 import { getReservationsByClient, cancelReservation } from '../services/reservation.service';
 import type { Parking } from '../types/parking.types';
 import type { MapFilters, VehicleFilterType } from '../types/mapFilters.types';
 import { DEFAULT_MAP_FILTERS } from '../types/mapFilters.types';
 import { useAuthStore } from '../stores/authStore';
+import { getParkingMinPrice, getParkingPriceForCategory } from '../utils/parkingPriceUtils';
+import { matchesQuery } from '../utils/search';
 import { useTheme } from '../context/ThemeContext';
 
 export interface UserNotification {
@@ -19,6 +21,7 @@ export interface UserNotification {
 
 export function useHomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const isOwner = useAuthStore((state) => state.isOwner);
   const logout = useAuthStore((state) => state.logout);
@@ -28,7 +31,13 @@ export function useHomePage() {
   const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isListDrawerOpen, setIsListDrawerOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setTextQuery] = useState('');
+  // Zona elegida con "Buscar en esta zona" [oeste, sur, este, norte]. Escribir en el buscador la descarta: el texto manda y mueve el mapa.
+  const [mapArea, setMapArea] = useState<[number, number, number, number] | null>(null);
+  const setSearchQuery = useCallback((q: string) => {
+    setTextQuery(q);
+    setMapArea(null);
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -42,11 +51,13 @@ export function useHomePage() {
 
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_MAP_FILTERS);
+    setMapArea(null);
   }, []);
 
   // Estados para Popup de Vehículos
-  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
-  const [vehicleModalTab, setVehicleModalTab] = useState<'list' | 'create'>('list');
+  // Las rutas /vehicles, /reservations e /invoices abren Home con su panel (no hay páginas aparte).
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(location.pathname.startsWith('/vehicles'));
+  const [vehicleModalTab, setVehicleModalTab] = useState<'list' | 'create'>(location.pathname === '/vehicles/new' ? 'create' : 'list');
 
   // Estado para menú de usuario dropdown 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -68,10 +79,13 @@ export function useHomePage() {
   ]);
 
   // Estado para modal de Reservas e Historial
-  const [isReservationsModalOpen, setIsReservationsModalOpen] = useState(false);
+  const [isReservationsModalOpen, setIsReservationsModalOpen] = useState(location.pathname === '/reservations');
   const [reservationsModalTab, setReservationsModalTab] = useState<'active' | 'history'>('active');
   const [clientReservations, setClientReservations] = useState<any[]>([]);
   const [loadingReservations, setLoadingReservations] = useState(false);
+
+  // Facturas: panel lateral; la ruta /invoices abre Home con el panel puesto (p. ej. desde Mi perfil).
+  const [isInvoicesOpen, setIsInvoicesOpen] = useState(location.pathname === '/invoices');
 
   // Estado para modal de Favoritos
   const [isFavoritesModalOpen, setIsFavoritesModalOpen] = useState(false);
@@ -142,17 +156,33 @@ export function useHomePage() {
     ['PENDIENTE', 'CONFIRMADA', 'EN CURSO'].includes(r.status)
   ).length;
 
-  // Cocheras filtradas por buscador
+  // Cocheras filtradas por buscador y precio, y ordenadas por precio (las sin tarifa quedan al final)
   const filteredParkings = useMemo(() => {
-    if (!searchQuery.trim()) return parkings;
-    const q = searchQuery.toLowerCase();
-    return parkings.filter(
-      (p) =>
-        p.name?.toLowerCase().includes(q) ||
-        p.address?.toLowerCase().includes(q) ||
-        p.locality?.toLowerCase().includes(q)
-    );
-  }, [parkings, searchQuery]);
+    const priceOf = (p: Parking) =>
+      filters.vehicleType ? getParkingPriceForCategory(p, filters.vehicleType) : getParkingMinPrice(p);
+    let list = parkings.filter((p) => matchesQuery(searchQuery, p.name, p.address, p.neighborhood, p.locality, p.province));
+    if (mapArea) {
+      const [w, s, e, n] = mapArea;
+      list = list.filter((p) => Number(p.longitude) >= w && Number(p.longitude) <= e && Number(p.latitude) >= s && Number(p.latitude) <= n);
+    }
+    if (filters.maxPrice) {
+      const max = filters.maxPrice;
+      list = list.filter((p) => {
+        const price = priceOf(p);
+        return price !== null && price <= max;
+      });
+    }
+    if (filters.sort) {
+      const dir = filters.sort === 'price-asc' ? 1 : -1;
+      list = [...list].sort((a, b) => {
+        const pa = priceOf(a);
+        const pb = priceOf(b);
+        if (pa === null || pb === null) return pa === pb ? 0 : pa === null ? 1 : -1;
+        return (pa - pb) * dir;
+      });
+    }
+    return list;
+  }, [parkings, searchQuery, mapArea, filters.maxPrice, filters.sort, filters.vehicleType]);
 
   // Cocheras favoritas
   const favoriteParkings = useMemo(() => {
@@ -278,6 +308,34 @@ export function useHomePage() {
     setIsFavoritesModalOpen(true);
   }, [user]);
 
+  const handleOpenInvoices = useCallback(() => {
+    if (!user) {
+      setAuthModalTab('login');
+      setIsAuthModalOpen(true);
+      return;
+    }
+    setIsSidebarOpen(false);
+    setIsUserMenuOpen(false);
+    setIsInvoicesOpen(true);
+  }, [user]);
+
+  const closeInvoices = useCallback(() => setIsInvoicesOpen(false), []);
+
+  // Navegar a una de esas rutas con Home ya montado (p. ej. desde Mi perfil) abre su panel; al cerrarlo se vuelve al mapa.
+  const path = location.pathname;
+  useEffect(() => {
+    if (path === '/invoices') setIsInvoicesOpen(true);
+    else if (path === '/reservations') { setReservationsModalTab('active'); setIsReservationsModalOpen(true); }
+    else if (path.startsWith('/vehicles')) { setVehicleModalTab(path === '/vehicles/new' ? 'create' : 'list'); setIsVehicleModalOpen(true); }
+  }, [path]);
+
+  const routePanelOpen = isInvoicesOpen || isReservationsModalOpen || isVehicleModalOpen;
+  const wasOpen = useRef(routePanelOpen);
+  useEffect(() => {
+    if (wasOpen.current && !routePanelOpen && path !== '/') navigate('/', { replace: true });
+    wasOpen.current = routePanelOpen;
+  }, [routePanelOpen, path, navigate]);
+
   const handleOpenNotifications = useCallback(() => {
     setIsUserMenuOpen(false);
     setIsNotificationsOpen(true);
@@ -289,18 +347,19 @@ export function useHomePage() {
     setIsSupportOpen(true);
   }, []);
 
-  const handleHostClick = useCallback(() => {
+  // notify: el hook corre fuera del ToastProvider (vive en OwnerShell), así que el aviso lo pasa quien lo tiene
+  const handleHostClick = useCallback((notify: (msg: string, type?: 'info') => void) => {
     setIsUserMenuOpen(false);
     setIsSidebarOpen(false);
-    if (!user) {
+    if (isOwner) {
+      navigate('/owner');
+    } else if (user) {
+      notify('Para ofrecer tu estacionamiento necesitás una cuenta de dueño.', 'info');
+    } else {
       setAuthModalTab('register');
       setIsAuthModalOpen(true);
-    } else if (isOwner) {
-      navigate('/owner');
-    } else {
-      navigate('/my-parkings/create');
     }
-  }, [user, isOwner, navigate]);
+  }, [isOwner, user, navigate]);
 
   const handleAuthSuccess = useCallback(() => {
     setIsAuthModalOpen(false);
@@ -327,6 +386,8 @@ export function useHomePage() {
     resetFilters,
     searchQuery,
     setSearchQuery,
+    mapArea,
+    setMapArea,
     isSidebarOpen,
     setIsSidebarOpen,
     isListDrawerOpen,
@@ -373,6 +434,9 @@ export function useHomePage() {
     handleOpenReservations,
     handleOpenFavorites,
     handleOpenNotifications,
+    isInvoicesOpen,
+    handleOpenInvoices,
+    closeInvoices,
     handleOpenSupport,
     handleHostClick,
     handleOpenLogin,

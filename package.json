@@ -38,6 +38,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "check:standard": "node scripts/check-standard.mjs",
+    "verify": "node scripts/verify.mjs",
     "preview": "vite preview"
   }
 }
