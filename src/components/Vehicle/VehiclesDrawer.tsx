@@ -16,6 +16,7 @@ import OwnerShell from '../Owner/ui/OwnerShell';
 import { Presence } from '../Owner/ui/Presence';
 import { Empty, ErrorBox } from '../Owner/ui/Page';
 import { Field, Input, apiError } from '../Owner/ui/Field';
+import { cleanPlate, plateState, vehicleYears } from '../../utils/plate';
 import { useToast } from '../Owner/ui/Toasts';
 import { plural } from '../../pages/Owner/owner.lib';
 
@@ -55,7 +56,7 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [plate, setPlate] = useState('');
-  const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [year, setYear] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [insurance, setInsurance] = useState('');
@@ -105,7 +106,7 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
 
   const resetForm = () => {
     setPlate('');
-    setYear(new Date().getFullYear());
+    setYear('');
     setBrand('');
     setModel('');
     setInsurance('');
@@ -113,8 +114,10 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
     setError(null);
   };
 
+  // Si el panel se abrió directo en el formulario (p. ej. desde una reserva), salir del formulario lo cierra y vuelve a quien lo abrió.
   const backToList = () => {
     resetForm();
+    if (initialTab === 'create') return onClose();
     setView('list');
   };
 
@@ -122,7 +125,7 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
     resetForm();
     setEditingId(idOf(v));
     setPlate(v.plate || '');
-    setYear(v.year || new Date().getFullYear());
+    setYear(v.year ? String(v.year) : '');
     setInsurance(v.insurance?.id || v.insuranceId || '');
     const brandId = v.brand?.id || v.brandId || '';
     setBrand(brandId);
@@ -138,18 +141,19 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId) return;
+    if (plateState(plate) !== 'ok') return setError('Completá una patente argentina válida (AB123CD, ABC123, A123BCD o 123ABC).');
     setSubmitting(true);
     setError(null);
     const payload = {
-      plate: plate.trim().toUpperCase(),
-      year: Number(year),
+      plate,
+      year: year ? Number(year) : undefined,
       brandId: brand,
       modelId: model,
       insuranceId: insurance || undefined,
     };
     try {
       if (view === 'create') await createVehicle(userId, payload);
-      else if (editingId) await updateVehicle(editingId, { ...payload, insuranceId: insurance || null }); // vacío quita el seguro
+      else if (editingId) await updateVehicle(editingId, { ...payload, year: year ? Number(year) : null, insuranceId: insurance || null }); // vacío quita el seguro
       toast(view === 'create' ? 'Vehículo registrado.' : 'Vehículo actualizado.');
       await loadVehicles();
       backToList();
@@ -202,12 +206,19 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
       <Drawer title={title} sub={sub} onClose={onClose} onBack={isForm ? backToList : undefined} footer={footer || undefined}>
         {isForm ? (
           <form id="vehicle-form" className="dbody stack" onSubmit={submit}>
-            {error && <div className="ferr" role="alert"><AlertCircle className="i sm" />{error}</div>}
+            <div className="ferr fx" role="alert">{error && <><AlertCircle className="i sm" />{error}</>}</div>
             <div className="grid2">
-              <Input label="Patente" placeholder="AB123CD" value={plate} required style={{ textTransform: 'uppercase' }}
-                onChange={(e) => setPlate(e.target.value.toUpperCase())} />
-              <Input label="Año de fabricación" type="number" min={1980} max={new Date().getFullYear() + 1} value={year} required
-                onChange={(e) => setYear(Number(e.target.value))} />
+              <Input fixed label="Patente" placeholder="AB123CD" value={plate} required autoComplete="off" spellCheck={false} maxLength={7}
+                error={plateState(plate) === 'bad' ? 'Formato de patente inválido' : undefined} hint="Ej.: AB123CD o A123BCD"
+                onChange={(e) => { setPlate(cleanPlate(e.target.value)); setError(null); }} />
+              <Field fixed label="Año (opcional)" hint="Del más reciente al más antiguo">
+                {(id, aria) => (
+                  <select className="sel" id={id} {...aria} value={year} onChange={(e) => setYear(e.target.value)}>
+                    <option value="">Sin especificar</option>
+                    {vehicleYears().map((y) => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                )}
+              </Field>
             </div>
             <div className="grid2">
               <Field label="Marca">
@@ -274,7 +285,7 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
                           <div>
                             <div>{brandName} {modelName}</div>
                             <div className="sd">
-                              <span>Año {v.year}</span>
+                              {v.year && <span>Año {v.year}</span>}
                               {insuranceName && <span className="tag"><Shield className="i sm" aria-hidden="true" /> {insuranceName}</span>}
                             </div>
                           </div>

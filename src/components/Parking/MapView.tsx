@@ -17,8 +17,10 @@ interface MapViewProps {
   selectedVehicleType?: VehicleFilterType | null;
   fit?: boolean; // encuadrar los pines cuando cambian (no, si la lista sale de la zona que el usuario está mirando)
   onSearchArea?: (bounds: [number, number, number, number]) => void; // [oeste, sur, este, norte]
+  onViewChange?: (bounds: [number, number, number, number]) => void; // lo que se ve, al cargar y tras cada movimiento
 }
 
+const toArea = (b: maptilersdk.LngLatBounds): [number, number, number, number] => [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
 
 function MapViewComponent({
   spots,
@@ -27,6 +29,7 @@ function MapViewComponent({
   selectedVehicleType = null,
   fit = true,
   onSearchArea,
+  onViewChange,
 }: MapViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -34,8 +37,10 @@ function MapViewComponent({
   const activeMarkersRef = useRef<maptilersdk.Marker[]>([]);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
-  const isInternalClickRef = useRef(false);
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
   const centeredIdRef = useRef<string | null>(null);
+  const fittedKeyRef = useRef<string | null>(null);
   const [searching, setSearching] = useState(false);
   const searchTimerRef = useRef<number | undefined>(undefined);
   useEffect(() => () => clearTimeout(searchTimerRef.current), []);
@@ -160,7 +165,6 @@ function MapViewComponent({
 
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          isInternalClickRef.current = true;
           if (onSelectRef.current) {
             onSelectRef.current(spot.id);
           }
@@ -191,12 +195,16 @@ function MapViewComponent({
     });
 
     map.on('styleimagemissing', () => {});
-    map.on('load', () => renderMarkersRef.current());
+    map.on('load', () => {
+      renderMarkersRef.current();
+      onViewChangeRef.current?.(toArea(map.getBounds()));
+    });
     map.on('style.load', () => renderMarkersRef.current());
     map.on('styledata', () => renderMarkersRef.current());
     map.on('zoomend', () => renderMarkersRef.current());
     map.on('moveend', (e) => {
       renderMarkersRef.current();
+      onViewChangeRef.current?.(toArea(map.getBounds()));
       if (e.originalEvent) setMoved(true); // solo arrastre, rueda o botones de zoom; los encuadres por código no traen evento
     });
 
@@ -249,7 +257,11 @@ function MapViewComponent({
       return !isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0);
     });
 
-    if (fit && validSpots.length > 0) {
+    // Encuadrar solo si cambian los pines: refrescar los datos de uno (p. ej. lugares libres de la elegida) no debe alejar el mapa
+    const key = validSpots.map((s) => s.id).join();
+    if (!fit) fittedKeyRef.current = null;
+    if (fit && validSpots.length > 0 && key !== fittedKeyRef.current) {
+      fittedKeyRef.current = key;
       setMoved(false);
       const bounds = new maptilersdk.LngLatBounds();
       validSpots.forEach((s) => bounds.extend([Number(s.longitude), Number(s.latitude)]));
@@ -264,7 +276,7 @@ function MapViewComponent({
   const searchArea = () => {
     const b = mapRef.current?.getBounds();
     if (!b || !onSearchArea) return;
-    onSearchArea([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+    onSearchArea(toArea(b));
     // shortcut: L-26, elfiltro es local e instantáneo; el spinner dura un mínimo fijo para que se perciba, cuando la búsqueda sea remota atarlo a la carga real
     setSearching(true);
     searchTimerRef.current = window.setTimeout(() => {
@@ -276,12 +288,6 @@ function MapViewComponent({
   // Actualizar selección activa
   useEffect(() => {
     renderMarkers();
-
-    if (isInternalClickRef.current) {
-      isInternalClickRef.current = false;
-      centeredIdRef.current = selectedId;
-      return;
-    }
 
     if (!selectedId) centeredIdRef.current = null;
     const map = mapRef.current;
@@ -296,9 +302,11 @@ function MapViewComponent({
 
     if (!isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0)) {
       centeredIdRef.current = selectedId;
-      map.easeTo({
+      // Acercar a la sucursal (desde la lista o su pin); si el usuario ya está más cerca, no alejar
+      map.flyTo({
         center: [lng, lat],
-        duration: 500,
+        zoom: Math.max(map.getZoom(), 16),
+        duration: 800,
       });
     }
   }, [selectedId, spots, renderMarkers]);

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { useClosing } from './Presence';
+import { useSwipeClose } from '../../../hooks/useSwipeClose';
 
 // Foco al primer campo, Escape cierra, bloquea el scroll y devuelve el foco al abridor (como openLayer/closeLayer del prototipo).
 function useLayer(onClose: () => void, focusSel = '[data-first],input:not([type=hidden]),select,textarea,.dfoot .btn') {
@@ -49,10 +50,11 @@ export function Drawer({ title, sub, onClose, children, footer, wide, left, size
   const ref = useLayer(onClose, focusSel);
   const id = useId();
   const closing = useClosing();
+  const swipe = useSwipeClose(onClose, left ? 'left' : 'right');
   return (
     <div className={`layer on${closing ? ' out' : ''}`} ref={ref}>
       <div className="scrim" onClick={onClose} />
-      <aside className={`drawer${wide ? ' wide' : ''}${left ? ' left' : ''}${size ? ` ${size}` : ''}`} role="dialog" aria-modal="true" aria-labelledby={id}>
+      <aside ref={swipe} className={`drawer${wide ? ' wide' : ''}${left ? ' left' : ''}${size ? ` ${size}` : ''}`} role="dialog" aria-modal="true" aria-labelledby={id}>
         <div className="dhead">
           {(() => {
             const head = <div><h2 id={id}>{title}</h2>{sub && <p>{sub}</p>}</div>;

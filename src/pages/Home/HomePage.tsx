@@ -9,7 +9,7 @@ import '../../styles/home.scss';
 
 export default function HomePage() {
   const homeProps = useHomePage();
-  const { filteredParkings, selectedParkingId, handleSelectSpot, filters, mapArea, setMapArea } = homeProps;
+  const { filteredParkings, selectedParkingId, handleSelectSpot, filters, mapArea, setMapArea, localityFromView, handleViewChange } = homeProps;
 
   return (
     <>
@@ -23,8 +23,9 @@ export default function HomePage() {
               selectedId={selectedParkingId}
               onSelect={handleSelectSpot}
               selectedVehicleType={filters.vehicleType}
-              fit={!mapArea}
+              fit={!mapArea && !localityFromView}
               onSearchArea={setMapArea}
+              onViewChange={handleViewChange}
             />
           </div>
 

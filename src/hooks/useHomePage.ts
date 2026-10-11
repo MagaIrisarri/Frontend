@@ -19,6 +19,10 @@ export interface UserNotification {
   type: 'reservation' | 'system' | 'promo';
 }
 
+type Area = [number, number, number, number]; // [oeste, sur, este, norte]
+const inArea = (p: Parking, [w, s, e, n]: Area) =>
+  Number(p.longitude) >= w && Number(p.longitude) <= e && Number(p.latitude) >= s && Number(p.latitude) <= n;
+
 export function useHomePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,26 +36,37 @@ export function useHomePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isListDrawerOpen, setIsListDrawerOpen] = useState(false);
   const [searchQuery, setTextQuery] = useState('');
-  // Zona elegida con "Buscar en esta zona" [oeste, sur, este, norte]. Escribir en el buscador la descarta: el texto manda y mueve el mapa.
-  const [mapArea, setMapArea] = useState<[number, number, number, number] | null>(null);
+  // Filtros del mapa
+  const [filters, setFilters] = useState<MapFilters>(DEFAULT_MAP_FILTERS);
+  // Zona elegida con "Buscar en esta zona". Escribir en el buscador la descarta: el texto manda y mueve el mapa.
+  const [mapArea, setMapArea] = useState<Area | null>(null);
+  // La localidad la fijó la vista del mapa al abrir el listado: sigue a lo que se ve y el mapa no se re-encuadra solo
+  const [localityFromView, setLocalityFromView] = useState(false);
   const setSearchQuery = useCallback((q: string) => {
     setTextQuery(q);
     setMapArea(null);
-  }, []);
+    if (localityFromView) {
+      setLocalityFromView(false);
+      setFilters((f) => ({ ...f, locality: null }));
+    }
+  }, [localityFromView]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-
-  // Filtros del mapa
-  const [filters, setFilters] = useState<MapFilters>(DEFAULT_MAP_FILTERS);
 
   const setVehicleFilter = useCallback((type: VehicleFilterType | null) => {
     setFilters((prev) => ({ ...prev, vehicleType: type }));
   }, []);
 
+  const setLocality = useCallback((locality: string | null) => {
+    setLocalityFromView(false);
+    setFilters((f) => ({ ...f, locality }));
+  }, []);
+
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_MAP_FILTERS);
     setMapArea(null);
+    setLocalityFromView(false);
   }, []);
 
   // Estados para Popup de Vehículos
@@ -168,10 +183,7 @@ export function useHomePage() {
       filters.vehicleType ? getParkingPriceForCategory(p, filters.vehicleType) : getParkingMinPrice(p);
     let list = parkings.filter((p) => matchesQuery(searchQuery, p.name, p.address, p.neighborhood, p.locality, p.province));
     if (filters.locality) list = list.filter((p) => localityKey(p) === filters.locality);
-    if (mapArea) {
-      const [w, s, e, n] = mapArea;
-      list = list.filter((p) => Number(p.longitude) >= w && Number(p.longitude) <= e && Number(p.latitude) >= s && Number(p.latitude) <= n);
-    }
+    if (mapArea) list = list.filter((p) => inArea(p, mapArea));
     if (filters.maxPrice) {
       const max = filters.maxPrice;
       list = list.filter((p) => {
@@ -218,6 +230,29 @@ export function useHomePage() {
     setSelectedParkingId(id);
     setIsListDrawerOpen(true);
   }, []);
+
+  // Localidad que se ve en el mapa: la única a la vista, o ninguna ("Todas") si se ven varias o si el sistema tiene una sola.
+  const viewRef = useRef<Area | null>(null);
+  const applyViewLocality = useCallback(() => {
+    const view = viewRef.current;
+    if (!view || parkings.length === 0) return false;
+    const located = parkings.filter((p) => p.locality);
+    const inView = new Set(located.filter((p) => inArea(p, view)).map(localityKey));
+    const locality = inView.size === 1 && new Set(located.map(localityKey)).size > 1 ? [...inView][0] : null;
+    setFilters((f) => ((f.locality ?? null) === locality ? f : { ...f, locality }));
+    return true;
+  }, [parkings]);
+
+  const handleViewChange = useCallback((view: Area) => {
+    viewRef.current = view;
+    if (localityFromView) applyViewLocality();
+  }, [localityFromView, applyViewLocality]);
+
+  // Abrir el listado fija la localidad que se ve; con texto en el buscador no, porque el texto manda.
+  const openList = useCallback(() => {
+    if (!searchQuery && applyViewLocality()) setLocalityFromView(true);
+    setIsListDrawerOpen(true);
+  }, [searchQuery, applyViewLocality]);
 
   // Refrescar en tiempo real los lugares disponibles de la cochera seleccionada
   const refreshSelectedParking = useCallback(() => {
@@ -390,15 +425,19 @@ export function useHomePage() {
     filters,
     setFilters,
     setVehicleFilter,
+    setLocality,
     resetFilters,
     searchQuery,
     setSearchQuery,
     mapArea,
     setMapArea,
+    localityFromView,
+    handleViewChange,
     isSidebarOpen,
     setIsSidebarOpen,
     isListDrawerOpen,
     setIsListDrawerOpen,
+    openList,
     isModalOpen,
     setIsModalOpen,
     isVehicleModalOpen,

@@ -126,7 +126,7 @@ function Content({ onClose }: { onClose: () => void }) {
                     </span>
                   </div>
                   <div className="isub">
-                    Reserva {inv.reservation?.startTime ? fmtDate(inv.reservation.startTime) : 's/d'} · {where}
+                    Reserva {inv.reservation?.code || (inv.reservation?.id ? `R-${inv.reservation.id.slice(0, 6).toUpperCase()}` : 's/d')} · {inv.reservation?.startTime ? fmtDate(inv.reservation.startTime) : 's/d'} · {where}
                   </div>
                   <div className="isub">
                     {inv.paymentDate ? `Pagada el ${fmtDateTime(inv.paymentDate)}` : 'Pendiente de pago'}

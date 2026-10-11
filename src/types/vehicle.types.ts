@@ -20,7 +20,7 @@ export interface Client {
 export interface Vehicle {
   id: string;
   plate: string;
-  year: number;
+  year?: number | null;
   brand?: { id: string; name: string };
   model?: { id: string; name: string };
   client?: Client;
@@ -30,7 +30,7 @@ export interface Vehicle {
 
 export interface CreateVehicle {
   plate: string;
-  year: number;
+  year?: number;
   brandId: string;
   modelId: string;
   insuranceId?: string;
@@ -38,7 +38,7 @@ export interface CreateVehicle {
 
 export interface UpdateVehicle {
   plate: string;
-  year: number;
+  year?: number | null; // null quita el año
   brandId: string;
   modelId: string;
   insuranceId?: string | null;

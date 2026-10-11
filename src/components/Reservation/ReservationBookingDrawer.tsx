@@ -24,6 +24,7 @@ interface ReservationBookingDrawerProps {
   parking: Parking | null;
   initialVehicleCategory?: VehicleFilterType | null;
   onOpenVehicleRegister?: () => void;
+  vehiclesRev?: number; // cambia al volver de Mis vehículos: recarga la lista sin perder la reserva en curso
   onViewMyReservations?: () => void;
   onReservationSuccess?: () => void;
 }
@@ -68,6 +69,7 @@ export function ReservationBookingDrawer({
   parking,
   initialVehicleCategory,
   onOpenVehicleRegister,
+  vehiclesRev = 0,
   onViewMyReservations,
   onReservationSuccess,
 }: ReservationBookingDrawerProps) {
@@ -217,6 +219,20 @@ export function ReservationBookingDrawer({
     }
   }, [isOpen, parking?.id, todayStr, initialVehicleCategory]);
 
+  // Al volver de Mis vehículos aparecen los recién registrados
+  useEffect(() => {
+    const currentUser = useAuthStore.getState().user;
+    const userId = currentUser?.id || currentUser?._id;
+    if (!vehiclesRev || !isOpen || !userId) return;
+    getUserVehicle(userId)
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.data || [];
+        setVehicles(list);
+        setSelectedVehicle((cur) => cur ?? (list.length === 1 ? list[0] : null));
+      })
+      .catch((err) => console.error('Error cargando vehículos:', err));
+  }, [vehiclesRev]);
+
   // Cargar servicios y precios cuando se selecciona vehículo
   useEffect(() => {
     if (!parking || !selectedVehicle) return;
@@ -333,10 +349,8 @@ export function ReservationBookingDrawer({
   const vUi = selectedVehicle ? VEHICLE_UI[normalizeVehicleType(selectedVehicle.vehicleType) as keyof typeof VEHICLE_UI] : VEHICLE_UI.AUTO;
   const min = parking.minReservationHours || 1;
   const max = parking.maxReservationHours || 24;
-  const goRegister = () => {
-    onClose();
-    onOpenVehicleRegister?.();
-  };
+  // El panel de vehículos se abre encima: al cerrarlo (X, fuera o Esc) se vuelve a esta reserva tal como estaba.
+  const goRegister = () => onOpenVehicleRegister?.();
 
   const footer =
     step === 'success' ? (

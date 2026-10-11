@@ -15,6 +15,7 @@ export const TopBar: React.FC<any> = (props: any) => {
     setSearchQuery,
     isListDrawerOpen,
     setIsListDrawerOpen,
+    openList,
     selectedParkingId,
     setSelectedParkingId,
     setIsNotificationsOpen,
@@ -81,7 +82,8 @@ export const TopBar: React.FC<any> = (props: any) => {
           aria-pressed={isPanelOpen}
           onClick={() => {
             setSelectedParkingId?.(null);
-            setIsListDrawerOpen(!isPanelOpen);
+            if (isPanelOpen) setIsListDrawerOpen(false);
+            else openList();
           }}
         >
           <Layers className="i" />

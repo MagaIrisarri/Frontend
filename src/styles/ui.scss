@@ -13,6 +13,8 @@
 .ftool .frow .field{flex:1;min-width:150px}
 .ftool .sel{width:auto;min-width:150px}
 .ftool .fclear{justify-self:start}
+.fx.field .hint,.fx.field .ferr,.ferr.fx{height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* mensaje de una línea con alto fijo: al aparecer o cambiar no mueve nada */
+.ftool .seg{flex-wrap:wrap} /* en pantallas angostas los botones pasan a otra línea en vez de quedar ocultos tras un scroll horizontal */
 .ftool .seg button{white-space:nowrap}
 .search .i{top:calc((var(--ctl) - 16px)/2)}
 
@@ -66,9 +68,10 @@
 .dhead .tl .icon-btn{margin-left:-6px}
 .dbody.stack{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;padding-top:16px}
 .dbody.stack>.st{white-space:normal}
+.dbody.stack>.seg:first-child{overflow:visible;position:sticky;top:-8px;z-index:2;box-shadow:0 0 0 8px var(--surface)} /* las pestañas (Activas/Historial) no se van con el scroll de una lista larga; overflow visible: un .seg con scroll se encogía a 0 en la grilla cuando la lista era más alta que el panel, y las filas de abajo lo pisaban */
 .pcard.nc{cursor:default}.pcard.nc:hover{background:var(--raised)}
 .pcard .acts{display:flex;gap:8px;flex-wrap:wrap}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
 .btn.errtx{color:var(--err)}
 .rcard{display:grid;gap:10px;padding:14px;border-radius:var(--r-lg);background:var(--raised)}
 .rcard .rtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}

@@ -86,7 +86,8 @@ export default function OwnerShifts() {
         setMeta(m => m.map((x, i) => (i === d ? r : x)));
       }
       const moved = transfers.length ? ` Reservas transferidas a ${transfers.map(t => name(t.toEmployeeId)).join(', ')}.` : '';
-      toast(`${msg}${moved}`, 'ok', undoable ? () => commit(d, prev, 'Cambio deshecho.', [], false) : undefined);
+      const text = `${msg}${moved}`.trim();
+      if (text) toast(text, 'ok', undoable ? () => commit(d, prev, 'Cambio deshecho.', [], false) : undefined);
       return true;
     } catch (x) {
       setWeek(w => w && w.map((y, i) => (i === d ? prev : y)));
@@ -194,10 +195,9 @@ export default function OwnerShifts() {
     if (locked(d0) || locked(r.d)) return toast(lockedMsg(locked(d0) ? d0 : r.d), 'err');
     if (r.a < s || r.b > e) return toast('Fuera del horario de la sucursal.', 'err');
     const b = week[d0]![i]!, rest = week[d0]!.filter((_, k) => k !== i);
-    const msg = b.who === CLOSED ? 'Cierre actualizado.' : `Turno de ${name(b.who)} actualizado.`;
-    if (r.d === d0) return commit(d0, place(rest, { who: b.who, a: r.a, b: r.b }), msg);
+    if (r.d === d0) return commit(d0, place(rest, { who: b.who, a: r.a, b: r.b }), '');
     // Entre días: se guarda primero el destino y después se libera el origen.
-    if (await commit(r.d, place(week[r.d]!, { who: b.who, a: r.a, b: r.b }), msg, [], false)) await commit(d0, rest, msg);
+    if (await commit(r.d, place(week[r.d]!, { who: b.who, a: r.a, b: r.b }), '', [], false)) await commit(d0, rest, '');
   };
 
   const onBlockKey = (ev: RKeyboardEvent, d: number, i: number) => {

@@ -88,7 +88,7 @@ export default function OwnerEmployees() {
             <td data-label="Teléfono">{e.phone || <span className="na">—</span>}</td>
             <td className="c-wide" data-label="Sucursal y turno">{p ? (
               <><div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}><Building2 className="i sm" /><span className="nm">{p.name}</span></div>
-                <div className="ad">{sh.length ? sh.join(' · ') : <button type="button" className="link" onClick={() => navigate(`/owner/shifts?p=${p.id}`)}>Definir turnos</button>}</div></>
+                <div className="ad"><button type="button" className="link" title={`Ver turnos de ${p.name}`} onClick={() => navigate(`/owner/shifts?p=${p.id}`)}>{sh.length ? 'Ver turnos' : 'Definir turnos'}</button></div></>
             ) : <span className="st warn"><Unlink className="i sm" />Sin asignar</span>}</td>
             <td className="r"><div className="acts">
               <button type="button" className="btn sm" onClick={() => setForm(e)}>Editar</button>

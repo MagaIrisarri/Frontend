@@ -129,6 +129,7 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
     const n = names(r);
     const st = STATUS[(r.status || '').toUpperCase().trim()] ?? { l: r.status || 'Desconocido', c: 'mute', Icon: Clock };
     const services = r.services || [];
+    const staff = [(r as any).attendedBy?.name, (r as any).attendedBy?.last_name].filter(Boolean).join(' ');
     return (
       <article key={r.id} className="rcard">
         <div className="rtop">
@@ -151,6 +152,10 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
         </div>
 
         <dl className="dl">
+          <dt>Reserva</dt>
+          <dd><span className="plate">{r.code || `R-${r.id.slice(0, 6).toUpperCase()}`}</span></dd>
+          <dt>Empleado</dt>
+          <dd>{staff || 'Sin empleado asignado'}</dd>
           <dt>Desde</dt>
           <dd>{formatReservationDate(r.startTime)}</dd>
           <dt>Hasta</dt>

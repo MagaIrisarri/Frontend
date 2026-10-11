@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ReservationBookingDrawer } from '../../components/Reservation/ReservationBookingDrawer';
 import { VehiclesDrawer } from '../../components/Vehicle/VehiclesDrawer';
 import { ReservationsDrawer } from '../../components/Reservation/ReservationsDrawer';
@@ -15,6 +15,7 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
     selectedParking,
     filters,
     setIsVehicleModalOpen,
+    setVehicleModalTab,
     handleOpenReservations,
     fetchParkings,
     fetchClientReservations,
@@ -29,7 +30,7 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
     loadingReservations,
     handleCancelReservation,
     handleRateReservation,
-    setIsListDrawerOpen,
+    openList,
     isFavoritesModalOpen,
     setIsFavoritesModalOpen,
     favoriteParkings,
@@ -49,6 +50,7 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
     authModalTab,
     handleAuthSuccess,
   } = props;
+  const [vehiclesRev, setVehiclesRev] = useState(0); // sube al cerrar Mis vehículos para que la reserva en curso recargue la lista
 
   return (
     <>
@@ -58,7 +60,8 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
         onClose={() => setIsModalOpen(false)}
         parking={selectedParking}
         initialVehicleCategory={filters?.vehicleType}
-        onOpenVehicleRegister={() => setIsVehicleModalOpen(true)}
+        vehiclesRev={vehiclesRev}
+        onOpenVehicleRegister={() => { setVehicleModalTab('create'); setIsVehicleModalOpen(true); }}
         onViewMyReservations={() => handleOpenReservations('active')}
         onReservationSuccess={() => {
           if (fetchParkings) fetchParkings();
@@ -70,7 +73,7 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
       {/* Panel de Mis Vehículos (lista, alta y edición) */}
       <VehiclesDrawer
         isOpen={isVehicleModalOpen}
-        onClose={() => setIsVehicleModalOpen(false)}
+        onClose={() => { setIsVehicleModalOpen(false); setVehiclesRev((n) => n + 1); }}
         initialTab={vehicleModalTab}
       />
 
@@ -86,7 +89,7 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
         onRateReservation={handleRateReservation}
         onExploreParkings={() => {
           setIsReservationsModalOpen(false);
-          setIsListDrawerOpen(true);
+          openList();
         }}
       />
 

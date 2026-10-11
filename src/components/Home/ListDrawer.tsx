@@ -12,6 +12,7 @@ import {
 } from '../../utils/parkingPriceUtils';
 import { Empty, ErrorBox } from '../Owner/ui/Page';
 import { Presence } from '../Owner/ui/Presence';
+import { useSwipeClose } from '../../hooks/useSwipeClose';
 import { FilterBar } from '../Owner/ui/FilterBar';
 import { Field } from '../Owner/ui/Field';
 import { localityKey } from '../../utils/search';
@@ -47,6 +48,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
     setSearchQuery,
     mapArea = null,
     setFilters,
+    setLocality,
     resetFilters,
     parkings = [],
   } = props;
@@ -184,6 +186,8 @@ export const ListDrawer: React.FC<any> = (props: any) => {
     );
   };
 
+  const swipe = useSwipeClose(() => { setSelectedParkingId(null); setIsListDrawerOpen(false); }, 'down');
+
   const subtitle = loading
     ? 'Buscando cocheras…'
     : category
@@ -195,6 +199,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
     <Presence open={isOpen}>
       {(closing) => (
     <aside
+      ref={swipe}
       aria-label={sp ? 'Detalle de la cochera' : 'Listado de estacionamientos'}
       className={`hpanel${closing ? ' out' : ''}`}
     >
@@ -344,7 +349,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
                   <Field label="Localidad">
                     {(id, aria) => (
                       <select id={id} {...aria} className="sel" value={filters.locality ?? ''}
-                        onChange={(e) => setFilters((f: any) => ({ ...f, locality: e.target.value || null }))}>
+                        onChange={(e) => setLocality(e.target.value || null)}>
                         <option value="">Todas</option>
                         {localities.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
                       </select>

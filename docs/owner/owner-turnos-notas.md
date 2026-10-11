@@ -101,6 +101,7 @@ Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado c
 | L-25 | Empleados | Un empleado pertenece a una sola sucursal. | Confirmar rotación. | Parcial: el frontend no cambia de sucursal a quien tiene turnos o reservas pendientes. |
 | L-26 | Buscar en esta zona | El filtro del mapa es local e instantáneo; el spinner dura un mínimo fijo (500 ms) para que se perciba. | Atarlo a la carga real si la búsqueda pasa al servidor. | Abierta. |
 | L-27 | Recordatorios | La tarea de recordatorios (R-28) corre en memoria del proceso cada `REMINDER_CHECK_MINUTES`, como la de vencidas (R-17); no hay cola ni reintento con espera. | Pasar a un job programado o una cola si el backend corre en varias instancias. | Abierta (Backend `99802ae`, `src/index.ts`). |
+| L-28 | Año del vehículo | `vehiculos.json` no trae años por modelo y el DNRPA no ofrece API pública: el año es opcional y solo se acota entre 1960 y el año próximo (`MIN_VEHICLE_YEAR`, duplicado en `Backend/src/Vehicle/Vehicle.Schema.ts` y `Frontend/src/utils/plate.ts`). | Cargar los años de producción de cada modelo en el catálogo y validar contra ellos. | Abierta. |
 
 ## Decisiones
 

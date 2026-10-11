@@ -22,7 +22,7 @@ export const Sidebar: React.FC<any> = (props: any) => {
     isOwner,
     isSidebarOpen,
     setIsSidebarOpen,
-    setIsListDrawerOpen,
+    openList,
     filteredParkings = [],
     favoriteParkings = [],
     activeReservationsCount = 0,
@@ -92,7 +92,7 @@ export const Sidebar: React.FC<any> = (props: any) => {
             className="btn ghost sitem"
             onClick={() => {
               setIsSidebarOpen(false);
-              setIsListDrawerOpen(true);
+              openList();
             }}
           >
             <Layers className="i" />

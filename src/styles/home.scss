@@ -75,6 +75,7 @@
   .hpanel::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0;flex:none}
   .htop{top:12px;left:12px;right:12px;gap:8px;flex-wrap:wrap}
   .htop .hcenter{order:3;flex-basis:100%;max-width:none}
+  .areabtn{top:calc(12px + var(--ctl)*2 + 8px + 12px)} /* la barra ocupa dos filas (botones y buscador): el botón va debajo de ambas */
   .htop .lbl-d{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)} /* solo ícono, el nombre accesible se conserva */
 }
 @media(min-width:721px){
