@@ -64,6 +64,30 @@ Los CRUD de Usuario, Estacionamiento, Servicio, TipoVehículo, Vehículo y Ubica
    - Los endpoints de usuarios y vehículos no tienen protección.
 3. **Configurar SMTP para la defensa** (esfuerzo bajo), si se quiere mostrar un mail real: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` y `MAIL_FROM` (sirven Ethereal, Mailtrap o Gmail con contraseña de aplicación).
 
+## Próximas mejoras
+
+Propuestas a partir de la valoración (R-27) y del uso del mapa. Ninguna está implementada.
+
+1. **Valoración visible para los clientes.** Hoy solo la ven el cliente que la dejó y el dueño.
+   - En la tarjeta del listado y en el detalle de la cochera, mostrar "★ 4,5 (12)".
+   - `/api/parkings/active` devuelve `ratingAvg` y `ratingCount` por cochera, calculados en la consulta.
+   - El promedio se muestra recién desde 3 valoraciones; antes, "Sin valoraciones suficientes", para que una sola reseña no defina la cochera.
+2. **Valoración general para el dueño.** Hoy ve cada valoración en el detalle de la reserva, y el promedio por sucursal solo dentro del resumen mensual del mes elegido.
+   - Agregar una columna "Valoración" por sucursal en el panel del dueño, con el promedio histórico y la cantidad.
+3. **Comentario en la reseña.** Campo `ratingComment` opcional, de hasta 500 caracteres, que se carga junto con las estrellas.
+   - Primero visible solo para el dueño.
+   - Hacerlo público en el detalle de la cochera pide más: mostrar solo el nombre de pila, que el dueño pueda responder o reportar, y algún filtro de contenido.
+4. **"Buscar en esta zona" reemplaza a los otros filtros de ubicación.** Hoy se acumula con el texto y la localidad: con "Localidad: Rosario" elegida, buscar en una zona de Funes deja el listado vacío.
+   - La ubicación se elige de una sola forma a la vez, como en Airbnb o Google Maps.
+   - "Buscar en esta zona" limpia el texto y la localidad.
+   - Escribir o elegir una localidad descarta la zona (con el texto ya pasa; falta sumar la localidad).
+   - El tipo de vehículo, el precio y el orden se mantienen.
+5. **Nota para la cochera al reservar.** Campo opcional de hasta 200 caracteres (por ejemplo, "llego con portaequipajes").
+   - Se ve en el panel del empleado y en el detalle del dueño.
+   - Es distinta de la reseña: una es antes de la estadía y la otra después.
+   - El formulario aclara que la nota no es un pedido confirmado.
+   - No está en el proposal; es un agregado.
+
 ## Diferencias con el DER y el modelo de dominio
 
 - **Reserva:** ya tiene `cod_reserva` (`code`, R-26) y `valoracion_servicio` (`rating`, R-27). No tiene `tipo_reserva`: el sistema solo tiene reservas online, así que sería siempre el mismo valor.
