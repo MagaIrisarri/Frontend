@@ -41,7 +41,7 @@ export interface UpdateVehicle {
   year: number;
   brandId: string;
   modelId: string;
-  insuranceId?: string;
+  insuranceId?: string | null;
 }
 export interface VehicleTypeInput {
   name: string;

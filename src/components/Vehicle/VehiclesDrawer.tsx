@@ -149,7 +149,7 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
     };
     try {
       if (view === 'create') await createVehicle(userId, payload);
-      else if (editingId) await updateVehicle(editingId, payload);
+      else if (editingId) await updateVehicle(editingId, { ...payload, insuranceId: insurance || null }); // vacío quita el seguro
       toast(view === 'create' ? 'Vehículo registrado.' : 'Vehículo actualizado.');
       await loadVehicles();
       backToList();
