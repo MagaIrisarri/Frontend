@@ -277,17 +277,18 @@ export function ReservationBookingDrawer({
     }
   };
 
-  const toggleService = (serviceCatalogId: string) => {
+  // Se elige por la tarifa del servicio en esta cochera (ServicePrice.id): es lo que el backend asocia a la reserva y cobra.
+  const toggleService = (servicePriceId: string) => {
     setSelectedServiceIds((prev) =>
-      prev.includes(serviceCatalogId)
-        ? prev.filter((id) => id !== serviceCatalogId)
-        : [...prev, serviceCatalogId]
+      prev.includes(servicePriceId)
+        ? prev.filter((id) => id !== servicePriceId)
+        : [...prev, servicePriceId]
     );
   };
 
   const totalParkingPrice = hourlyRate && durationHours > 0 ? durationHours * hourlyRate : 0;
   const totalServicesPrice = services
-    .filter((s) => selectedServiceIds.includes(s.serviceCatalog.id))
+    .filter((s) => selectedServiceIds.includes(s.id))
     .reduce((acc, s) => acc + Number(s.price), 0);
   const grandTotal = totalParkingPrice + totalServicesPrice;
 
@@ -503,9 +504,9 @@ export function ReservationBookingDrawer({
                 ) : (
                   <div className="optlist" role="group" aria-label={`Servicios extra en ${parking.name}`}>
                     {services.map((s) => {
-                      const checked = selectedServiceIds.includes(s.serviceCatalog.id);
+                      const checked = selectedServiceIds.includes(s.id);
                       return (
-                        <button key={s.id} type="button" role="checkbox" aria-checked={checked} className="opt" onClick={() => toggleService(s.serviceCatalog.id)}>
+                        <button key={s.id} type="button" role="checkbox" aria-checked={checked} className="opt" onClick={() => toggleService(s.id)}>
                           <span className="grow">
                             {s.serviceCatalog?.name || 'Servicio'}
                             {s.serviceCatalog?.description && <small>{s.serviceCatalog.description}</small>}

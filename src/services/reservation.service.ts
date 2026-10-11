@@ -41,3 +41,11 @@ export const checkInReservation = (reservationId: string, employeeId: string) =>
 
 export const checkOutReservation = (reservationId: string, employeeId: string) =>
   api.post(`/api/reservations/${reservationId}/check-out`, { employeeId }, { headers: { 'x-user-id': employeeId } }).then(res => res.data);
+
+// R-23: el personal de la sucursal extiende el fin; las reservas siguientes de esa plaza que no entraron pasan a otra libre.
+export const extendReservation = (reservationId: string, endTime: Date, userId: string) =>
+  api.patch(`/api/reservations/${reservationId}/end`, { endTime: toLocalISOString(endTime) }, { headers: { 'x-user-id': userId } }).then(res => res.data);
+
+// R-24: deja la reserva con estos servicios (ServicePrice.id de la cochera); se cobran en la salida.
+export const setReservationServices = (reservationId: string, serviceIds: string[], userId: string) =>
+  api.put(`/api/reservations/${reservationId}/services`, { serviceIds }, { headers: { 'x-user-id': userId } }).then(res => res.data);

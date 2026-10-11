@@ -224,6 +224,7 @@ export interface Res {
   plate: string; vtype: string; client: { n: string; ph: string; em: string };
   eid: string | null; amount: number | null;
   bill: Bill | null; // detalle del cobro; null si no hay factura o es anterior al detalle
+  services: Svc[]; // servicios pedidos con la reserva
 }
 
 // Detalle del cobro guardado en la factura al hacer el check-out (R-14).
@@ -232,11 +233,18 @@ export const toBill = (inv: any): Bill | null => inv?.reservedHours == null ? nu
   reservedHours: Number(inv.reservedHours), extraHours: Number(inv.extraHours ?? 0),
   hourlyRate: Number(inv.hourlyRate ?? 0), servicesAmount: Number(inv.servicesAmount ?? 0),
 };
+// Servicio pedido con la reserva: nombre del catálogo y precio de la tarifa con que se reservó, que es el que se cobra.
+export interface Svc { id: string; name: string; price: number } // id: la tarifa del servicio en la cochera (ServicePrice.id)
+export const servicesOf = (r: any): Svc[] =>
+  (r?.services ?? []).map((s: any) => ({ id: s.id, name: s.serviceCatalog?.name ?? 'Servicio', price: Number(s.price ?? 0) }));
+
 // Líneas [concepto, importe] que suman el total: horas reservadas, horas extra (si hubo) y servicios (si hubo).
-export const billLines = (b: Bill): [string, number][] => [
+// Con los servicios de la reserva, la línea "Servicios" se abre en uno por servicio.
+export const billLines = (b: Bill, services: Svc[] = []): [string, number][] => [
   [`${plural(b.reservedHours, 'hora reservada', 'horas reservadas')} × ${money(b.hourlyRate)}`, b.reservedHours * b.hourlyRate],
   ...(b.extraHours ? [[`${plural(b.extraHours, 'hora extra', 'horas extra')} × ${money(b.hourlyRate)}`, b.extraHours * b.hourlyRate] as [string, number]] : []),
-  ...(b.servicesAmount ? [['Servicios', b.servicesAmount] as [string, number]] : []),
+  ...(services.length ? services.map((s): [string, number] => [s.name, s.price])
+    : b.servicesAmount ? [['Servicios', b.servicesAmount] as [string, number]] : []),
 ];
 
 const clock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -257,6 +265,7 @@ export function normRes(r: any): Res {
     eid: r.attendedBy?.id ?? null,
     amount: r.amount == null ? null : Number(r.amount),
     bill: toBill(r.invoice),
+    services: servicesOf(r),
   };
 }
 

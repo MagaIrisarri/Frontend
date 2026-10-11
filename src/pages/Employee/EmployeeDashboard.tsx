@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Search } from 'lucide-react';
+import { AlarmClock, CalendarDays, Check, ChevronLeft, ChevronRight, MapPin, Search } from 'lucide-react';
 import OwnerShell from '../../components/Owner/ui/OwnerShell';
 import PanelBar from '../../components/Owner/ui/PanelBar';
 import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
@@ -10,11 +10,13 @@ import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { useAuthStore } from '../../stores/authStore';
 import {
-  cancelReservation, changeReservationSpace, checkInReservation, checkOutReservation, confirmReservation, getReservationsByParking,
+  cancelReservation, changeReservationSpace, checkInReservation, checkOutReservation, confirmReservation, extendReservation, getReservationsByParking,
+  setReservationServices,
 } from '../../services/reservation.service';
 import { payInvoice } from '../../services/invoice.service';
 import { getSpaceAvailability } from '../../services/parkingSpace.service';
-import { DOW, addD, billLines, dayStr, cap, fmtD, initials, money, normRes, shD, today, type Res } from '../Owner/owner.lib';
+import { getParkingServices } from '../../services/servicePrice.service';
+import { DOW, addD, billLines, dayStr, cap, fmtD, initials, isoD, money, normRes, plural, shD, today, type Res, type Svc } from '../Owner/owner.lib';
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 const list = (x: any) => (Array.isArray(x) ? x : x?.data ?? []);
@@ -27,6 +29,8 @@ const ST: Record<Status, { l: string; c: string }> = {
 };
 const SEGS: ['all' | Status, string][] = [['all', 'Todas'], ['PENDIENTE', 'Pendientes'], ['CONFIRMADA', 'Confirmadas'], ['EN CURSO', 'En curso'], ['FINALIZADA', 'Finalizadas'], ['CANCELADA', 'Canceladas']];
 const ACTIVE: Status[] = ['PENDIENTE', 'CONFIRMADA', 'EN CURSO'];
+// Sigue adentro después del fin reservado: la salida cobra las horas extra (R-14) y la plaza no se libera (R-21).
+const overdue = (r: ERes) => r.status === 'EN CURSO' && r.endAt.getTime() < Date.now();
 // Tienen que coincidir con PaymentMethodSchema del backend (Invoice.Schema.ts).
 const METHODS: [string, string][] = [['EFECTIVO', 'Efectivo'], ['TARJETA_DEBITO', 'Débito'], ['TARJETA_CREDITO', 'Crédito'], ['MERCADO_PAGO', 'Mercado Pago'], ['TRANSFERENCIA', 'Transferencia']];
 
@@ -98,7 +102,8 @@ function DayList({ reservations, pid, userId, onChange }: { reservations: ERes[]
   const [openId, setOpenId] = useState<string | null>(null);
   const open = reservations.find(r => r.id === openId);
 
-  const D = reservations.filter(r => r.date === rd);
+  // Hoy también lista los vehículos que siguen adentro desde un día anterior (R-21): si no, su salida no se ve.
+  const D = reservations.filter(r => r.date === rd || (rd === now && r.date < rd && r.status === 'EN CURSO'));
   const q = rq.trim().toLowerCase().replace(/[\s-]/g, '');
   const shown = D.filter(r => (rs === 'all' || r.status === rs) && (!q || (r.plate + r.code).toLowerCase().replace(/-/g, '').includes(q)))
     .sort((a, b) => a.start.localeCompare(b.start));
@@ -113,8 +118,10 @@ function DayList({ reservations, pid, userId, onChange }: { reservations: ERes[]
       <tbody>{shown.map(r => (
         <tr key={r.id}>
           <td><span className="plate">{r.code}</span><div className="ad">{r.plate}</div></td>
-          <td data-label="Plaza y horario"><span className="nm">Plaza {r.space}</span><div className="ad">{r.start} – {r.end}{r.endDate !== r.date ? ` (${shD(r.endDate)})` : ''}</div></td>
-          <td data-label="Estado"><span className={`st ${ST[r.status].c}`}>{ST[r.status].l}</span></td>
+          <td data-label="Plaza y horario"><span className="nm">Plaza {r.space}</span><div className="ad">{r.date !== rd ? `${shD(r.date)} ` : ''}{r.start} – {r.end}{r.endDate !== r.date ? ` (${shD(r.endDate)})` : ''}</div></td>
+          <td data-label="Estado">{overdue(r)
+            ? <span className="st warn"><AlarmClock className="i sm" aria-hidden="true" />Se pasó de hora</span>
+            : <span className={`st ${ST[r.status].c}`}>{ST[r.status].l}</span>}</td>
           <td className="r" data-label="Importe">{r.amount != null
             ? <>{money(r.amount)}{r.invoice?.status === 'PENDIENTE' && <div className="ad">Por cobrar</div>}</>
             : <span className="na">—</span>}</td>
@@ -158,31 +165,61 @@ function ResDrawer({ r, pid, userId, onChange, onClose }: { r: ERes; pid: string
   const early = r.startAt.getTime() > Date.now(); // R-16: el ingreso se registra desde el inicio reservado
 
   // Plazas del mismo tipo libres en el horario de la reserva (con el margen de la sucursal); la actual va primero.
+  // Si se pasó de hora, sigue ocupando la plaza hasta que salga: se busca hasta ahora como mínimo.
   useEffect(() => {
     if (!active || !r.vtype) return;
     setSpaces(null);
-    getSpaceAvailability(pid, r.vtype, r.startAt, r.endAt)
+    getSpaceAvailability(pid, r.vtype, r.startAt, new Date(Math.max(r.endAt.getTime(), Date.now())))
       .then(x => setSpaces(list(x).filter((s: any) => s.available && s.isActive !== false && s.id !== r.spaceId)))
       .catch(() => setSpaces([]));
   }, [active, pid, r.vtype, r.startAt, r.endAt, r.spaceId]);
 
   // Corre una acción, recarga la lista y avisa; el cajón queda abierto con la reserva actualizada.
-  const run = async (fn: () => Promise<unknown>, ok: string, type: 'ok' | 'info' = 'ok') => {
+  const run = async <T,>(fn: () => Promise<T>, ok: string | ((res: T) => string), type: 'ok' | 'info' = 'ok') => {
     setBusy(true);
     try {
-      await fn();
+      const res = await fn();
       await onChange();
-      toast(ok, type);
+      toast(typeof ok === 'function' ? ok(res) : ok, type);
     } catch (x) { toast(apiError(x, 'No se pudo completar la acción. Intentá de nuevo.'), 'err'); }
     setBusy(false);
   };
 
   const moveTo = (id: string) => run(() => changeReservationSpace(r.id, id, userId), `Reserva ${r.code} movida a la plaza ${spaces?.find(s => s.id === id)?.spaceCode}.`);
+  // R-21: si su plaza seguía ocupada por alguien que se pasó de hora, el backend la pasó a otra libre.
+  const checkedIn = (res: any) => {
+    const code = res?.data?.parkingSpace?.spaceCode ?? r.space;
+    return `Ingreso de ${r.plate} registrado en la plaza ${code}${code !== r.space ? `: la ${r.space} seguía ocupada` : ''}.`;
+  };
   const cancel = async () => { setConfirm(false); await run(() => cancelReservation(r.id, userId), `Reserva ${r.code} cancelada.`, 'info'); onClose(); };
+
+  // R-23: extender de a horas enteras: una hora más desde el fin o, si ya se pasó, la próxima hora entera. El backend valida máximo y cierre.
+  const first = new Date(Math.max(r.endAt.getTime() + 3_600_000, Date.now()));
+  if (first.getMinutes() || first.getSeconds() || first.getMilliseconds()) first.setHours(first.getHours() + 1, 0, 0, 0);
+  const ends = [0, 1, 2].map(n => new Date(first.getTime() + n * 3_600_000));
+  const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:00`;
+  const extend = (end: Date) => run(() => extendReservation(r.id, end, userId), (res: any) => {
+    const moved: { code: string; to: string }[] = res?.data?.moved ?? [];
+    return `Reserva ${r.code} extendida hasta las ${hhmm(end)}.${moved.length ? ` ${plural(moved.length, 'reserva pasó', 'reservas pasaron')} a otra plaza: ${moved.map(m => `${m.code} → ${m.to}`).join(', ')}.` : ''}`;
+  });
+
+  // R-24: servicios de la cochera para agregar o quitar mientras la reserva no terminó (se cobran en la salida).
+  const [offer, setOffer] = useState<Svc[]>([]);
+  useEffect(() => {
+    if (!active) return;
+    getParkingServices(pid).then(x => setOffer(list(x).filter((s: any) => s.expirationDate == null)
+      .map((s: any) => ({ id: s.id, name: s.serviceCatalog?.name ?? 'Servicio', price: Number(s.price) })))).catch(() => setOffer([]));
+  }, [active, pid]);
+  const options = [...r.services, ...offer.filter(s => !r.services.some(x => x.id === s.id))]; // los pedidos conservan su precio
+  const toggleService = (s: Svc) => {
+    const on = r.services.some(x => x.id === s.id);
+    const ids = on ? r.services.filter(x => x.id !== s.id).map(x => x.id) : [...r.services.map(x => x.id), s.id];
+    run(() => setReservationServices(r.id, ids, userId), on ? `${s.name} quitado de ${r.code}.` : `${s.name} agregado a ${r.code}: se cobra en la salida.`);
+  };
 
   const primary =
     r.status === 'PENDIENTE' ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => confirmReservation(r.id, userId),`Reserva ${r.code} confirmada.`)}>Confirmar reserva</button>
-      : r.status === 'CONFIRMADA' ? <button type="button" className="btn pri" disabled={busy || early} onClick={() => run(() => checkInReservation(r.id, userId), `Ingreso de ${r.plate} registrado en la plaza ${r.space}.`)}>Registrar ingreso</button>
+      : r.status === 'CONFIRMADA' ? <button type="button" className="btn pri" disabled={busy || early} onClick={() => run(() => checkInReservation(r.id, userId), checkedIn)}>Registrar ingreso</button>
         : r.status === 'EN CURSO' ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => checkOutReservation(r.id, userId), `Salida de ${r.plate} registrada. Falta cobrar la estadía.`)}>Registrar salida</button>
           : toPay ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => payInvoice(r.invoice!.id, method), `Estadía de ${r.code} cobrada: ${money(r.amount ?? 0)}.`)}>Registrar pago</button>
             : null;
@@ -202,7 +239,13 @@ function ResDrawer({ r, pid, userId, onChange, onClose }: { r: ERes; pid: string
           </div>
           <div className="fs"><div className="fh"><h3>Reserva</h3><span className={`st ${ST[r.status].c}`}>{ST[r.status].l}</span></div>
             <dl className="dl" style={{ margin: 0 }}>
-              <dt>Desde</dt><dd>{shD(r.date)} · {r.start}</dd><dt>Hasta</dt><dd>{shD(r.endDate)} · {r.end}</dd>
+              <dt>Desde</dt><dd>{shD(r.date)} · {r.start}</dd>
+              <dt>Hasta</dt><dd>{shD(r.endDate)} · {r.end}
+                {active && <select className="sel" aria-label={`Extender la reserva ${r.code}`} value="" disabled={busy} style={{ marginTop: 6 }}
+                  onChange={ev => ev.target.value && extend(ends[Number(ev.target.value)]!)}>
+                  <option value="">Extender…</option>
+                  {ends.map((d, i) => <option key={i} value={i}>Hasta las {hhmm(d)}{d.toDateString() !== r.endAt.toDateString() ? ` del ${shD(isoD(d))}` : ''}</option>)}
+                </select>}</dd>
               <dt>Vehículo</dt><dd>{r.vtype ? `${r.vtype} · ` : ''}{r.plate}</dd>
               <dt>Plaza</dt><dd>{active
                 ? <select className="sel" aria-label={`Plaza de la reserva ${r.code}`} value={r.spaceId} disabled={busy || spaces === null}
@@ -212,14 +255,30 @@ function ResDrawer({ r, pid, userId, onChange, onClose }: { r: ERes; pid: string
                 </select>
                 : r.space}</dd>
               <dt>Registrada por</dt><dd>{r.staff || '—'}</dd>
+              {!active && r.services.length > 0 && <><dt>Servicios</dt><dd>{r.services.map(s => `${s.name} (${money(s.price)})`).join(', ')}</dd></>}
             </dl>
+            {active && options.length > 0 && <>
+              <p className="ctx" style={{ margin: '12px 0 6px' }}>Servicios</p>
+              <div className="optlist" role="group" aria-label={`Servicios de la reserva ${r.code}`}>
+                {options.map(s => {
+                  const checked = r.services.some(x => x.id === s.id);
+                  return (
+                    <button key={s.id} type="button" role="checkbox" aria-checked={checked} className="opt" disabled={busy} onClick={() => toggleService(s)}>
+                      <span className="grow">{s.name}</span><span className="tag">+{money(s.price)}</span>
+                      {checked && <Check className="i" aria-hidden="true" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </>}
+            {overdue(r) && <p className="ctx" style={{ margin: '8px 0 0' }}>Se pasó de hora: reservó hasta las {r.end} del {shD(r.endDate)}. Al registrar la salida se cobran las horas extra.</p>}
             {active && spaces?.length === 0 && <p className="ctx" style={{ margin: '8px 0 0' }}>No hay otra plaza libre para este vehículo en ese horario.</p>}
             {r.status === 'CONFIRMADA' && early && <p className="ctx" style={{ margin: '8px 0 0' }}>El ingreso se registra desde las {r.start} del {shD(r.date)}.</p>}
           </div>
           <div className="fs"><div className="fh"><h3>Importe</h3>{r.invoice && <span className={`st ${toPay ? 'warn' : 'ok'}`}>{toPay ? 'Por cobrar' : 'Cobrada'}</span>}</div>
             {r.amount != null
               ? <dl className="dl" style={{ margin: 0 }}>
-                {r.bill && billLines(r.bill).map(([l, v]) => <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{money(v)}</dd></div>)}
+                {r.bill && billLines(r.bill, r.services).map(([l, v]) => <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{money(v)}</dd></div>)}
                 <dt><b>Total</b></dt><dd><b>{money(r.amount)}</b></dd>
               </dl>
               : <p className="ctx" style={{ margin: 0 }}>Se calcula al registrar la salida: horas reservadas, más las extra si se quedó más tiempo, más los servicios.</p>}
