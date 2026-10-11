@@ -236,7 +236,7 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
 
   const assign = async (id: string) => {
     try {
-      await assignReservationEmployee(r.id, id);
+      await assignReservationEmployee(r.id, id, ownerId);
       await refresh();
       toast(`Reserva ${r.code} asignada a ${empName(employees.find(x => x.id === id))}.`);
     } catch (x) { toast(apiError(x), 'err'); }
