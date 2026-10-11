@@ -49,3 +49,7 @@ export const extendReservation = (reservationId: string, endTime: Date, userId: 
 // R-24: deja la reserva con estos servicios (ServicePrice.id de la cochera); se cobran en la salida.
 export const setReservationServices = (reservationId: string, serviceIds: string[], userId: string) =>
   api.put(`/api/reservations/${reservationId}/services`, { serviceIds }, { headers: { 'x-user-id': userId } }).then(res => res.data);
+
+// R-27: valoración opcional (1 a 5) de una reserva finalizada; solo la deja su cliente, una vez.
+export const rateReservation = (reservationId: string, rating: number, userId: string) =>
+  api.patch(`/api/reservations/${reservationId}/rating`, { rating }, { headers: { 'x-user-id': userId } }).then(res => res.data);

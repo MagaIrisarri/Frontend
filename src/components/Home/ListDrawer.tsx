@@ -14,6 +14,7 @@ import { Empty, ErrorBox } from '../Owner/ui/Page';
 import { Presence } from '../Owner/ui/Presence';
 import { FilterBar } from '../Owner/ui/FilterBar';
 import { Field } from '../Owner/ui/Field';
+import { localityKey } from '../../utils/search';
 import { VICON, vehicleKey } from '../Owner/ui/vehicles';
 import { VT } from '../../pages/Owner/owner.lib';
 
@@ -76,7 +77,14 @@ export const ListDrawer: React.FC<any> = (props: any) => {
   const sp = isOpen ? selectedParking : snap.current;
 
   const category: VehicleFilterType | null = filters.vehicleType;
-  const hasFilters = !!(searchQuery || mapArea || category || filters.maxPrice || filters.sort);
+  const hasFilters = !!(searchQuery || mapArea || category || filters.maxPrice || filters.sort || filters.locality);
+  // Localidades de las cocheras; la provincia se agrega solo si el nombre se repite.
+  const places = new Map<string, Parking>();
+  for (const p of parkings as Parking[]) if (p.locality) places.set(localityKey(p), p);
+  const localities = [...places].map(([key, p]) => {
+    const twin = [...places.values()].some((o) => o !== p && o.locality === p.locality);
+    return { key, label: twin && p.province ? `${p.locality} (${p.province})` : p.locality };
+  }).sort((a, b) => a.label.localeCompare(b.label, 'es'));
   const clearAll = () => {
     resetFilters();
     setSearchQuery('');
@@ -332,6 +340,17 @@ export const ListDrawer: React.FC<any> = (props: any) => {
                     <button key={l} type="button" aria-pressed={(filters.sort ?? null) === k} onClick={() => setFilters((f: any) => ({ ...f, sort: k }))}>{l}</button>
                   ))}
                 </div>
+                {localities.length > 1 && (
+                  <Field label="Localidad">
+                    {(id, aria) => (
+                      <select id={id} {...aria} className="sel" value={filters.locality ?? ''}
+                        onChange={(e) => setFilters((f: any) => ({ ...f, locality: e.target.value || null }))}>
+                        <option value="">Todas</option>
+                        {localities.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
+                      </select>
+                    )}
+                  </Field>
+                )}
                 <Field label="Precio máximo por hora">
                   {(id, aria) => (
                     <input id={id} {...aria} className="inp" inputMode="numeric" placeholder="Sin límite" value={filters.maxPrice ?? ''}

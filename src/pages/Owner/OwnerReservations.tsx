@@ -8,6 +8,7 @@ import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { assignReservationEmployee, cancelReservation } from '../../services/reservation.service';
 import { getRange } from '../../services/shift.service';
+import { Stars } from '../../components/Owner/ui/Stars';
 import { useOwner, type Emp } from './OwnerContext';
 import {
   RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, net, plural, shD, today, type Res, type ResState,
@@ -108,6 +109,7 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
   const now = today();
   const [rm, setRm] = useState(now.slice(0, 7));
   const [sort, setSort] = useState<{ k: SortKey; d: 1 | -1 }>({ k: 'desde', d: 1 });
+  const [ms, setMs] = useState<StFilter>('finalizada');
   const [hours, setHours] = useState<Record<string, { h: number; f: number }> | null>(null);
   const emp = (id: string | null) => employees.find(e => e.id === id);
   const [y, m] = rm.split('-').map(Number) as [number, number];
@@ -137,11 +139,16 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
     code: r => r.code, desde: r => r.date + r.start, hasta: r => r.endDate + r.end, horas: r => r.hours,
     emp: r => empName(emp(r.eid)), monto: r => net(r.amount) ?? -1,
   };
-  const list = reservations.filter(r => r.date.slice(0, 7) === rm && r.st === 'finalizada').sort((a, b) => {
+  const M = reservations.filter(r => r.date.slice(0, 7) === rm);
+  const list = M.filter(r => ms === 'all' || r.st === ms).sort((a, b) => {
     const x = KEY[sort.k](a), z = KEY[sort.k](b);
     return (x < z ? -1 : x > z ? 1 : 0) * sort.d || (a.date + a.start).localeCompare(b.date + b.start);
   });
   const sum = list.reduce((a, r) => a + (net(r.amount) ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
+  // R-27: valoración promedio del mes por sucursal, con las reservas que la tienen.
+  const rated = new Map<string, number[]>();
+  M.forEach(r => { if (r.rating != null) rated.set(r.pname, [...(rated.get(r.pname) ?? []), r.rating]); });
+  const ratings = [...rated].map(([p, v]) => `${p}: ${(v.reduce((a, b) => a + b, 0) / v.length).toLocaleString('es-AR', { maximumFractionDigits: 1 })} de 5 (${plural(v.length, 'valoración', 'valoraciones')})`);
 
   const th = (k: SortKey, l: string, c = '') => {
     const on = sort.k === k;
@@ -170,7 +177,13 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
         <span className="grow" />
         <button type="button" className="btn" disabled={!list.length} onClick={csv}><Download className="i sm" />Descargar CSV</button>
       </div>
-      {!list.length ? <Empty icon={<CalendarDays className="i" />} title="Sin reservas finalizadas">No hay reservas finalizadas en {label}.</Empty> : (
+      <div className="seg" role="group" aria-label="Filtrar por estado" style={{ justifySelf: 'start' }}>
+        {ST_SEGS.map(([k, l]) => (
+          <button type="button" key={k} aria-pressed={ms === k} onClick={() => setMs(k)}>{l}<b>{M.filter(r => k === 'all' || r.st === k).length}</b></button>
+        ))}
+      </div>
+      {!M.length ? <Empty icon={<CalendarDays className="i" />} title="Sin reservas">No hay reservas en {label}.</Empty>
+        : !list.length ? <Empty icon={<Search className="i" />} title="Sin resultados" action={<button type="button" className="btn" onClick={() => setMs('all')}>Limpiar filtros</button>}>Ninguna reserva de {label} está en ese estado.</Empty> : (
         <>
           <div className="panel tw"><table className="tbl rm">
             <colgroup><col style={{ width: '14%' }} /><col style={{ width: '15%' }} /><col style={{ width: '15%' }} /><col style={{ width: '10%' }} /><col /><col style={{ width: 120 }} /></colgroup>
@@ -189,9 +202,10 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
             })}</tbody>
             <tfoot><tr className="tot"><td colSpan={3}>{plural(list.length, 'reserva', 'reservas')}</td><td>{fmtH(hs)}</td><td /><td className="r">{money(sum)}</td></tr></tfoot>
           </table></div>
-          <p className="ctx">Solo reservas finalizadas. Monto neto: importe sin IVA (21 %). Tocá un encabezado para ordenar.</p>
+          <p className="ctx">{ms === 'all' ? 'Todas las reservas del mes' : `Solo reservas en estado ${RS[ms].l.toLowerCase()}`}. Monto neto: importe sin IVA (21 %); las reservas sin factura no suman. Tocá un encabezado para ordenar.</p>
         </>
       )}
+      {ratings.length > 0 && <p className="ctx">Valoración promedio del mes · {ratings.join(' · ')}</p>}
       <div className="fs" style={{ marginTop: 20 }}>
         <div className="fh"><h3>Horas trabajadas por empleado</h3></div>
         <p className="ctx" style={{ margin: '0 0 10px' }}>Horas programadas según la semana tipo y las fechas especiales, hasta hoy.</p>
@@ -263,6 +277,7 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
             <dl className="dl" style={{ margin: 0 }}>
               {r.bill && billLines(r.bill, r.services).map(([l, v]) => <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{money(v)}</dd></div>)}
               <dt>Importe</dt><dd>{r.amount != null ? money(r.amount) : '—'}</dd><dt>Monto neto</dt><dd>{r.amount != null ? money(net(r.amount)!) : '—'}</dd>
+              {r.st === 'finalizada' && <><dt>Valoración</dt><dd>{r.rating != null ? <><Stars value={r.rating} /> {r.rating} de 5</> : <span className="na">Sin valorar</span>}</dd></>}
             </dl>
           </div>
         </div>

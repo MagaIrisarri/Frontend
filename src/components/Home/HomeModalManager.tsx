@@ -28,6 +28,7 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
     clientReservations,
     loadingReservations,
     handleCancelReservation,
+    handleRateReservation,
     setIsListDrawerOpen,
     isFavoritesModalOpen,
     setIsFavoritesModalOpen,
@@ -82,6 +83,7 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
         reservations={clientReservations}
         loading={loadingReservations}
         onCancelReservation={handleCancelReservation}
+        onRateReservation={handleRateReservation}
         onExploreParkings={() => {
           setIsReservationsModalOpen(false);
           setIsListDrawerOpen(true);

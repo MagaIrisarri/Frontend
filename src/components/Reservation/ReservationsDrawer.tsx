@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Calendar, CheckCircle2, Clock, CircleDot, MapPin, SearchX, Sparkles, XCircle, type LucideIcon } from 'lucide-react';
+import { Stars } from '../Owner/ui/Stars';
 import type { Reservation } from '../../types/reservation.types';
 import { formatReservationDate } from '../../utils/date';
 import { Drawer, ConfirmModal } from '../Owner/ui/Layer';
@@ -22,6 +23,7 @@ interface ReservationsDrawerProps {
   loading: boolean;
   onExploreParkings: () => void;
   onCancelReservation?: (reservationId: string) => Promise<void>;
+  onRateReservation?: (reservationId: string, rating: number) => Promise<void>;
 }
 
 // Estado en color + ícono + texto (nunca solo color).
@@ -67,8 +69,21 @@ export function ReservationsDrawer(props: ReservationsDrawerProps) {
   );
 }
 
-function Content({ onClose, tab, onTabChange, reservations, loading, onExploreParkings, onCancelReservation }: ReservationsDrawerProps) {
+function Content({ onClose, tab, onTabChange, reservations, loading, onExploreParkings, onCancelReservation, onRateReservation }: ReservationsDrawerProps) {
   const toast = useToast();
+  const [rating, setRating] = useState<string | null>(null); // reserva que se está valorando
+  const rate = async (r: Reservation, n: number) => {
+    if (!onRateReservation) return;
+    setRating(r.id);
+    try {
+      await onRateReservation(r.id, n);
+      toast(`Gracias: valoraste ${names(r).parking} con ${n} de 5.`);
+    } catch (err) {
+      toast(apiError(err, 'No se pudo guardar la valoración. Intentá de nuevo.'), 'err');
+    } finally {
+      setRating(null);
+    }
+  };
   const [confirming, setConfirming] = useState<Reservation | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const shown = useRef<Reservation | null>(null); // la confirmación conserva sus datos mientras se va
@@ -159,6 +174,13 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
                 {s.serviceCatalog?.name || s.name || 'Servicio'} · {money(s.price)}
               </span>
             ))}
+          </div>
+        )}
+
+        {r.status === 'FINALIZADA' && (r.rating != null || onRateReservation) && (
+          <div className="rfoot">
+            <span>{r.rating != null ? 'Tu valoración' : `¿Cómo te fue en ${n.parking}?`}</span>
+            {r.rating != null ? <Stars value={r.rating} /> : <Stars value={0} busy={rating === r.id} onPick={(v) => rate(r, v)} />}
           </div>
         )}
 

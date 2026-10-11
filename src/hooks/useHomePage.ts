@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getParking, getOneParking } from '../services/parking.service';
-import { getReservationsByClient, cancelReservation } from '../services/reservation.service';
+import { getReservationsByClient, cancelReservation, rateReservation } from '../services/reservation.service';
 import type { Parking } from '../types/parking.types';
 import type { MapFilters, VehicleFilterType } from '../types/mapFilters.types';
 import { DEFAULT_MAP_FILTERS } from '../types/mapFilters.types';
 import { useAuthStore } from '../stores/authStore';
 import { getParkingMinPrice, getParkingPriceForCategory } from '../utils/parkingPriceUtils';
-import { matchesQuery } from '../utils/search';
+import { localityKey, matchesQuery } from '../utils/search';
 import { useTheme } from '../context/ThemeContext';
 
 export interface UserNotification {
@@ -150,6 +150,12 @@ export function useHomePage() {
     fetchClientReservations();
   };
 
+  const handleRateReservation = async (reservationId: string, rating: number) => {
+    if (!user?.id) throw new Error('Usuario no identificado');
+    await rateReservation(reservationId, rating, user.id);
+    fetchClientReservations();
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
   // Mismos estados que ACTIVE_RESERVATION_STATUSES del backend
   const activeReservationsCount = clientReservations.filter((r) =>
@@ -161,6 +167,7 @@ export function useHomePage() {
     const priceOf = (p: Parking) =>
       filters.vehicleType ? getParkingPriceForCategory(p, filters.vehicleType) : getParkingMinPrice(p);
     let list = parkings.filter((p) => matchesQuery(searchQuery, p.name, p.address, p.neighborhood, p.locality, p.province));
+    if (filters.locality) list = list.filter((p) => localityKey(p) === filters.locality);
     if (mapArea) {
       const [w, s, e, n] = mapArea;
       list = list.filter((p) => Number(p.longitude) >= w && Number(p.longitude) <= e && Number(p.latitude) >= s && Number(p.latitude) <= n);
@@ -182,7 +189,7 @@ export function useHomePage() {
       });
     }
     return list;
-  }, [parkings, searchQuery, mapArea, filters.maxPrice, filters.sort, filters.vehicleType]);
+  }, [parkings, searchQuery, mapArea, filters.maxPrice, filters.sort, filters.vehicleType, filters.locality]);
 
   // Cocheras favoritas
   const favoriteParkings = useMemo(() => {
@@ -414,6 +421,7 @@ export function useHomePage() {
     loadingReservations,
     fetchClientReservations,
     handleCancelReservation,
+    handleRateReservation,
     isFavoritesModalOpen,
     setIsFavoritesModalOpen,
     isAuthModalOpen,

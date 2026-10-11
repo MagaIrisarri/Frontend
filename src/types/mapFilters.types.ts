@@ -5,6 +5,7 @@ export interface MapFilters {
   // Preparado para extensiones futuras:
   maxPrice?: number | null; // $ por hora; con vehículo elegido compara su tarifa, sin vehículo la menor
   sort?: 'price-asc' | 'price-desc' | null;
+  locality?: string | null; // localityKey(): provincia y localidad, porque hay localidades homónimas
   onlyAvailable?: boolean;
   minAvailableSpaces?: number;
   services?: string[];

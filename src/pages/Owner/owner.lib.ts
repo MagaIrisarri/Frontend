@@ -225,6 +225,7 @@ export interface Res {
   eid: string | null; amount: number | null;
   bill: Bill | null; // detalle del cobro; null si no hay factura o es anterior al detalle
   services: Svc[]; // servicios pedidos con la reserva
+  rating: number | null; // R-27: valoración del cliente (1 a 5), opcional
 }
 
 // Detalle del cobro guardado en la factura al hacer el check-out (R-14).
@@ -252,7 +253,7 @@ export function normRes(r: any): Res {
   const s = new Date(r.startTime), e = new Date(r.endTime), c = r.vehicle?.client ?? {};
   return {
     id: r.id,
-    code: 'R-' + String(r.id).slice(0, 6).toUpperCase(),
+    code: r.code ?? 'R-' + String(r.id).slice(0, 6).toUpperCase(), // R-26: lo guarda el backend
     st: resState(r.status),
     pid: r.parkingSpace?.parking?.id ?? '',
     pname: r.parkingSpace?.parking?.name ?? '—',
@@ -266,6 +267,7 @@ export function normRes(r: any): Res {
     amount: r.amount == null ? null : Number(r.amount),
     bill: toBill(r.invoice),
     services: servicesOf(r),
+    rating: r.rating ?? null,
   };
 }
 

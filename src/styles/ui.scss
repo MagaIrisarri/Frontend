@@ -51,6 +51,14 @@
 .pcard .pb>.tag{justify-self:start}
 .fav[aria-pressed=true]{color:var(--warn)}
 .fav[aria-pressed=true] .i{fill:currentColor}
+/* Estrellas de valoración (R-27): llenas hasta la elegida; al pasar el mouse o con foco se llenan hasta esa */
+.stars{display:inline-flex;align-items:center;gap:2px;color:var(--warn)}
+.stars .on{fill:currentColor}
+.stars.pick .icon-btn{color:var(--tx3)}
+.stars.pick:is(:hover,:focus-within) .icon-btn{color:var(--warn)}
+.stars.pick:is(:hover,:focus-within) .icon-btn .i{fill:currentColor}
+.stars.pick .icon-btn:is(:hover,:focus-visible)~.icon-btn{color:var(--tx3)}
+.stars.pick .icon-btn:is(:hover,:focus-visible)~.icon-btn .i{fill:none}
 .pgroup{padding-top:6px}
 
 /* ───── Paneles del cliente (Favoritos, Reservas, Vehículos, Facturas) ───── */
