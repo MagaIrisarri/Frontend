@@ -31,8 +31,9 @@ export const cancelReservation = (reservationId: string, userId: string) =>
 export const changeReservationSpace = (reservationId: string, parkingSpaceId: string, userId: string) =>
   api.patch(`/api/reservations/${reservationId}/space`, { parkingSpaceId }, { headers: { 'x-user-id': userId } }).then(res => res.data);
 
-export const confirmReservation = (reservationId: string) =>
-  api.patch(`/api/reservations/${reservationId}/confirm`).then(res => res.data);
+// Solo confirma el personal de la sucursal (empleado o dueño), identificado por x-user-id.
+export const confirmReservation = (reservationId: string, userId: string) =>
+  api.patch(`/api/reservations/${reservationId}/confirm`, {}, { headers: { 'x-user-id': userId } }).then(res => res.data);
 
 // El backend toma el empleado del header x-user-id (o del body) y lo guarda como attendedById.
 export const checkInReservation = (reservationId: string, employeeId: string) =>

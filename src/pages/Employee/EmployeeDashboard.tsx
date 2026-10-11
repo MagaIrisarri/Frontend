@@ -181,7 +181,7 @@ function ResDrawer({ r, pid, userId, onChange, onClose }: { r: ERes; pid: string
   const cancel = async () => { setConfirm(false); await run(() => cancelReservation(r.id, userId), `Reserva ${r.code} cancelada.`, 'info'); onClose(); };
 
   const primary =
-    r.status === 'PENDIENTE' ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => confirmReservation(r.id), `Reserva ${r.code} confirmada.`)}>Confirmar reserva</button>
+    r.status === 'PENDIENTE' ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => confirmReservation(r.id, userId),`Reserva ${r.code} confirmada.`)}>Confirmar reserva</button>
       : r.status === 'CONFIRMADA' ? <button type="button" className="btn pri" disabled={busy || early} onClick={() => run(() => checkInReservation(r.id, userId), `Ingreso de ${r.plate} registrado en la plaza ${r.space}.`)}>Registrar ingreso</button>
         : r.status === 'EN CURSO' ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => checkOutReservation(r.id, userId), `Salida de ${r.plate} registrada. Falta cobrar la estadía.`)}>Registrar salida</button>
           : toPay ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => payInvoice(r.invoice!.id, method), `Estadía de ${r.code} cobrada: ${money(r.amount ?? 0)}.`)}>Registrar pago</button>
