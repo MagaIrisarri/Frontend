@@ -10,7 +10,7 @@ import { assignReservationEmployee, cancelReservation } from '../../services/res
 import { getRange } from '../../services/shift.service';
 import { useOwner, type Emp } from './OwnerContext';
 import {
-  RS, addD, cap, downloadCsv, fmtD, fmtH, initials, mm, money, net, plural, shD, today, type Res, type ResState,
+  RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, net, plural, shD, today, type Res, type ResState,
 } from './owner.lib';
 
 type StFilter = 'all' | ResState;
@@ -260,7 +260,10 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
             </dl>
           </div>
           <div className="fs"><div className="fh"><h3>Importe</h3></div>
-            <dl className="dl" style={{ margin: 0 }}><dt>Importe</dt><dd>{r.amount != null ? money(r.amount) : '—'}</dd><dt>Monto neto</dt><dd>{r.amount != null ? money(net(r.amount)!) : '—'}</dd></dl>
+            <dl className="dl" style={{ margin: 0 }}>
+              {r.bill && billLines(r.bill).map(([l, v]) => <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{money(v)}</dd></div>)}
+              <dt>Importe</dt><dd>{r.amount != null ? money(r.amount) : '—'}</dd><dt>Monto neto</dt><dd>{r.amount != null ? money(net(r.amount)!) : '—'}</dd>
+            </dl>
           </div>
         </div>
       </Drawer>

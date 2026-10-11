@@ -40,7 +40,7 @@ for (const path of manifest.forbiddenRoutes) if (new RegExp(`path="${path.replac
 
 // Las rutas de cliente de esas pantallas son atajos que abren el panel sobre Home, no páginas propias.
 for (const path of manifest.panelRoutes) {
-  const re = new RegExp(`path="${path.replace(/[/:]/g, '\\$&')}" element=\\{<ProtectedRoute><HomePage />`);
+  const re = new RegExp(`path="${path.replace(/[/:]/g, '\\$&')}" element=\\{<ProtectedRoute[^>]*><HomePage />`); // ProtectedRoute puede restringir roles (allowedRoles)
   if (!re.test(app)) errors.push(`src/App.tsx: la ruta ${path} debe renderizar <HomePage /> (abre su panel), no una página aparte`);
 }
 

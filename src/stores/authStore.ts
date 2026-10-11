@@ -27,6 +27,14 @@ export function normalizeRole(roleOrType?: string): NormalizedRole {
   return '';
 }
 
+// Pantalla de inicio de cada rol: el cliente usa el mapa; el resto, solo su panel.
+export function homeForRole(role: NormalizedRole): string {
+  if (role === 'DUEÑO') return '/owner';
+  if (role === 'EMPLEADO') return '/employee';
+  if (role === 'ADMINISTRADOR') return '/admin';
+  return '/';
+}
+
 export interface AuthState {
   user: CurrentUser | null;
   isAuthenticated: boolean;

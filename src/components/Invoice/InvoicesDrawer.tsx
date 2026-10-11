@@ -6,7 +6,7 @@ import { Drawer } from '../Owner/ui/Layer';
 import OwnerShell from '../Owner/ui/OwnerShell';
 import { Presence } from '../Owner/ui/Presence';
 import { Empty, ErrorBox } from '../Owner/ui/Page';
-import { money, cap } from '../../pages/Owner/owner.lib';
+import { money, cap, billLines, toBill } from '../../pages/Owner/owner.lib';
 import { FilterBar } from '../Owner/ui/FilterBar';
 import { matchesQuery } from '../../utils/search';
 import { PERIODS, inPeriod, type Period } from '../../utils/period';
@@ -131,6 +131,12 @@ function Content({ onClose }: { onClose: () => void }) {
                   <div className="isub">
                     {inv.paymentDate ? `Pagada el ${fmtDateTime(inv.paymentDate)}` : 'Pendiente de pago'}
                   </div>
+                  {/* Detalle del cobro (horas reservadas, extra y servicios); las facturas viejas no lo tienen */}
+                  {toBill(inv) && (
+                    <dl className="dl" style={{ margin: '6px 0 0' }}>
+                      {billLines(toBill(inv)!).map(([l, v]) => <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{money(v)}</dd></div>)}
+                    </dl>
+                  )}
                 </div>
                 <div className="iamt">
                   <b>{money(inv.totalAmount || 0)}</b>

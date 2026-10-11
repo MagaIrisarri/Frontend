@@ -10,5 +10,8 @@ export const getSpaceAvailability = (parkingId: string, vehicleType: string, sta
   }).then(res => res.data);
 export const createBulkParkingSpaces = (parkingId: string, data: { vehicleType: string; count: number }) =>
   api.put(`/api/parkings/${parkingId}/spaces`, data).then(res => res.data);
-export const updateParkingSpace = (id: string, data: Partial<ParkingSpace> | ParkingSpaceState) => api.put(`/api/parkings/spaces/${id}`, data).then(res => res.data);
-export const removeParkingSpace = (id: string) => api.delete(`/api/parkings/spaces/${id}`).then(res => res.data);
+// relocate: confirma pasar las reservas futuras de la plaza a otras libres (sin él, el backend responde 409 con la propuesta).
+export const updateParkingSpace = (id: string, data: (Partial<ParkingSpace> | ParkingSpaceState) & { relocate?: boolean }) =>
+  api.put(`/api/parkings/spaces/${id}`, data).then(res => res.data);
+export const removeParkingSpace = (id: string, relocate = false) =>
+  api.delete(`/api/parkings/spaces/${id}`, { params: relocate ? { relocate: 'true' } : undefined }).then(res => res.data);

@@ -10,16 +10,26 @@ import OwnerTariffs from './pages/Owner/OwnerTariffs';
 import OwnerServices from './pages/Owner/OwnerServices';
 import OwnerLayout from './pages/Owner/OwnerLayout';
 import OwnerShifts from './pages/Owner/OwnerShifts';
-import { ProtectedRoute } from './components/Auth/ProtectedRoute';
-import { ParkingSpaceEdit } from './pages/ParkingSpace/ParkingSpaceEdit';
+import { ProtectedRoute, ClientOrGuestRoute } from './components/Auth/ProtectedRoute';
+import OwnerSpaces from './pages/Owner/OwnerSpaces';
 import MetricsView from './pages/Owner/MetricsView';
+import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
+import AdminPanel from './pages/Admin/AdminPanel';
+import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes';
+import AdminService from './pages/Admin/AdminService';
+import AdminUsers from './pages/Admin/AdminUsers';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminVehicles from './pages/Admin/AdminVehicles';
+import AdminBrands from './pages/Admin/AdminBrands';
+import AdminInsurances from './pages/Admin/AdminInsurances';
 
 /**
  * Componentes de redirección para preservar compatibilidad con enlaces y marcadores previos
  */
+// Las plazas se gestionan en el panel del dueño; las rutas viejas llevan ahí con la sucursal elegida.
 function RedirectToParkingSpaces() {
   const { id } = useParams<{ id: string }>();
-  return <Navigate to={`/my-parkings/${id}/spaces`} replace />;
+  return <Navigate to={`/owner/spaces?p=${id}`} replace />;
 }
 
 export function App() {
@@ -27,8 +37,8 @@ export function App() {
     <BrowserRouter>
       <ProfileProvider>
       <Routes>
-        {/* Ruta Principal: Mapa y Dashboard Unificado */}
-        <Route path="/" element={<HomePage />} />
+        {/* Ruta Principal: Mapa (clientes y visitantes; los demás roles van a su panel) */}
+        <Route path="/" element={<ClientOrGuestRoute><HomePage /></ClientOrGuestRoute>} />
 
         {/* Redirecciones de rutas de auth y obsoletas directamente a Home */}
         <Route path="/login" element={<Navigate to="/" replace />} />
@@ -36,17 +46,45 @@ export function App() {
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         <Route path="/parking" element={<Navigate to="/" replace />} />
 
-        {/* Flujo de Reserva con Layout (Protegido) */}
-        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+        {/* Flujo de Reserva con Layout (solo clientes) */}
+        <Route element={<ProtectedRoute allowedRoles={['CLIENTE']}><AppLayout /></ProtectedRoute>}>
           <Route path="/parkings/:id/reservar" element={<ParkingSpaceMap />} />
         </Route>
 
-        {/* Rutas Protegidas Generales (Perfil, Vehículos, Facturas y Reservas) */}
-        <Route path="/vehicles" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/vehicles/new" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/vehicles/:id/edit" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/invoices" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/reservations" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        {/* Vehículos, facturas y reservas propias (solo clientes): abren Home con su panel */}
+        <Route path="/vehicles" element={<ProtectedRoute allowedRoles={['CLIENTE']}><HomePage /></ProtectedRoute>} />
+        <Route path="/vehicles/new" element={<ProtectedRoute allowedRoles={['CLIENTE']}><HomePage /></ProtectedRoute>} />
+        <Route path="/vehicles/:id/edit" element={<ProtectedRoute allowedRoles={['CLIENTE']}><HomePage /></ProtectedRoute>} />
+        <Route path="/invoices" element={<ProtectedRoute allowedRoles={['CLIENTE']}><HomePage /></ProtectedRoute>} />
+        <Route path="/reservations" element={<ProtectedRoute allowedRoles={['CLIENTE']}><HomePage /></ProtectedRoute>} />
+
+        {/* Empleado: confirmar, check-in y check-out (genera y cobra la factura) */}
+        <Route
+          path="/employee"
+          element={
+            <ProtectedRoute allowedRoles={['EMPLEADO']}>
+              <EmployeeDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Administrador: ABM de tipos de vehículo y del catálogo de servicios */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+              <AdminPanel />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="vehicles" element={<AdminVehicles />} />
+          <Route path="brands" element={<AdminBrands />} />
+          <Route path="insurances" element={<AdminInsurances />} />
+          <Route path="vehicle-types" element={<AdminVehicleTypes />} />
+          <Route path="services" element={<AdminService />} />
+        </Route>
 
         {/* =========================================================
             RUTAS DE DUEÑO (DUEÑO)
@@ -68,17 +106,11 @@ export function App() {
           {/* el alta y la edición de empleados ahora son un panel lateral dentro de Personal */}
           <Route path="employees/*" element={<Navigate to="/owner/employees" replace />} />
           <Route path="shifts" element={<OwnerShifts />} />
+          <Route path="spaces" element={<OwnerSpaces />} />
         </Route>
 
-        {/* Distribución y edición de plazas (Ruta canónica RESTful) */}
-        <Route
-          path="/my-parkings/:id/spaces"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <ParkingSpaceEdit />
-            </ProtectedRoute>
-          }
-        />
+        {/* El listado, el alta y la edición de sucursales viven en /owner; las rutas viejas caen en el fallback */}
+        <Route path="/my-parkings/:id/spaces" element={<RedirectToParkingSpaces />} />
 
         {/* Métricas y reportes de facturación */}
         <Route

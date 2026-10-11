@@ -16,7 +16,7 @@ import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
 import ParkingDrawer from './ParkingDrawer';
 import {
-  VT, capOf, coverage, gapGroups, hrs, initials, issues, lvl, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
+  VT, capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
   type VehicleKey,
 } from './owner.lib';
 
@@ -51,7 +51,8 @@ export default function OwnerDashboard() {
 
   const T = parkings.reduce((a, p) => a + tot(p), 0), O = parkings.reduce((a, p) => a + oc(p), 0), pc = T ? Math.round((O / T) * 100) : 0;
   const now = today();
-  const fin = reservations.filter(r => r.st === 'finalizada' && r.endDate === now);
+  // Solo las que tienen factura vigente: una factura anulada deja `amount` en null.
+  const fin = reservations.filter(r => r.st === 'finalizada' && r.endDate === now && r.amount != null);
   const revenue = fin.reduce((a, r) => a + (r.amount ?? 0), 0);
   const active = reservations.filter(r => r.st === 'curso').length;
   const alerts = useMemo(() => Object.fromEntries(parkings.map(p => [p.id, issues(p, templates[p.id])])), [parkings, templates]);
@@ -77,7 +78,7 @@ export default function OwnerDashboard() {
   const menuFor = (p: Parking) => [
     { label: 'Ver detalle', icon: <Eye className="i" />, onClick: () => setDetail(p) },
     { label: 'Editar sucursal', icon: <Pencil className="i" />, onClick: () => setPform(p) },
-    { label: 'Gestionar plazas', icon: <LayoutGrid className="i" />, onClick: () => navigate(`/my-parkings/${p.id}/spaces`) },
+    { label: 'Gestionar plazas', icon: <LayoutGrid className="i" />, onClick: () => navigate(`/owner/spaces?p=${p.id}`) },
     { label: 'Tarifas', icon: <DollarSign className="i" />, sep: true, onClick: () => navigate(`/owner/tariffs?p=${p.id}`) },
     { label: 'Servicios', icon: <Layers className="i" />, onClick: () => navigate(`/owner/services?p=${p.id}`) },
     { label: 'Turnos y cobertura', icon: <CalendarDays className="i" />, onClick: () => navigate(`/owner/shifts?p=${p.id}`) },
@@ -141,13 +142,13 @@ export default function OwnerDashboard() {
           <section className="panel occ" aria-label="Ocupación actual">
             <div><div className="lab">Ocupación actual</div><div className="big">{pc}<span>%</span></div><div className="ctx">{O} de {T} plazas ocupadas · {T - O} libres</div></div>
             <div className="types">{T ? VT.map(t => {
-              const c = parkings.reduce((a, p) => a + capOf(p, t.k), 0), o = parkings.reduce((a, p) => a + occOf(p, t.k), 0), I = VICON[t.k];
+              const c = parkings.reduce((a, p) => a + svcOf(p, t.k), 0), o = parkings.reduce((a, p) => a + occOf(p, t.k), 0), I = VICON[t.k];
               return c ? <div className="trow" key={t.k}><span className="n"><I className="i" />{t.pl}</span><OccBar value={Math.round((o / c) * 100)} label={`${t.pl}: ${o} de ${c} ocupadas`} /><span className="v">{o}/{c}</span></div> : null;
             }) : <span className="ctx">Todavía no hay plazas configuradas.</span>}</div>
           </section>
           <section className="panel stats" aria-label="Indicadores del día">
-            <div className="srow"><div><div className="lab">Facturado hoy</div><div className="ctx">{plural(fin.length, 'check-out cobrado', 'check-outs cobrados')} desde las 00:00</div></div><div className="val">{money(revenue)}</div></div>
-            <div className="srow"><div className="lab">Reservas activas</div><div className="val"><button type="button" aria-label={`${active} reservas activas. Ver planilla`} onClick={() => navigate('/owner/reservations?s=curso')}>{active}</button></div></div>
+            <div className="srow"><div><div className="lab">Facturado hoy</div><div className="ctx">{plural(fin.length, 'check-out facturado', 'check-outs facturados')} desde las 00:00</div></div><div className="val">{money(revenue)}</div></div>
+            <div className="srow"><div><div className="lab">Reservas en curso</div><div className="ctx">Vehículos adentro ahora</div></div><div className="val"><button type="button" aria-label={`${active} reservas en curso. Ver planilla`} onClick={() => navigate('/owner/reservations?s=curso')}>{active}</button></div></div>
           </section>
         </div>
       )}
@@ -190,7 +191,7 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
     <Drawer title={p.name} sub={`${p.address}, ${p.locality}`} onClose={onClose} focusSel=".dfoot .btn.pri"
       footer={<div className="dfoot">
         <button type="button" className="btn" onClick={onToggle}><Power className="i sm" />{p.isActive ? 'Pausar' : 'Habilitar'}</button>
-        <button type="button" className="btn" onClick={() => navigate(`/my-parkings/${p.id}/spaces`)}><LayoutGrid className="i sm" />Plazas</button>
+        <button type="button" className="btn" onClick={() => navigate(`/owner/spaces?p=${p.id}`)}><LayoutGrid className="i sm" />Plazas</button>
         <button type="button" className="btn pri" onClick={onEdit}><Pencil className="i sm" />Editar sucursal</button>
       </div>}>
       <div className="dbody">
@@ -200,7 +201,7 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
           {!!alerts.length && <div className="list">{alerts.map(x => <div className="li" key={x.l}><span className="st warn"><AlertTriangle className="i sm" />{x.l}</span><span className="sd">{x.d}</span></div>)}</div>}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}><span style={{ fontSize: 34, fontWeight: 600, letterSpacing: '-.03em' }}>{n}%</span><span className="ctx">{oc(p)} ocupadas · {tot(p) - oc(p)} libres de {tot(p)}</span></div>
           <div style={{ display: 'grid', gap: 12 }}>{VT.filter(t => capOf(p, t.k)).map(t => {
-            const c = capOf(p, t.k), o = occOf(p, t.k), x = Math.round((o / c) * 100), I = VICON[t.k];
+            const c = svcOf(p, t.k), o = occOf(p, t.k), x = c ? Math.round((o / c) * 100) : 0, I = VICON[t.k];
             return <div className="trow" key={t.k} style={{ gridTemplateColumns: '104px 1fr 64px' }}><span className="n"><I className="i" />{t.pl}</span><OccBar value={x} label={`${t.pl}: ${x}%`} /><span className="v">{o}/{c}</span></div>;
           })}</div>
         </div>

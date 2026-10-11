@@ -13,3 +13,5 @@ export const deleteParking = (id: string) => api.delete(`/api/parkings/${id}`).t
 export const createParkingPrice = (parkingId: string, data: any) => api.post('/api/parkings/' + parkingId + '/prices', data).then(res => res.data);
 export const deleteParkingPrice = (priceId: string) => api.delete('/api/parkings/prices/' + priceId).then(res => res.data);
 export const reactivateParking = (parkingId: string) => api.post('/api/parkings/' + parkingId + '/reactivate').then(res => res.data);
+// Reservas por estado (PENDIENTE, CONFIRMADA, EN CURSO, FINALIZADA, CANCELADA) y facturación total de la sucursal.
+export const getParkingMetrics = (parkingId: string) => api.get(`/api/parkings/${parkingId}/metrics`).then(res => res.data.data ?? res.data);
