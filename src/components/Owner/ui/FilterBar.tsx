@@ -19,8 +19,12 @@ export function FilterBar({ search, children, active, onClear }: FilterBarProps)
           <input type="search" className="inp" aria-label={search.label} placeholder={search.placeholder} value={search.value} onChange={(e) => search.onChange(e.target.value)} />
         </div>
       )}
-      {children && <div className="frow">{children}</div>}
-      {active && <button type="button" className="btn ghost sm fclear" onClick={onClear}>Limpiar filtros</button>}
+      {(children || active) && (
+        <div className="frow">
+          {children}
+          {active && <button type="button" className="btn ghost sm fclear" onClick={onClear}>Limpiar filtros</button>}
+        </div>
+      )}
     </div>
   );
 }

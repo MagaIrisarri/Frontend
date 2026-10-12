@@ -19,6 +19,7 @@
     "src/components/Parking/LocationPicker.tsx",
     "src/components/Parking/MapView.tsx",
     "src/components/Owner/ui/Menu.tsx",
+    "src/components/Owner/ui/PanelBar.tsx",
     "src/styles/ui.scss",
     "src/styles/home.scss"
   ],

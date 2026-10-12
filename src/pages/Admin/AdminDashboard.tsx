@@ -6,7 +6,8 @@ import { getStatsSummary, type Locality, type StatsSummary } from '../../service
 import { money, plural } from '../Owner/owner.lib';
 
 const RES_ST: [string, string][] = [['FINALIZADA', 'Finalizadas'], ['EN CURSO', 'En curso'], ['CONFIRMADA', 'Confirmadas'], ['PENDIENTE', 'Pendientes'], ['CANCELADA', 'Canceladas']];
-const ROLES: [string, string][] = [['CLIENTE', 'Clientes'], ['DUEÑO', 'Dueños'], ['EMPLEADO', 'Empleados'], ['ADMINISTRADOR', 'Administradores']];
+// Los administradores no se muestran: son quienes miran el panel.
+const ROLES: [string, string][] = [['CLIENTE', 'Clientes'], ['DUEÑO', 'Dueños'], ['EMPLEADO', 'Empleados']];
 
 // Variación contra el período anterior, con ícono y texto (no solo color).
 function Delta({ now, prev, days, fmt = (n: number) => String(n) }: { now: number; prev: number; days: number; fmt?: (n: number) => string }) {
@@ -47,6 +48,7 @@ export default function AdminDashboard() {
   useEffect(() => { load(); }, [load]);
 
   const days = s?.periodDays ?? 30;
+  const users = s ? s.users.total - (s.users.byRole.ADMINISTRADOR ?? 0) : 0;
   const where = scope ? ` en ${scope.locality}` : ' del sistema';
   return (
     <>
@@ -72,7 +74,7 @@ export default function AdminDashboard() {
           <section className="panel stats" aria-label="Indicadores">
             <div className="srow"><div><div className="lab">Reservas · últimos {days} días</div><Delta now={s.reservations.total} prev={s.reservations.previousTotal} days={days} /></div><div className="val">{s.reservations.total}</div></div>
             <div className="srow"><div><div className="lab">Usuarios activos{scope && ' · todo el sistema'}</div><div className="ctx">{plural(s.users.byRole.CLIENTE ?? 0, 'cliente', 'clientes')} · {plural(s.users.byRole['DUEÑO'] ?? 0, 'dueño', 'dueños')}</div></div>
-              <div className="val"><button type="button" aria-label={`${s.users.total} usuarios activos. Ver usuarios`} onClick={() => navigate('/admin/users')}>{s.users.total}</button></div></div>
+              <div className="val"><button type="button" aria-label={`${users} usuarios activos. Ver usuarios`} onClick={() => navigate('/admin/users')}>{users}</button></div></div>
             <div className="srow"><div><div className="lab">Cocheras</div><div className="ctx">{s.parkings.active} activas · {s.parkings.total - s.parkings.active} pausadas</div></div><div className="val">{s.parkings.total}</div></div>
             <div className="srow"><div><div className="lab">Plazas</div><div className="ctx">{s.spaces.occupied} ocupadas ahora · {s.spaces.maintenance} en mantenimiento</div></div><div className="val">{s.spaces.total}</div></div>
           </section>
@@ -86,8 +88,8 @@ export default function AdminDashboard() {
               : <span className="ctx">No hubo reservas en el período.</span>}
           </section>
           <section className="panel" style={{ padding: '20px 24px' }} aria-label="Usuarios por rol">
-            <div className="lab" style={{ marginBottom: 14 }}>Usuarios activos por rol{scope && <span className="ctx"> · de todo el sistema</span>}</div>
-            <Bars rows={ROLES.map(([k, l]) => [l, s.users.byRole[k] ?? 0] as [string, number])} total={s.users.total} />
+            <div className="lab" style={{ marginBottom: 6 }}>Usuarios activos{scope && <span className="ctx"> · de todo el sistema</span>}</div>
+            {ROLES.map(([k, l]) => <div className="srow" style={{ padding: '10px 0' }} key={k}><span>{l}</span><span className="val">{s.users.byRole[k] ?? 0}</span></div>)}
           </section>
         </div>
 

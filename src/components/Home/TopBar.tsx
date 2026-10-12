@@ -1,6 +1,7 @@
 import React from 'react';
 import { useOpenProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useNotifications } from '../../context/NotificationsContext';
 import { Menu as MenuIcon, Search, X, Layers, HelpCircle, User, Bell, LogOut, ChevronDown, Sun, Moon } from 'lucide-react';
 import { Menu } from '../Owner/ui/Menu';
 import { VehicleMapFilter } from '../Parking/VehicleMapFilter';
@@ -8,6 +9,7 @@ import { VehicleMapFilter } from '../Parking/VehicleMapFilter';
 export const TopBar: React.FC<any> = (props: any) => {
   const openProfile = useOpenProfile();
   const { theme, toggleTheme } = useTheme();
+  const { unread, open: openNotifications } = useNotifications();
   const {
     user,
     setIsSidebarOpen,
@@ -18,8 +20,6 @@ export const TopBar: React.FC<any> = (props: any) => {
     openList,
     selectedParkingId,
     setSelectedParkingId,
-    setIsNotificationsOpen,
-    unreadCount = 0,
     filters,
     setVehicleFilter,
     handleOpenLogin,
@@ -33,11 +33,6 @@ export const TopBar: React.FC<any> = (props: any) => {
   const accountItems = user
     ? [
         { label: 'Mi perfil y configuración', icon: <User className="i" />, onClick: openProfile },
-        {
-          label: `Notificaciones${unreadCount > 0 ? ` · ${unreadCount} ${unreadCount === 1 ? 'nueva' : 'nuevas'}` : ''}`,
-          icon: <Bell className="i" />,
-          onClick: () => setIsNotificationsOpen?.(true),
-        },
         { label: 'Cerrar sesión', icon: <LogOut className="i" />, danger: true, sep: true, onClick: handleLogout },
       ]
     : [
@@ -105,6 +100,13 @@ export const TopBar: React.FC<any> = (props: any) => {
           <HelpCircle className="i" />
         </button>
 
+        {user && (
+          <button type="button" className="icon-btn hfloat has-badge" data-tip="Notificaciones" onClick={openNotifications}
+            aria-label={`Notificaciones${unread > 0 ? `, ${unread} sin leer` : ''}`}>
+            <Bell className="i" />{unread > 0 && <span className="nbadge" aria-hidden="true">{unread}</span>}
+          </button>
+        )}
+
         <button type="button" className="icon-btn hfloat" aria-label="Cambiar tema" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun className="i" /> : <Moon className="i" />}
         </button>
@@ -113,7 +115,7 @@ export const TopBar: React.FC<any> = (props: any) => {
           className="me hfloat"
           label={
             user
-              ? `Cuenta de ${user.name || 'usuario'}${unreadCount > 0 ? `, ${unreadCount} notificaciones sin leer` : ''}`
+              ? `Cuenta de ${user.name || 'usuario'}`
               : 'Cuenta'
           }
           header={
@@ -131,7 +133,6 @@ export const TopBar: React.FC<any> = (props: any) => {
           button={
             <>
               <span className="av">{user ? (user.name ? user.name[0].toUpperCase() : 'U') : <User className="i sm" />}</span>
-              {user && unreadCount > 0 && <span className="hbadge" aria-hidden="true">{unreadCount}</span>}
               <ChevronDown className="i sm" />
             </>
           }

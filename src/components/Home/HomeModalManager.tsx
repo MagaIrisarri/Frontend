@@ -4,7 +4,6 @@ import { VehiclesDrawer } from '../../components/Vehicle/VehiclesDrawer';
 import { ReservationsDrawer } from '../../components/Reservation/ReservationsDrawer';
 import { FavoritesDrawer } from '../../components/Parking/FavoritesDrawer';
 import { InvoicesDrawer } from '../../components/Invoice/InvoicesDrawer';
-import { NotificationsDrawer } from '../../components/Shared/NotificationsDrawer';
 import { SupportModal } from '../../components/Home/SupportModal';
 import { AuthDrawer } from '../../components/Auth/AuthDrawer';
 
@@ -37,10 +36,6 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
     toggleFavorite,
     setSelectedParkingId,
     handleOpenReservation,
-    isNotificationsOpen,
-    setIsNotificationsOpen,
-    notifications,
-    setNotifications,
     isInvoicesOpen,
     closeInvoices,
     isSupportOpen,
@@ -105,18 +100,6 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
 
       {/* Panel de Facturas y Pagos */}
       <InvoicesDrawer isOpen={!!isInvoicesOpen} onClose={closeInvoices} />
-
-      {/* Panel de Notificaciones */}
-      <NotificationsDrawer
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-        notifications={notifications}
-        onMarkAllAsRead={() => {
-          if (setNotifications) {
-            setNotifications((prev: any[]) => prev.map((n) => ({ ...n, read: true })));
-          }
-        }}
-      />
 
       {/* Modal de Ayuda y Soporte */}
       <SupportModal

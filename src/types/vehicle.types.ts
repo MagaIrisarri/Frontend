@@ -3,6 +3,12 @@
   name: string;
 }
 
+export interface Model {
+  id: string;
+  name: string;
+  vehicleType?: { id: string; name: string };
+}
+
 export interface VehicleType {
   id: string;
   name: string;

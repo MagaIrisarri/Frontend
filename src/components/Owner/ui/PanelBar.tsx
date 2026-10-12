@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, LogOut, Moon, RefreshCw, Sun, User } from 'lucide-react';
+import { Bell, ChevronDown, LogOut, Moon, RefreshCw, Sun, User } from 'lucide-react';
 import { Menu } from './Menu';
 import { useToast } from './Toasts';
 import { useTheme } from '../../../context/ThemeContext';
 import { useAuthStore } from '../../../stores/authStore';
 import { useOpenProfile } from '../../../context/ProfileContext';
+import { useNotifications } from '../../../context/NotificationsContext';
 
 // Barra superior de los paneles (dueño, empleado, administrador): marca, secciones, actualizar, tema y cuenta.
 export default function PanelBar({ home, role, views = [], onRefresh }: {
@@ -15,6 +16,7 @@ export default function PanelBar({ home, role, views = [], onRefresh }: {
   onRefresh?: () => Promise<void>;
 }) {
   const onProfile = useOpenProfile();
+  const { unread, open: openNotifications } = useNotifications();
   const { theme, toggleTheme } = useTheme();
   const user = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
@@ -44,6 +46,10 @@ export default function PanelBar({ home, role, views = [], onRefresh }: {
             <RefreshCw className={`i${busy ? ' spin' : ''}`} />
           </button>
         )}
+        <button type="button" className="icon-btn has-badge" data-tip="Notificaciones" onClick={openNotifications}
+          aria-label={`Notificaciones${unread > 0 ? `, ${unread} sin leer` : ''}`}>
+          <Bell className="i" />{unread > 0 && <span className="nbadge" aria-hidden="true">{unread}</span>}
+        </button>
         <button type="button" className="icon-btn" aria-label="Cambiar tema" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun className="i" /> : <Moon className="i" />}
         </button>

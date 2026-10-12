@@ -10,7 +10,7 @@ import { getParkingsByOwner } from '../../services/parking.service';
 import { useAuthStore } from '../../stores/authStore';
 
 const IVA = ['Responsable Inscripto', 'Monotributo', 'Exento'];
-// shortcut: proposal, datos fiscales y notificaciones se guardan en el navegador (el backend no los tiene), pasarlos al usuario en el servidor
+// shortcut: proposal, datos fiscales y preferencias de aviso se guardan en el navegador (el backend no los tiene) y las preferencias no filtran los avisos de /api/notifications, pasarlos al usuario en el servidor
 const store = <T,>(key: string, fallback: T): T => { try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || '{}') }; } catch { return fallback; } };
 
 // "Mi perfil" en panel lateral (owner-design/owner.html › openMe). Reemplaza a la página /profile; lo abre cualquier rol.

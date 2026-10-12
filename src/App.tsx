@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import HomePage from './pages/Home/HomePage';
 import { ProfileProvider } from './context/ProfileContext';
+import { NotificationsProvider } from './context/NotificationsContext';
 import { AppLayout } from './components/Layout/AppLayout';
 import { ParkingSpaceMap } from './pages/ParkingSpace/ParkingSpaceMap';
 import OwnerDashboard from './pages/Owner/OwnerDashboard';
@@ -15,9 +16,9 @@ import OwnerSpaces from './pages/Owner/OwnerSpaces';
 import MetricsView from './pages/Owner/MetricsView';
 import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
 import AdminPanel from './pages/Admin/AdminPanel';
-import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes';
 import AdminService from './pages/Admin/AdminService';
 import AdminUsers from './pages/Admin/AdminUsers';
+import AdminParkings from './pages/Admin/AdminParkings';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminVehicles from './pages/Admin/AdminVehicles';
 import AdminBrands from './pages/Admin/AdminBrands';
@@ -35,7 +36,7 @@ function RedirectToParkingSpaces() {
 export function App() {
   return (
     <BrowserRouter>
-      <ProfileProvider>
+      <ProfileProvider><NotificationsProvider>
       <Routes>
         {/* Ruta Principal: Mapa (clientes y visitantes; los demás roles van a su panel) */}
         <Route path="/" element={<ClientOrGuestRoute><HomePage /></ClientOrGuestRoute>} />
@@ -68,7 +69,7 @@ export function App() {
           }
         />
 
-        {/* Administrador: ABM de tipos de vehículo y del catálogo de servicios */}
+        {/* Administrador: usuarios, cocheras, catálogo de marcas y modelos (con el CSV del DNRPA), seguros y servicios */}
         <Route
           path="/admin"
           element={
@@ -79,10 +80,10 @@ export function App() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="parkings" element={<AdminParkings />} />
           <Route path="vehicles" element={<AdminVehicles />} />
           <Route path="brands" element={<AdminBrands />} />
           <Route path="insurances" element={<AdminInsurances />} />
-          <Route path="vehicle-types" element={<AdminVehicleTypes />} />
           <Route path="services" element={<AdminService />} />
         </Route>
 
@@ -131,7 +132,7 @@ export function App() {
         {/* Fallback general */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      </ProfileProvider>
+      </NotificationsProvider></ProfileProvider>
     </BrowserRouter>
   );
 }

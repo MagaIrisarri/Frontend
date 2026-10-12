@@ -3,8 +3,8 @@ import OwnerShell from '../../components/Owner/ui/OwnerShell';
 import PanelBar from '../../components/Owner/ui/PanelBar';
 
 const VIEWS: [string, string][] = [
-  ['/admin', 'Panel'], ['/admin/users', 'Usuarios'], ['/admin/vehicles', 'Vehículos'], ['/admin/vehicle-types', 'Tipos de vehículo'],
-  ['/admin/brands', 'Marcas'], ['/admin/insurances', 'Seguros'], ['/admin/services', 'Servicios'],
+  ['/admin', 'Panel'], ['/admin/users', 'Usuarios'], ['/admin/parkings', 'Cocheras'], ['/admin/vehicles', 'Vehículos'],
+  ['/admin/brands', 'Marcas y modelos'], ['/admin/insurances', 'Seguros'], ['/admin/services', 'Servicios'],
 ];
 
 // Raíz del panel del administrador, con la misma barra y estilos que el del dueño.

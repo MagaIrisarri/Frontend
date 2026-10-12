@@ -80,7 +80,7 @@ Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado c
 | L-04 | Zona horaria | "Hoy" sale del reloj del navegador. | Calcular en el servidor con la zona de la sucursal. | Parcial: el backend valida con su reloj (`TZ=America/Argentina/Buenos_Aires`); el frontend sigue usando el navegador. |
 | L-05 | Validación | Todas las reglas corren en el frontend. | Replicarlas en el backend. | Resuelta: el backend valida y el frontend anticipa. |
 | L-06 | Concurrencia | No hay control de ediciones simultáneas. | Control optimista por sucursal y fecha; transacción única al transferir. | Parcial: transferencia y cambio van en un solo flush (una transacción). Falta control optimista. |
-| L-07 | Transferencia de reservas | No verifica que el destino esté libre ni avisa a nadie. | Validar disponibilidad y notificar. | Abierta. |
+| L-07 | Transferencia de reservas | No verifica que el destino esté libre ni avisa a nadie (el aviso en la app: L-30). | Validar disponibilidad y notificar. | Abierta. |
 | L-08 | Reservas largas | Las validaciones miran solo la fecha de inicio. | Usar el intervalo completo, contemplar medianoche. | Parcial: dentro del día se usa el intervalo completo; las que cruzan medianoche se miden solo en su fecha de inicio. |
 | L-09 | Medianoche | "23:59" hace de 24:00; no hay turnos nocturnos. | Minutos o fecha de fin. | Abierta. |
 | L-10 | Granularidad | Bloques fijos de 30 minutos. | Definir si se parametriza. | Abierta. |
@@ -102,6 +102,13 @@ Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado c
 | L-26 | Buscar en esta zona | El filtro del mapa es local e instantáneo; el spinner dura un mínimo fijo (500 ms) para que se perciba. | Atarlo a la carga real si la búsqueda pasa al servidor. | Abierta. |
 | L-27 | Recordatorios | La tarea de recordatorios (R-28) corre en memoria del proceso cada `REMINDER_CHECK_MINUTES`, como la de vencidas (R-17); no hay cola ni reintento con espera. | Pasar a un job programado o una cola si el backend corre en varias instancias. | Abierta (Backend `99802ae`, `src/index.ts`). |
 | L-28 | Año del vehículo | `vehiculos.json` no trae años por modelo y el DNRPA no ofrece API pública: el año es opcional y solo se acota entre 1960 y el año próximo (`MIN_VEHICLE_YEAR`, duplicado en `Backend/src/Vehicle/Vehicle.Schema.ts` y `Frontend/src/utils/plate.ts`). | Cargar los años de producción de cada modelo en el catálogo y validar contra ellos. | Abierta. |
+| L-29 | Notificaciones (reubicación) | Al extender una reserva (R-23), las reservas siguientes que se pasan a otra plaza (`moved`) no avisan a sus clientes; solo se avisa al de la reserva extendida. | Devolver el cliente en `moved` y notificarlo. | Abierta. |
+| L-30 | Notificaciones (transferencias) | Las transferencias de reservas por turnos o feriados no notifican al empleado destino (ver L-07). | Notificar al empleado asignado en `Schedule.Service`. | Abierta. |
+| L-31 | Notificaciones (entrega) | Se piden por polling cada 30 s (pausado con la pestaña oculta) y se listan las últimas 50 por usuario, sin purga ni paginación. | Pasar a SSE si hace falta inmediatez; purgar o paginar con uso real. | Abierta. |
+| L-32 | Notificaciones (recordatorio) | El aviso en la app del recordatorio (R-28) sale junto con el mail: un cliente sin email, o con el envío fallando, no lo recibe. | Separar el aviso del mail en `sendReminders`. | Abierta. |
+| L-33 | Catálogo del DNRPA (tipos) | La importación omite los tipos que no son de pasajeros con una lista fija de palabras (acoplado, semirremolque, tractor, chasis, ómnibus, minibús…). `vehiculos.json` ya trajo algunos como AUTO y no se limpian. | Revisar la lista si el DNRPA cambia sus descripciones; limpiar el catálogo sembrado. | Abierta. |
+| L-35 | Alta de empleado (dueños) | El selector de dueños del panel del administrador trae hasta 100 dueños activos. | Pasar a un buscador si hay más. | Abierta. |
+| L-34 | Catálogo del DNRPA (permiso) | `POST /api/catalog/import` comprueba que `x-user-id` sea un administrador activo, pero ese header se puede falsificar: no hay autenticación (ver `revision-alcance.md`). | Sesión o token firmado. | Abierta. |
 
 ## Decisiones
 
@@ -141,7 +148,7 @@ Sin cambios: estacionamientos por localidad, vehículos por tipo (marca, modelo,
 
 ## Diferencias con el prototipo
 
-- "Mi perfil" es un panel lateral para todos los roles (`src/components/Profile/ProfileDrawer.tsx`, abierto con `useOpenProfile()`); la página `/profile` ya no existe. Los datos fiscales y las notificaciones del dueño se guardan en el navegador, porque el backend no los tiene.
+- "Mi perfil" es un panel lateral para todos los roles (`src/components/Profile/ProfileDrawer.tsx`, abierto con `useOpenProfile()`); la página `/profile` ya no existe. Los datos fiscales y las preferencias de aviso del dueño se guardan en el navegador, porque el backend no los tiene. Los avisos en sí vienen de `GET /api/notifications` (campana en Home y en la barra de los paneles, `NotificationsProvider`).
 - Alta y edición de sucursal reutilizan las pantallas existentes (`/my-parkings/...`); el prototipo las tenía en un panel lateral.
 - El alta de empleado exige sucursal (el backend la requiere); no existe "Quitar de sucursal".
 - Personal suma "Dados de baja" con "Reactivar", que la app ya tenía.

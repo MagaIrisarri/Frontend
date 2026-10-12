@@ -23,7 +23,6 @@
 .htop input[type=search]::-webkit-search-cancel-button{appearance:none}
 .htop .search .icon-btn.clr{position:absolute;right:0;top:0;width:var(--ctl);height:var(--ctl)}
 .htop .icon-btn.hfloat{width:var(--ctl);height:var(--ctl)}
-.hbadge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--err);color:#fff;font-size:11px;font-weight:600;line-height:18px;text-align:center}
 .vwrap{position:relative;flex:none}
 .menu.vmenu{position:absolute;right:0;top:calc(100% + 4px);left:auto;width:260px;z-index:40}
 .vmenu button{height:auto;min-height:36px;padding:6px 10px;justify-content:space-between;text-align:left}

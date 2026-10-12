@@ -10,15 +10,6 @@ import { getParkingMinPrice, getParkingPriceForCategory } from '../utils/parking
 import { localityKey, matchesQuery } from '../utils/search';
 import { useTheme } from '../context/ThemeContext';
 
-export interface UserNotification {
-  id: string;
-  title: string;
-  message: string;
-  date: string;
-  read: boolean;
-  type: 'reservation' | 'system' | 'promo';
-}
-
 type Area = [number, number, number, number]; // [oeste, sur, este, norte]
 const inArea = (p: Parking, [w, s, e, n]: Area) =>
   Number(p.longitude) >= w && Number(p.longitude) <= e && Number(p.latitude) >= s && Number(p.latitude) <= n;
@@ -79,19 +70,6 @@ export function useHomePage() {
 
   // Estado para modal de Ayuda & Soporte
   const [isSupportOpen, setIsSupportOpen] = useState(false);
-
-  // Estado para modal de Notificaciones
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<UserNotification[]>([
-    {
-      id: '1',
-      title: '¡Bienvenido!',
-      message: 'Explorá estacionamientos cercanos y reservá tu lugar al instante.',
-      date: 'Hoy',
-      read: false,
-      type: 'system',
-    },
-  ]);
 
   // Estado para modal de Reservas e Historial
   const [isReservationsModalOpen, setIsReservationsModalOpen] = useState(location.pathname === '/reservations');
@@ -171,7 +149,6 @@ export function useHomePage() {
     fetchClientReservations();
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
   // Mismos estados que ACTIVE_RESERVATION_STATUSES del backend
   const activeReservationsCount = clientReservations.filter((r) =>
     ['PENDIENTE', 'CONFIRMADA', 'EN CURSO'].includes(r.status)
@@ -378,11 +355,6 @@ export function useHomePage() {
     wasOpen.current = routePanelOpen;
   }, [routePanelOpen, path, navigate]);
 
-  const handleOpenNotifications = useCallback(() => {
-    setIsUserMenuOpen(false);
-    setIsNotificationsOpen(true);
-  }, []);
-
   const handleOpenSupport = useCallback(() => {
     setIsUserMenuOpen(false);
     setIsSidebarOpen(false);
@@ -448,10 +420,6 @@ export function useHomePage() {
     setIsUserMenuOpen,
     isSupportOpen,
     setIsSupportOpen,
-    isNotificationsOpen,
-    setIsNotificationsOpen,
-    notifications,
-    setNotifications,
     isReservationsModalOpen,
     setIsReservationsModalOpen,
     reservationsModalTab,
@@ -469,7 +437,6 @@ export function useHomePage() {
     setAuthModalTab,
     loading,
     loadError,
-    unreadCount,
     activeReservationsCount,
     fetchParkings,
     refreshSelectedParking,
@@ -480,7 +447,6 @@ export function useHomePage() {
     handleOpenVehicleRegister,
     handleOpenReservations,
     handleOpenFavorites,
-    handleOpenNotifications,
     isInvoicesOpen,
     handleOpenInvoices,
     closeInvoices,
