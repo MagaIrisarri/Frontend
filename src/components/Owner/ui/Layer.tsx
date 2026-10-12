@@ -14,7 +14,10 @@ function useLayer(onClose: () => void, focusSel = '[data-first],input:not([type=
     document.body.style.overflow = 'hidden';
     const t = setTimeout(() => {
       const el = ref.current;
-      ((el?.querySelector(focusSel) ?? el?.querySelector('.icon-btn')) as HTMLElement | null)?.focus();
+      let first = (el?.querySelector(focusSel) ?? el?.querySelector('.icon-btn')) as HTMLElement | null;
+      // en táctil, enfocar un campo de texto abre el teclado y tapa el panel recién abierto
+      if (first?.matches('input:not([type=checkbox],[type=radio]),textarea') && window.matchMedia('(pointer:coarse)').matches) first = el?.querySelector('.icon-btn') as HTMLElement | null;
+      first?.focus();
     }, 30);
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -22,7 +25,14 @@ function useLayer(onClose: () => void, focusSel = '[data-first],input:not([type=
       if (layers[layers.length - 1] === ref.current) close.current(); // solo cierra la capa de arriba
     };
     document.addEventListener('keydown', onKey);
+    // iOS no achica la ventana al abrir el teclado: --kb sube la hoja para que sus botones no queden tapados
+    const vv = window.visualViewport;
+    const kb = () => vv && ref.current?.style.setProperty('--kb', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`);
+    vv?.addEventListener('resize', kb);
+    vv?.addEventListener('scroll', kb);
     return () => {
+      vv?.removeEventListener('resize', kb);
+      vv?.removeEventListener('scroll', kb);
       clearTimeout(t);
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;

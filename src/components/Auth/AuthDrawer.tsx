@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { loginUser } from '@/services/user.service';
 import { useAuthStore } from '@/stores/authStore';
@@ -26,16 +26,16 @@ const EMPTY: Record<FieldName, string> = {
 function validate(name: FieldName, value: string, form: Record<FieldName, string>): string | undefined {
   switch (name) {
     case 'name':
-      if (value.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres';
+      if (value.trim().length < 2) return 'Mínimo 2 caracteres';
       break;
     case 'last_name':
-      if (value.trim().length < 2) return 'El apellido debe tener al menos 2 caracteres';
+      if (value.trim().length < 2) return 'Mínimo 2 caracteres';
       break;
     case 'dni':
-      if (!/^\d{7,8}$/.test(value.trim())) return 'El DNI debe tener 7 u 8 dígitos';
+      if (!/^\d{7,8}$/.test(value.trim())) return 'Debe tener 7 u 8 dígitos';
       break;
     case 'phone':
-      if (value.trim().length < 6) return 'Ingresá un número de teléfono válido';
+      if (value.trim().length < 6) return 'Teléfono no válido';
       break;
     case 'date_of_birth': {
       if (!value) return 'Seleccioná tu fecha de nacimiento';
@@ -81,9 +81,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
+  // Correo y contraseña son los mismos en las dos pestañas: lo escrito en una no se pierde al pasar a la otra.
   const [form, setForm] = useState(EMPTY);
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
   const [errors, setErrors] = useState<FormErrors>({});
@@ -100,7 +98,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
     setError(null);
     setLoading(true);
     try {
-      finish(await loginUser(email.trim(), password));
+      finish(await loginUser(form.email.trim(), form.password));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Credenciales incorrectas');
     } finally {
@@ -185,9 +183,34 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
     }
   };
 
-  const f = (name: FieldName) => ({ name, value: form[name], onChange: change, onBlur: blur, error: touched[name] ? errors[name] : undefined });
+  const f = (name: FieldName) => ({ name, value: form[name], onChange: change, onBlur: blur, error: touched[name] ? errors[name] : undefined, fixed: true });
   const isLogin = tab === 'login';
   const nerrs = FIELDS.filter((x) => touched[x] && errors[x]).length;
+  const summary = !isLogin && nerrs > 0 ? `Revisá ${nerrs} ${nerrs === 1 ? 'campo' : 'campos'}` : null;
+
+  // Cambio de pestaña: el selector desliza su indicador, el contenido entra con un fundido y la altura de la hoja se anima
+  // (de la altura que tenía al tocar a la del contenido nuevo) en vez de saltar.
+  const seg = useRef<HTMLDivElement>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  const fromH = useRef(0);
+  const anim = useRef<Animation | null>(null);
+  const switchTab = (next: 'login' | 'register') => {
+    if (next === tab) return;
+    fromH.current = wrap.current?.offsetHeight ?? 0; // si había una animación en curso, es la altura que se ve ahora
+    setTab(next);
+    setError(null);
+  };
+  useLayoutEffect(() => {
+    const b = seg.current?.querySelector<HTMLElement>('button[aria-pressed=true]');
+    if (b) { seg.current!.style.setProperty('--x', `${b.offsetLeft}px`); seg.current!.style.setProperty('--w', `${b.offsetWidth}px`); }
+    anim.current?.cancel();
+    const el = wrap.current, from = fromH.current;
+    fromH.current = 0;
+    if (!el || !from || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const to = el.offsetHeight;
+    if (Math.abs(from - to) < 2) return;
+    anim.current = el.animate({ height: [`${from}px`, `${to}px`], overflow: ['hidden', 'hidden'] }, { duration: 300, easing: 'cubic-bezier(.3,.9,.3,1)' });
+  }, [tab]);
 
   return (
     <Drawer
@@ -196,6 +219,11 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
       onClose={onClose}
       footer={
         <div className="dfoot">
+          <div className="fmsg">
+            {error
+              ? <span className="ferr" role="alert" title={error}><AlertCircle className="i sm" />{error}</span>
+              : summary && <span className="ferr" role="status"><AlertCircle className="i sm" />{summary}</span>}
+          </div>
           <button type="submit" form="auth-form" className="btn pri" disabled={loading} aria-busy={loading || undefined}>
             {loading ? (isLogin ? 'Ingresando…' : 'Creando cuenta…') : isLogin ? 'Iniciar sesión' : 'Crear cuenta'}
           </button>
@@ -203,28 +231,28 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
       }
     >
       <form id="auth-form" className="dbody stack" onSubmit={isLogin ? submitLogin : submitRegister} noValidate>
-        <div className="seg" role="group" aria-label="Acceso">
-          <button type="button" aria-pressed={isLogin} onClick={() => { setTab('login'); setError(null); }}>Iniciar sesión</button>
-          <button type="button" aria-pressed={!isLogin} onClick={() => { setTab('register'); setError(null); }}>Crear cuenta</button>
+        <div className="seg slide" role="group" aria-label="Acceso" ref={seg}>
+          <span className="pill" aria-hidden="true" />
+          <button type="button" aria-pressed={isLogin} onClick={() => switchTab('login')}>Iniciar sesión</button>
+          <button type="button" aria-pressed={!isLogin} onClick={() => switchTab('register')}>Crear cuenta</button>
         </div>
 
-        {error && <div className="ferr" role="alert"><AlertCircle className="i sm" />{error}</div>}
-        {!isLogin && nerrs > 0 && !error && <div className="ferr" role="alert"><AlertCircle className="i sm" />Revisá los campos marcados.</div>}
-
+        <div ref={wrap}>
+        <div className="swapin" key={tab}>
         {isLogin ? (
           <>
-            <Input label="Correo electrónico" type="email" autoComplete="email" placeholder="ejemplo@correo.com" value={email} required
-              onChange={(e) => setEmail(e.target.value)} />
-            <Password label="Contraseña" autoComplete="current-password" placeholder="••••••••" value={password} required
-              onChange={(e) => setPassword(e.target.value)} />
+            <Input label="Correo electrónico" name="email" type="email" autoComplete="email" placeholder="ejemplo@correo.com" value={form.email} required
+              onChange={change} />
+            <Password label="Contraseña" name="password" autoComplete="current-password" placeholder="••••••••" value={form.password} required
+              onChange={change} />
           </>
         ) : (
           <>
-            <div className="grid2">
+            <div className="grid2 keep">
               <Input label="Nombre" autoComplete="given-name" placeholder="Juan" {...f('name')} />
               <Input label="Apellido" autoComplete="family-name" placeholder="Pérez" {...f('last_name')} />
             </div>
-            <div className="grid2">
+            <div className="grid2 keep">
               <Input label="DNI" inputMode="numeric" placeholder="40123456" {...f('dni')} />
               <Input label="Teléfono" type="tel" autoComplete="tel" placeholder="3364001086" {...f('phone')} />
             </div>
@@ -234,7 +262,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
               <Password label="Contraseña" autoComplete="new-password" placeholder="Mínimo 6 caracteres" {...f('password')} />
               <Password label="Repetir contraseña" autoComplete="new-password" placeholder="Repetí tu contraseña" {...f('confirmPassword')} />
             </div>
-            <Field label="Tipo de cuenta" error={touched.type ? errors.type : undefined}>
+            <Field fixed label="Tipo de cuenta" error={touched.type ? errors.type : undefined}>
               {(id, aria) => (
                 <select className="sel" id={id} {...aria} name="type" value={form.type} onChange={change} onBlur={blur}>
                   <option value="CLIENTE">Cliente</option>
@@ -244,6 +272,8 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
             </Field>
           </>
         )}
+        </div>
+        </div>
       </form>
     </Drawer>
   );

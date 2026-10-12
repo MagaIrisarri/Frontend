@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Star, MapPin, ArrowLeft, Clock, ChevronRight, SearchX } from 'lucide-react';
+import { X, Star, MapPin, ArrowLeft, Clock, ChevronRight, SearchX, Navigation } from 'lucide-react';
 import type { Parking } from '../../types/parking.types';
 import type { VehicleFilterType } from '../../types/mapFilters.types';
 import type { ServicePrice } from '../../types/servicePrice.types';
@@ -16,6 +16,7 @@ import { useSwipeClose } from '../../hooks/useSwipeClose';
 import { FilterBar } from '../Owner/ui/FilterBar';
 import { Field } from '../Owner/ui/Field';
 import { localityKey } from '../../utils/search';
+import { distanceKm, formatDistance } from '../../utils/distance';
 import { VICON, vehicleKey } from '../Owner/ui/vehicles';
 import { VT } from '../../pages/Owner/owner.lib';
 
@@ -29,12 +30,19 @@ const vehicleMeta = (type?: string) => {
   return { label: VT.find((v) => v.k === k)!.n, Icon: VICON[k] };
 };
 
+// Hoja inferior en móvil / panel flotante en escritorio. Es un componente aparte porque useSwipeClose lee del <Presence> si el panel se está yendo.
+function Sheet({ onClose, closing, label, expandKey, children }: { onClose: () => void; closing: boolean; label: string; expandKey?: string; children: React.ReactNode }) {
+  const swipe = useSwipeClose(onClose, 'down', { peek: true, resetKey: expandKey }); // deslizar un poco deja el listado asomado; mucho lo cierra
+  return <aside ref={swipe} aria-label={label} className={`hpanel${closing ? ' out' : ''}`}>{children}</aside>;
+}
+
 export const ListDrawer: React.FC<any> = (props: any) => {
   const {
     isListDrawerOpen,
     selectedParking,
     setIsListDrawerOpen,
     filteredParkings = [],
+    userPos = null,
     selectedParkingId,
     setSelectedParkingId,
     favoriteIds = [],
@@ -155,6 +163,12 @@ export const ListDrawer: React.FC<any> = (props: any) => {
             </span>
           ) : (
             <div className="tags">
+              {userPos && (
+                <span className="tag mute">
+                  <Navigation className="i sm" aria-hidden="true" />
+                  {formatDistance(distanceKm(userPos, [Number(p.longitude), Number(p.latitude)]))}
+                </span>
+              )}
               {counts.map(({ Icon, n, label }) => (
                 <span key={label} className="tag mute">
                   <Icon className="i sm" aria-hidden="true" />
@@ -186,7 +200,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
     );
   };
 
-  const swipe = useSwipeClose(() => { setSelectedParkingId(null); setIsListDrawerOpen(false); }, 'down');
+  const closeAll = () => { setSelectedParkingId(null); setIsListDrawerOpen(false); };
 
   const subtitle = loading
     ? 'Buscando cocheras…'
@@ -198,11 +212,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
   return (
     <Presence open={isOpen}>
       {(closing) => (
-    <aside
-      ref={swipe}
-      aria-label={sp ? 'Detalle de la cochera' : 'Listado de estacionamientos'}
-      className={`hpanel${closing ? ' out' : ''}`}
-    >
+    <Sheet onClose={closeAll} closing={closing} expandKey={sp?.id} label={sp ? 'Detalle de la cochera' : 'Listado de estacionamientos'}>
       {sp ? (
         <>
           <div className="dhead">
@@ -340,8 +350,8 @@ export const ListDrawer: React.FC<any> = (props: any) => {
           <div className="dbody" aria-busy={loading}>
             {!loading && !loadError && parkings.length > 0 && (
               <FilterBar active={hasFilters && filteredParkings.length > 0} onClear={clearAll}>
-                <div className="seg" role="group" aria-label="Ordenar por precio">
-                  {([[null, 'Sin orden'], ['price-asc', 'Menor precio'], ['price-desc', 'Mayor precio']] as const).map(([k, l]) => (
+                <div className="seg" role="group" aria-label="Ordenar">
+                  {([[null, 'Sin orden'], ['price-asc', 'Menor precio'], ['price-desc', 'Mayor precio'], ...(userPos ? [['near', 'Más cercanas']] : [])] as const).map(([k, l]) => (
                     <button key={l} type="button" aria-pressed={(filters.sort ?? null) === k} onClick={() => setFilters((f: any) => ({ ...f, sort: k }))}>{l}</button>
                   ))}
                 </div>
@@ -401,7 +411,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
           </div>
         </>
       )}
-    </aside>
+    </Sheet>
       )}
     </Presence>
   );

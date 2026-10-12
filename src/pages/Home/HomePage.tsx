@@ -26,6 +26,7 @@ export default function HomePage() {
               fit={!mapArea && !localityFromView}
               onSearchArea={setMapArea}
               onViewChange={handleViewChange}
+              onLocate={homeProps.handleLocate}
             />
           </div>
 

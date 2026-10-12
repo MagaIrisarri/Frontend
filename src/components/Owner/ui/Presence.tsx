@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
-// Duración de la salida de paneles y modales; igual a la de la entrada (.16 s en owner.scss).
-export const EXIT_MS = 160;
+// Cuánto sigue montado un panel o modal después de cerrarse: lo que tarda el resorte de useSwipeClose en sacarlo de pantalla (y la salida CSS de los modales, .16 s).
+export const EXIT_MS = 300;
 
 const ClosingCtx = createContext(false);
 

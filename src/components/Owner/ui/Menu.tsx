@@ -14,7 +14,9 @@ export function Menu({ label, button, items, header, className = 'icon-btn' }: {
     if (!open || !btn.current || !menu.current) return;
     const r = btn.current.getBoundingClientRect(), m = menu.current, w = m.offsetWidth, h = m.offsetHeight;
     m.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.right - w))}px`;
-    m.style.top = `${r.bottom + h + 12 > innerHeight ? r.top - h - 4 : r.bottom + 4}px`;
+    const up = r.bottom + h + 12 > innerHeight;
+    m.style.top = `${up ? r.top - h - 4 : r.bottom + 4}px`;
+    m.style.transformOrigin = `${r.left + r.width / 2 - parseFloat(m.style.left)}px ${up ? 'bottom' : 'top'}`; // nace del botón que lo abrió
     m.querySelector('button')?.focus();
   }, [open]);
 

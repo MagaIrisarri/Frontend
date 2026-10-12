@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/authStore';
 import { getParkingMinPrice, getParkingPriceForCategory } from '../utils/parkingPriceUtils';
 import { localityKey, matchesQuery } from '../utils/search';
 import { useTheme } from '../context/ThemeContext';
+import { distanceKm, type LngLat } from '../utils/distance';
 
 type Area = [number, number, number, number]; // [oeste, sur, este, norte]
 const inArea = (p: Parking, [w, s, e, n]: Area) =>
@@ -29,6 +30,12 @@ export function useHomePage() {
   const [searchQuery, setTextQuery] = useState('');
   // Filtros del mapa
   const [filters, setFilters] = useState<MapFilters>(DEFAULT_MAP_FILTERS);
+  // Ubicación del usuario, solo si tocó "Mi ubicación" en el mapa; habilita el orden "Más cercanas"
+  const [userPos, setUserPos] = useState<LngLat | null>(null);
+  const handleLocate = useCallback((pos: LngLat) => {
+    setUserPos(pos);
+    setFilters((f) => ({ ...f, sort: 'near' }));
+  }, []);
   // Zona elegida con "Buscar en esta zona". Escribir en el buscador la descarta: el texto manda y mueve el mapa.
   const [mapArea, setMapArea] = useState<Area | null>(null);
   // La localidad la fijó la vista del mapa al abrir el listado: sigue a lo que se ve y el mapa no se re-encuadra solo
@@ -168,7 +175,10 @@ export function useHomePage() {
         return price !== null && price <= max;
       });
     }
-    if (filters.sort) {
+    if (filters.sort === 'near' && userPos) {
+      const d = (p: Parking) => distanceKm(userPos, [Number(p.longitude), Number(p.latitude)]);
+      list = [...list].sort((a, b) => d(a) - d(b));
+    } else if (filters.sort && filters.sort !== 'near') {
       const dir = filters.sort === 'price-asc' ? 1 : -1;
       list = [...list].sort((a, b) => {
         const pa = priceOf(a);
@@ -178,7 +188,7 @@ export function useHomePage() {
       });
     }
     return list;
-  }, [parkings, searchQuery, mapArea, filters.maxPrice, filters.sort, filters.vehicleType, filters.locality]);
+  }, [parkings, searchQuery, mapArea, filters.maxPrice, filters.sort, filters.vehicleType, filters.locality, userPos]);
 
   // Cocheras favoritas
   const favoriteParkings = useMemo(() => {
@@ -403,6 +413,8 @@ export function useHomePage() {
     setSearchQuery,
     mapArea,
     setMapArea,
+    userPos,
+    handleLocate,
     localityFromView,
     handleViewChange,
     isSidebarOpen,

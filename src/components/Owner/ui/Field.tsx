@@ -9,7 +9,8 @@ export function Field({ label, error, hint, fixed, children }: { label: string; 
     <div className={fixed ? 'field fx' : 'field'}>
       <label htmlFor={id}>{label}</label>
       {children(id, aria)}
-      {error ? <div className="ferr" role="alert" id={`${id}-e`}><AlertCircle className="i sm" />{error}</div> : hint && <div className="hint">{hint}</div>}
+      {/* fixed: el mensaje (ayuda o error) ocupa siempre su línea de 18 px, así que aparecer o cambiar no mueve el resto del formulario */}
+      {error ? <div className="ferr" role="alert" id={`${id}-e`} title={error}><AlertCircle className="i sm" />{error}</div> : hint ? <div className="hint">{hint}</div> : fixed && <div className="hint" aria-hidden="true" />}
     </div>
   );
 }
@@ -18,10 +19,10 @@ export function Input({ label, error, hint, fixed, ...rest }: { label: string; e
   return <Field label={label} error={error} hint={hint} fixed={fixed}>{(id, aria) => <input className="inp" id={id} {...aria} {...rest} />}</Field>;
 }
 
-export function Password({ label, error, hint, ...rest }: { label: string; error?: string; hint?: string } & InputHTMLAttributes<HTMLInputElement>) {
+export function Password({ label, error, hint, fixed, ...rest }: { label: string; error?: string; hint?: string; fixed?: boolean } & InputHTMLAttributes<HTMLInputElement>) {
   const [show, setShow] = useState(false);
   return (
-    <Field label={label} error={error} hint={hint}>
+    <Field label={label} error={error} hint={hint} fixed={fixed}>
       {(id, aria) => (
         <div className="pw">
           <input className="inp" id={id} type={show ? 'text' : 'password'} {...aria} {...rest} />

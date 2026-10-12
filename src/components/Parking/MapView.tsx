@@ -9,6 +9,8 @@ import { formatSpotPrice, getUnavailableReason } from '../../utils/parkingPriceU
 import { VICON } from '../Owner/ui/vehicles';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle } from '../../config/map.js';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../Owner/ui/Toasts';
+import type { LngLat } from '../../utils/distance';
 
 interface MapViewProps {
   spots: Parking[];
@@ -18,6 +20,7 @@ interface MapViewProps {
   fit?: boolean; // encuadrar los pines cuando cambian (no, si la lista sale de la zona que el usuario está mirando)
   onSearchArea?: (bounds: [number, number, number, number]) => void; // [oeste, sur, este, norte]
   onViewChange?: (bounds: [number, number, number, number]) => void; // lo que se ve, al cargar y tras cada movimiento
+  onLocate?: (pos: LngLat) => void; // el usuario tocó "Mi ubicación" y el navegador la dio
 }
 
 const toArea = (b: maptilersdk.LngLatBounds): [number, number, number, number] => [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
@@ -30,6 +33,7 @@ function MapViewComponent({
   fit = true,
   onSearchArea,
   onViewChange,
+  onLocate,
 }: MapViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +43,11 @@ function MapViewComponent({
   onSelectRef.current = onSelect;
   const onViewChangeRef = useRef(onViewChange);
   onViewChangeRef.current = onViewChange;
+  const onLocateRef = useRef(onLocate);
+  onLocateRef.current = onLocate;
+  const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const centeredIdRef = useRef<string | null>(null);
   const fittedKeyRef = useRef<string | null>(null);
   const [searching, setSearching] = useState(false);
@@ -143,7 +152,7 @@ function MapViewComponent({
           map.flyTo({
             center: cluster.center,
             zoom: Math.min(18, map.getZoom() + 2.5),
-            duration: 600,
+            duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600,
           });
         });
 
@@ -192,8 +201,44 @@ function MapViewComponent({
       center: DEFAULT_MAP_CENTER,
       zoom: DEFAULT_MAP_ZOOM,
       navigationControl: 'bottom-right',
+      geolocateControl: false, // se agrega abajo para escuchar sus eventos
+      locale: { // etiquetas accesibles de los controles del mapa, en español
+        'GeolocateControl.FindMyLocation': 'Mi ubicación',
+        'GeolocateControl.LocationNotAvailable': 'Ubicación no disponible',
+        'NavigationControl.ZoomIn': 'Acercar',
+        'NavigationControl.ZoomOut': 'Alejar',
+        'NavigationControl.ResetBearing': 'Orientar al norte',
+        'AttributionControl.ToggleAttribution': 'Créditos del mapa',
+      },
+      attributionControl: { compact: true }, // botón ⓘ que se despliega; la atribución de OSM y MapTiler es obligatoria por licencia y no se quita
     });
 
+    // "Mi ubicación": el permiso se pide solo al tocar el botón. Al ubicarse se ofrece "Buscar en esta zona" y el listado pasa a "Más cercanas".
+    const locate = new maptilersdk.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 10000 }, trackUserLocation: false });
+    map.addControl(locate, 'bottom-right');
+    locate.on('geolocate', (e: any) => {
+      onLocateRef.current?.([e.coords.longitude, e.coords.latitude]);
+      setMoved(true);
+    });
+    locate.on('error', (e: any) => {
+      toastRef.current(e?.code === 1
+        ? 'No pudimos acceder a tu ubicación. Activala en los permisos del navegador.'
+        : 'No pudimos obtener tu ubicación. Intentá de nuevo.', 'err');
+    });
+    // en modo compacto MapLibre arranca con los créditos abiertos hasta que se toca el mapa: se dejan cerrados desde el principio y al cargar
+    const closeCredits = () => {
+      const credits = map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+      credits?.classList.remove('maplibregl-compact-show');
+      credits?.removeAttribute('open');
+    };
+    closeCredits();
+    map.once('load', closeCredits);
+    // un toque fuera del botón cierra los créditos (MapLibre solo los cierra al mover el mapa)
+    const closeOutside = (e: PointerEvent) => {
+      const credits = map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+      if (credits && !credits.contains(e.target as Node)) closeCredits();
+    };
+    document.addEventListener('pointerdown', closeOutside);
     map.on('styleimagemissing', () => {});
     map.on('load', () => {
       renderMarkersRef.current();
@@ -211,6 +256,7 @@ function MapViewComponent({
     mapRef.current = map;
 
     return () => {
+      document.removeEventListener('pointerdown', closeOutside);
       try {
         activeMarkersRef.current.forEach((marker) => marker.remove());
         activeMarkersRef.current = [];
@@ -258,7 +304,7 @@ function MapViewComponent({
     });
 
     // Encuadrar solo si cambian los pines: refrescar los datos de uno (p. ej. lugares libres de la elegida) no debe alejar el mapa
-    const key = validSpots.map((s) => s.id).join();
+    const key = validSpots.map((s) => s.id).sort().join(); // sin importar el orden: reordenar el listado no debe volver a encuadrar
     if (!fit) fittedKeyRef.current = null;
     if (fit && validSpots.length > 0 && key !== fittedKeyRef.current) {
       fittedKeyRef.current = key;
