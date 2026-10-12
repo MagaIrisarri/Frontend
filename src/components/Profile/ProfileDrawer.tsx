@@ -25,7 +25,7 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
   const isOwner = type.includes('DUE') || type.includes('OWNER');
   const isClient = !isOwner && !type.includes('ADMIN') && !type.includes('EMP');
 
-  const [v, setV] = useState({ name: me.name ?? '', last_name: me.last_name ?? '', email: me.email ?? '', phone: me.phone ?? '', pw0: '', pw1: '', pw2: '' });
+  const [v, setV] = useState({ name: me.name ?? '', last_name: me.last_name ?? '', email: me.email ?? '', phone: me.phone ?? '', dob: me.date_of_birth?.slice(0, 10) ?? '', pw0: '', pw1: '', pw2: '' });
   const [fiscal, setFiscal] = useState(() => store(`parkflow_fiscal_${id}`, { businessName: '', cuit: '', vatCondition: IVA[0]!, fiscalAddress: '' }));
   const [prefs, setPrefs] = useState(() => store(`parkflow_prefs_${id}`, { alertFullCapacity: true, alertNewBooking: true }));
   const [err, setErr] = useState<Record<string, string>>({});
@@ -48,23 +48,29 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
     if (!v.last_name.trim()) er.last_name = 'Ingresá tu apellido.';
     if (!/^\S+@\S+\.\S+$/.test(v.email.trim())) er.email = 'Ingresá un email válido.';
     if (isOwner && fiscal.cuit.trim() && !/^\d{2}-?\d{8}-?\d$/.test(fiscal.cuit.trim())) er.cuit = 'Formato esperado: 30-12345678-9.';
+    if (me.mustChangePassword && !v.pw1) er.pw1 = 'Elegí una contraseña nueva.';
     if (v.pw0 || v.pw1 || v.pw2) {
       if (!v.pw0) er.pw0 = 'Ingresá tu contraseña actual.';
       if (v.pw1.length < 6) er.pw1 = 'Mínimo 6 caracteres.';
+      else if (v.pw1 === me.dni) er.pw1 = 'No puede ser tu DNI.';
       else if (v.pw1 !== v.pw2) er.pw2 = 'Las contraseñas no coinciden.';
     }
     setErr(er);
     if (Object.keys(er).length) return toast('Revisá los campos marcados.', 'err');
     setBusy(true);
     try {
-      const data = { name: v.name.trim(), last_name: v.last_name.trim(), email: v.email.trim(), phone: v.phone.trim() };
+      // Teléfono y nacimiento pueden faltar en un cliente dado de alta en el mostrador (R-29): vacíos no se mandan.
+      const data = {
+        name: v.name.trim(), last_name: v.last_name.trim(), email: v.email.trim(),
+        ...(v.phone.trim() && { phone: v.phone.trim() }), ...(v.dob && { date_of_birth: v.dob }),
+      };
       await updateUser(id, data as any);
       if (v.pw1) await changePassword(id, v.pw0, v.pw1);
       if (isOwner) {
         localStorage.setItem(`parkflow_fiscal_${id}`, JSON.stringify(fiscal));
         localStorage.setItem(`parkflow_prefs_${id}`, JSON.stringify(prefs));
       }
-      setUser({ ...me, ...data });
+      setUser({ ...me, ...data, ...(v.pw1 && { mustChangePassword: false }) });
       toast(v.pw1 ? 'Perfil guardado y contraseña actualizada.' : 'Perfil guardado.');
       onClose();
     } catch (x) {
@@ -107,7 +113,10 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
               <Input label="Apellido" value={v.last_name} onChange={set('last_name')} error={err.last_name} autoComplete="family-name" />
             </div>
             <Input label="Email" type="email" value={v.email} onChange={set('email')} error={err.email} autoComplete="email" />
-            <Input label="Teléfono" type="tel" value={v.phone} onChange={set('phone')} error={err.phone} autoComplete="tel" />
+            <div className="g2">
+              <Input label="Teléfono" type="tel" value={v.phone} onChange={set('phone')} error={err.phone} autoComplete="tel" />
+              <Input label="Fecha de nacimiento" type="date" value={v.dob} onChange={set('dob')} error={err.dob} autoComplete="bday" />
+            </div>
           </section>
           {isOwner && (
             <section className="fs"><div className="fh"><h3>Datos fiscales</h3></div>
@@ -122,7 +131,9 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
             </section>
           )}
           <section className="fs"><div className="fh"><h3>Seguridad</h3></div>
-            <p className="ctx" style={{ marginTop: -6 }}>Completá solo si querés cambiar la contraseña.</p>
+            {me.mustChangePassword
+              ? <p className="ctx" role="alert" style={{ marginTop: -6 }}>Tu contraseña actual es tu DNI. Cambiala para registrar vehículos y reservar.</p>
+              : <p className="ctx" style={{ marginTop: -6 }}>Completá solo si querés cambiar la contraseña.</p>}
             <Password label="Contraseña actual" value={v.pw0} onChange={set('pw0')} error={err.pw0} autoComplete="current-password" />
             <div className="g2">
               <Password label="Nueva contraseña" value={v.pw1} onChange={set('pw1')} error={err.pw1} autoComplete="new-password" />

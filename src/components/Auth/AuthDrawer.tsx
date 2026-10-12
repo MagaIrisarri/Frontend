@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { loginUser } from '@/services/user.service';
+import { useOpenProfile } from '@/context/ProfileContext';
 import { useAuthStore } from '@/stores/authStore';
 import { Drawer } from '../Owner/ui/Layer';
 import OwnerShell from '../Owner/ui/OwnerShell';
@@ -83,6 +84,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
 
   // Correo y contraseña son los mismos en las dos pestañas: lo escrito en una no se pierde al pasar a la otra.
   const [form, setForm] = useState(EMPTY);
+  const openProfile = useOpenProfile();
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -91,6 +93,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
     useAuthStore.getState().setUser(user);
     onSuccess?.(user);
     onClose();
+    if (user?.mustChangePassword) openProfile(); // R-29: entró con el DNI; el perfil le pide la contraseña nueva
   };
 
   const submitLogin = async (e: React.FormEvent) => {
