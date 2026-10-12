@@ -161,4 +161,13 @@ Las secciones de arriba que dicen "propuesto" quedaron así:
 - `assertSchedule` exige que el fin caiga el mismo día (antes "00:30" pasaba contra un cierre "23:59").
 - Pago: `amountReceived` (efectivo, tiene que cubrir el total) y `receiptNumber` (otros medios).
 
-Sigue pendiente: cierre de caja (el nombre `ShiftClosure` ya lo usa el cierre de horarios de la sucursal: usar otro, p. ej. `CashClosure`); restringir R-07 al dueño; validar el turno del actor en ingreso y salida (pendiente de decidir, ver arriba); la terminal del empleado todavía no usa el alta de mostrador ni muestra los responsables.
+Sigue pendiente: cierre de caja (el nombre `ShiftClosure` ya lo usa el cierre de horarios de la sucursal: usar otro, p. ej. `CashClosure`); restringir R-07 al dueño; validar el turno del actor en ingreso y salida (pendiente de decidir, ver arriba).
+
+## Terminal del empleado (implementado, 12/10/2026)
+`EmployeeDashboard.tsx` (con `ResDrawer`, `WalkInDrawer`, `SummaryDrawer` y `CalendarDrawer`, y la lógica compartida en `employee.lib.ts`) usa el backend de arriba y la maqueta v38:
+- **Aspecto:** paleta y tokens de la v38 (`--edge`, `--div`, `--btn-ring`, `--card-sh`, `--info`, `--focus`) en `styles/employee.scss`, con alcance `.owner.emp` (se activa con `<OwnerShell theme="emp">`): el dueño, el administrador y el cliente no cambian. Clases nuevas con prefijo `e-` para no chocar con las del dueño.
+- **Pantalla:** fichas de ocupación con barra por tipo, "Tu turno hoy", Resumen y Nuevo ingreso (N), día con calendario (puntos en los días que trabaja, 60 atrás y 14 adelante), búsqueda (/), filtro por estado y cola agrupada (Por cobrar, En curso, Pendientes, Confirmadas, Finalizadas, Canceladas) con la acción de cada reserva en la fila. Se actualiza sola cada 30 s.
+- **Nuevo ingreso:** `walk-in`, tarifa y total estimado por marca y modelo, horas con − / + hasta el cierre.
+- **Detalle:** Ingreso y Egreso con quién los registró, horario reservado, salida real y horas extra, aviso de horas extra si sale ahora (misma cuenta que `checkOut`, con la gracia), cobro con efectivo recibido y vuelto o comprobante.
+- **Resumen:** tabla por período (Hoy / Semana / Mes) con datos reales, copiable a una hoja de cálculo.
+Falta el cierre de caja (necesita backend: `CashClosure`), el "Deshacer" de los avisos (las acciones son del servidor, ver L-15) y la fila "Sin cuenta" de la maqueta (el backend crea una cuenta real, R-29).

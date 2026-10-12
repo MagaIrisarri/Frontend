@@ -54,3 +54,12 @@ export const setReservationServices = (reservationId: string, serviceIds: string
 // R-27: valoración opcional (1 a 5) de una reserva finalizada; solo la deja su cliente, una vez.
 export const rateReservation = (reservationId: string, rating: number, userId: string) =>
   api.patch(`/api/reservations/${reservationId}/rating`, { rating }, { headers: { 'x-user-id': userId } }).then(res => res.data);
+
+// R-29: ingreso de mostrador sin reserva previa. El servidor fija el inicio (ahora, sin segundos); fin = inicio + horas completas.
+// Si el email no tiene cuenta, el backend crea un CLIENTE con el DNI como contraseña.
+export interface WalkInPayload {
+  parkingId: string; plate: string; brandId: string; modelId: string; hours: number; serviceIds?: string[];
+  name: string; last_name: string; dni: string; email: string; phone?: string;
+}
+export const walkInReservation = (payload: WalkInPayload, employeeId: string) =>
+  api.post('/api/reservations/walk-in', payload, { headers: { 'x-user-id': employeeId } }).then(res => res.data);

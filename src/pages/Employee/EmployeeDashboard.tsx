@@ -1,56 +1,31 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { AlarmClock, CalendarDays, Check, ChevronLeft, ChevronRight, MapPin, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Plus, Search } from 'lucide-react';
 import OwnerShell from '../../components/Owner/ui/OwnerShell';
 import PanelBar from '../../components/Owner/ui/PanelBar';
-import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
-import { Presence, Shown } from '../../components/Owner/ui/Presence';
-import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
-import { apiError } from '../../components/Owner/ui/Field';
-import { useToast } from '../../components/Owner/ui/Toasts';
+import { Shown } from '../../components/Owner/ui/Presence';
+import { Empty, ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
 import { useAuthStore } from '../../stores/authStore';
-import {
-  cancelReservation, changeReservationSpace, checkInReservation, checkOutReservation, confirmReservation, extendReservation, getReservationsByParking,
-  setReservationServices,
-} from '../../services/reservation.service';
-import { payInvoice } from '../../services/invoice.service';
-import { getSpaceAvailability } from '../../services/parkingSpace.service';
-import { getParkingServices } from '../../services/servicePrice.service';
-import { DOW, addD, billLines, dayStr, cap, fmtD, initials, isoD, money, normRes, plural, shD, today, type Res, type Svc } from '../Owner/owner.lib';
+import { getReservationsByParking } from '../../services/reservation.service';
+import { DOW, VT, addD, occOf, shD, svcOf, today, wdOf } from '../Owner/owner.lib';
+import CalendarDrawer, { AHEAD_DAYS, BACK_DAYS } from './CalendarDrawer';
+import ResDrawer from './ResDrawer';
+import SummaryDrawer from './SummaryDrawer';
+import WalkInDrawer from './WalkInDrawer';
+import { hhmm, list, normERes, overdue, person, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes, type Status } from './employee.lib';
+import '../../styles/employee.scss';
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
-const list = (x: any) => (Array.isArray(x) ? x : x?.data ?? []);
-
-// El empleado distingue pendiente de confirmada (el dueño las ve juntas como "Reservada").
-type Status = 'PENDIENTE' | 'CONFIRMADA' | 'EN CURSO' | 'FINALIZADA' | 'CANCELADA';
-const ST: Record<Status, { l: string; c: string }> = {
-  PENDIENTE: { l: 'Pendiente', c: 'warn' }, CONFIRMADA: { l: 'Confirmada', c: 'ok' }, 'EN CURSO': { l: 'En curso', c: 'ac' },
-  FINALIZADA: { l: 'Finalizada', c: 'mute' }, CANCELADA: { l: 'Cancelada', c: 'mute' },
-};
+const POLL_MS = 30_000;
 const SEGS: ['all' | Status, string][] = [['all', 'Todas'], ['PENDIENTE', 'Pendientes'], ['CONFIRMADA', 'Confirmadas'], ['EN CURSO', 'En curso'], ['FINALIZADA', 'Finalizadas'], ['CANCELADA', 'Canceladas']];
-const ACTIVE: Status[] = ['PENDIENTE', 'CONFIRMADA', 'EN CURSO'];
-// Sigue adentro después del fin reservado: la salida cobra las horas extra (R-14) y la plaza no se libera (R-21).
-const overdue = (r: ERes) => r.status === 'EN CURSO' && r.endAt.getTime() < Date.now();
-// Tienen que coincidir con PaymentMethodSchema del backend (Invoice.Schema.ts).
-const METHODS: [string, string][] = [['EFECTIVO', 'Efectivo'], ['TARJETA_DEBITO', 'Débito'], ['TARJETA_CREDITO', 'Crédito'], ['MERCADO_PAGO', 'Mercado Pago'], ['TRANSFERENCIA', 'Transferencia']];
+interface Shift { d: number; t: string } // d: 0 = lunes (como DOW), t: "08:00–16:00"
 
-interface ERes extends Res {
-  status: Status; spaceId: string; startAt: Date; endAt: Date; staff: string;
-  invoice: { id: string; status: string } | null;
-}
-const normERes = (r: any): ERes => ({
-  ...normRes(r),
-  status: r.status, spaceId: r.parkingSpace?.id ?? '', startAt: new Date(r.startTime), endAt: new Date(r.endTime),
-  staff: [r.attendedBy?.name, r.attendedBy?.last_name].filter(Boolean).join(' '),
-  invoice: r.invoice ?? null,
-});
-
-// Terminal del empleado: reservas de su sucursal, cambio de plaza, confirmación, ingreso, salida y cobro.
+// Terminal del empleado: reservas de su sucursal, ingreso de mostrador, cambio de plaza, confirmación, ingreso, salida y cobro.
 export default function EmployeeDashboard() {
   const user = useAuthStore(s => s.user);
   const userId: string = user?.id || user?._id || '';
-  const [parking, setParking] = useState<{ id: string; name: string } | null | undefined>(undefined); // undefined = cargando
-  const [shifts, setShifts] = useState<string[]>([]);
+  const [parking, setParking] = useState<EParking | null | undefined>(undefined); // undefined = cargando
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [reservations, setReservations] = useState<ERes[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
@@ -59,17 +34,11 @@ export default function EmployeeDashboard() {
     if (!userId) return;
     try {
       const [u, s] = await Promise.all([api.get(`/api/users/${userId}`), api.get(`/api/shifts/employee/${userId}`)]);
-      // Agrupa los días con el mismo horario, como el panel del dueño: "Todos los días 08:00–16:00".
-      const byTime = new Map<string, number[]>();
-      list(s.data).forEach((x: any) => {
-        const k = `${x.startTime.slice(0, 5)}–${x.endTime.slice(0, 5)}`;
-        byTime.set(k, [...(byTime.get(k) ?? []), DOW.indexOf(x.dayOfWeek)]);
-      });
-      setShifts([...byTime].sort(([, a], [, b]) => Math.min(...a) - Math.min(...b)).map(([k, days]) => `${dayStr(days)} ${k}`));
+      setShifts(list(s.data).map((x: any) => ({ d: DOW.indexOf(x.dayOfWeek), t: `${x.startTime.slice(0, 5)}–${x.endTime.slice(0, 5)}` })));
       const pid: string | null = u.data?.data?.parkingId ?? null;
       if (!pid) { setParking(null); setStatus('ready'); return; }
       const [p, r] = await Promise.all([api.get(`/api/parkings/${pid}`), getReservationsByParking(pid)]);
-      setParking({ id: pid, name: p.data?.data?.name ?? 'Tu sucursal' });
+      setParking({ ...p.data?.data, id: pid, name: p.data?.data?.name ?? 'Tu sucursal' }); // trae capacidades, ocupación, tarifas y horario
       setReservations(list(r).map(normERes));
       setStatus('ready');
     } catch (err) {
@@ -78,220 +47,131 @@ export default function EmployeeDashboard() {
     }
   }, [userId]);
   useEffect(() => { refresh(); }, [refresh]);
+  // Se actualiza sola cada 30 s mientras la pestaña se ve; el botón de la barra la actualiza al momento.
+  useEffect(() => {
+    const t = setInterval(() => { if (!document.hidden) refresh(); }, POLL_MS);
+    return () => clearInterval(t);
+  }, [refresh]);
 
   return (
-    <OwnerShell>
+    <OwnerShell theme="emp">
       <PanelBar home="/employee" role="Empleado" onRefresh={refresh} />
-      <main className="page">
-        <PageHead eyebrow={parking?.name} title="Reservas"
-          sub={shifts.length ? `Tus turnos: ${shifts.join(' · ')}` : 'Todavía no tenés turnos cargados.'} />
+      <main className="e-wrap">
         {status === 'error' ? <ErrorBox what="las reservas" onRetry={refresh} />
           : status === 'loading' || parking === undefined ? <SkeletonRows n={5} />
             : parking === null ? <Empty icon={<MapPin className="i" />} title="Sin sucursal asignada">Pedile al dueño que te asigne una sucursal desde Personal para ver y operar sus reservas.</Empty>
-              : <DayList reservations={reservations} pid={parking.id} userId={userId} onChange={refresh} />}
+              : <Terminal reservations={reservations} parking={parking} shifts={shifts} me={person(user)} userId={userId} onChange={refresh} />}
       </main>
     </OwnerShell>
   );
 }
 
-function DayList({ reservations, pid, userId, onChange }: { reservations: ERes[]; pid: string; userId: string; onChange: () => Promise<void> }) {
+function Terminal({ reservations, parking, shifts, me, userId, onChange }: { reservations: ERes[]; parking: EParking; shifts: Shift[]; me: string; userId: string; onChange: () => Promise<void> }) {
   const now = today();
   const [rd, setRd] = useState(now);
   const [rs, setRs] = useState<'all' | Status>('all');
   const [rq, setRq] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [panel, setPanel] = useState<'walkin' | 'summary' | 'calendar' | null>(null);
+  const search = useRef<HTMLInputElement>(null);
+  const { run, busy } = useRun(onChange);
   const open = reservations.find(r => r.id === openId);
+
+  const turno = shifts.filter(s => s.d === wdOf(now)).map(s => s.t).join(' · ');
+  const worked = [...new Set(shifts.map(s => (s.d + 1) % 7))]; // días de la semana de JS (0 = domingo)
+  const min = addD(now, -BACK_DAYS), max = addD(now, AHEAD_DAYS);
+  const dayLabel = `${rd === now ? 'Hoy · ' : rd === addD(now, 1) ? 'Mañana · ' : ''}${new Date(rd + 'T12:00').toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')} ${shD(rd)}`;
+
+  // Atajos de la maqueta: N abre Nuevo ingreso y / va a la búsqueda (no se disparan escribiendo en un campo).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (panel || openId || (e.target as HTMLElement).matches('input,select,textarea') || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); setPanel('walkin'); }
+      if (e.key === '/') { e.preventDefault(); search.current?.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [panel, openId]);
 
   // Hoy también lista los vehículos que siguen adentro desde un día anterior (R-21): si no, su salida no se ve.
   const D = reservations.filter(r => r.date === rd || (rd === now && r.date < rd && r.status === 'EN CURSO'));
   const q = rq.trim().toLowerCase().replace(/[\s-]/g, '');
-  const shown = D.filter(r => (rs === 'all' || r.status === rs) && (!q || (r.plate + r.code).toLowerCase().replace(/-/g, '').includes(q)))
-    .sort((a, b) => a.start.localeCompare(b.start));
+  const shown = D.filter(r => (rs === 'all' || r.status === rs) && (!q || (r.plate + r.code).toLowerCase().replace(/-/g, '').includes(q)));
+  const byStart = (a: ERes, b: ERes) => a.start.localeCompare(b.start);
+  const groups: [string, ERes[]][] = [
+    ['Por cobrar', shown.filter(r => r.status === 'FINALIZADA' && toPay(r)).sort(byStart)],
+    ['En curso', shown.filter(r => r.status === 'EN CURSO').sort((a, b) => Number(overdue(b)) - Number(overdue(a)) || byStart(a, b))], // los pasados de hora primero
+    ['Pendientes', shown.filter(r => r.status === 'PENDIENTE').sort(byStart)],
+    ['Confirmadas', shown.filter(r => r.status === 'CONFIRMADA').sort(byStart)],
+    ['Finalizadas', shown.filter(r => r.status === 'FINALIZADA' && !toPay(r)).sort(byStart)],
+    ['Canceladas', shown.filter(r => r.status === 'CANCELADA').sort(byStart)],
+  ];
+  const clear = () => { setRs('all'); setRq(''); setRd(now); };
 
-  let t;
-  if (!D.length) t = <Empty icon={<CalendarDays className="i" />} title={`Sin reservas el ${fmtD(rd)}`}>Probá con otra fecha. Las reservas de tu sucursal aparecen acá con su código y su plaza.</Empty>;
-  else if (!shown.length) t = <Empty icon={<Search className="i" />} title="Sin resultados" action={<button type="button" className="btn" onClick={() => { setRs('all'); setRq(''); }}>Limpiar filtros</button>}>Ninguna reserva coincide con los filtros actuales.</Empty>;
-  else t = (
-    <div className="panel tw"><table className="tbl rs">
-      <colgroup><col style={{ width: '22%' }} /><col /><col style={{ width: 140 }} /><col style={{ width: 120 }} /><col style={{ width: 120 }} /></colgroup>
-      <thead><tr><th>Código</th><th>Plaza y horario</th><th>Estado</th><th className="r">Importe</th><th><span className="sr">Acciones</span></th></tr></thead>
-      <tbody>{shown.map(r => (
-        <tr key={r.id}>
-          <td><span className="plate">{r.code}</span><div className="ad">{r.plate}</div></td>
-          <td data-label="Plaza y horario"><span className="nm">Plaza {r.space}</span><div className="ad">{r.date !== rd ? `${shD(r.date)} ` : ''}{r.start} – {r.end}{r.endDate !== r.date ? ` (${shD(r.endDate)})` : ''}</div></td>
-          <td data-label="Estado">{overdue(r)
-            ? <span className="st warn"><AlarmClock className="i sm" aria-hidden="true" />Se pasó de hora</span>
-            : <span className={`st ${ST[r.status].c}`}>{ST[r.status].l}</span>}</td>
-          <td className="r" data-label="Importe">{r.amount != null
-            ? <>{money(r.amount)}{r.invoice?.status === 'PENDIENTE' && <div className="ad">Por cobrar</div>}</>
-            : <span className="na">—</span>}</td>
-          <td className="r"><div className="acts"><button type="button" className="btn sm" aria-label={`Gestionar la reserva ${r.code}`} onClick={() => setOpenId(r.id)}>Gestionar</button></div></td>
-        </tr>
-      ))}</tbody>
-    </table></div>
-  );
+  let queue;
+  if (!D.length) queue = <div className="e-empty">Sin reservas el {shD(rd)}. <span className="dim">Probá con otra fecha: las reservas de tu sucursal aparecen acá con su código y su plaza.</span></div>;
+  else if (!shown.length) queue = <div className="e-empty">{rq ? `Sin resultados para «${rq}».` : 'No hay reservas en este estado.'}<button type="button" className="btn sm" onClick={clear}>Limpiar filtros</button></div>;
+  else queue = groups.filter(g => g[1].length).map(([title, rows]) => (
+    <section className="e-grp" key={title}>
+      <h2>{title} <b>{rows.length}</b></h2>
+      <div className="e-list" role="table" aria-label={title}>{rows.map(r => <Row key={r.id} r={r} userId={userId} busy={busy} run={run} onOpen={() => setOpenId(r.id)} />)}</div>
+    </section>
+  ));
 
   return (
     <>
-      <p className="ctx" style={{ marginBottom: -4 }}>{cap(fmtD(rd))}{rd === now ? ' · hoy' : ''}</p>
-      <div className="toolbar">
-        <div className="dt" role="group" aria-label="Fecha">
-          <button type="button" className="icon-btn" aria-label="Día anterior" onClick={() => setRd(addD(rd, -1))}><ChevronLeft className="i" /></button>
-          <input className="inp" type="date" value={rd} aria-label="Fecha de las reservas" onChange={e => e.target.value && setRd(e.target.value)} />
-          <button type="button" className="icon-btn" aria-label="Día siguiente" onClick={() => setRd(addD(rd, 1))}><ChevronRight className="i" /></button>
-          <button type="button" className="btn" disabled={rd === now} onClick={() => setRd(now)}>Hoy</button>
+      <h1 className="sr">Reservas</h1>
+      <header className="e-hd">
+        <div className="e-who"><span className="dim">{parking.name} · Terminal del empleado</span><b>{me || 'Empleado'}</b>
+          <span className="dim">{turno ? `Tu turno hoy: ${turno}` : shifts.length ? 'Hoy no tenés turno' : 'Todavía no tenés turnos cargados.'}</span></div>
+        <div className="e-occ" aria-label="Ocupación por tipo de vehículo">
+          {VT.filter(t => svcOf(parking, t.k) > 0).map(t => {
+            const o = occOf(parking, t.k), c = svcOf(parking, t.k);
+            return <div className="e-chip" key={t.k}><span>{t.pl} <b>{o}/{c}</b></span><div className={`e-meter${o >= c ? ' full' : ''}`}><i style={{ width: `${Math.min(100, (o / c) * 100)}%` }} /></div></div>;
+          })}
         </div>
-        <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar por código o patente" aria-label="Buscar por código o patente" value={rq} onChange={e => setRq(e.target.value)} /></div>
+        <div className="e-tb"><button type="button" className="btn sm" onClick={() => setPanel('summary')}>Resumen</button></div>
+        <button type="button" className="btn pri lg e-new" title="Atajo: N" onClick={() => { setRd(now); setPanel('walkin'); }}><Plus className="i" aria-hidden="true" />Nuevo ingreso</button>
+      </header>
+
+      <div className="e-tools">
+        <div className="e-day" role="group" aria-label="Día">
+          <button type="button" className="btn sm" aria-label="Día anterior" disabled={rd <= min} onClick={() => setRd(addD(rd, -1))}><ChevronLeft className="i" /></button>
+          <button type="button" className="btn sm e-dayl" aria-label={`Elegir fecha en el calendario. Día actual: ${dayLabel}`} onClick={() => setPanel('calendar')}>{dayLabel}</button>
+          <button type="button" className="btn sm" aria-label="Día siguiente" disabled={rd >= max} onClick={() => setRd(addD(rd, 1))}><ChevronRight className="i" /></button>
+        </div>
+        <div className="search"><Search className="i" /><input ref={search} className="inp" type="search" placeholder="Patente o código de reserva  ( / )" aria-label="Buscar por patente o código" autoComplete="off" value={rq} onChange={e => setRq(e.target.value)} /></div>
+        <div className="seg" role="group" aria-label="Filtrar por estado">
+          {SEGS.map(([k, l]) => <button type="button" key={k} aria-pressed={rs === k} onClick={() => setRs(k)}>{l}<b>{D.filter(r => k === 'all' || r.status === k).length}</b></button>)}
+        </div>
       </div>
-      <div className="seg" role="group" aria-label="Filtrar por estado" style={{ justifySelf: 'start' }}>
-        {SEGS.map(([k, l]) => (
-          <button type="button" key={k} aria-pressed={rs === k} onClick={() => setRs(k)}>{l}<b>{D.filter(r => k === 'all' || r.status === k).length}</b></button>
-        ))}
-      </div>
-      {t}
-      <Shown when={open}>{open => <ResDrawer r={open} pid={pid} userId={userId} onChange={onChange} onClose={() => setOpenId(null)} />}</Shown>
+
+      <div className="e-queue">{queue}</div>
+
+      <Shown when={open}>{open => <ResDrawer r={open} parking={parking} userId={userId} onChange={onChange} onClose={() => setOpenId(null)} />}</Shown>
+      <WalkInDrawer open={panel === 'walkin'} parking={parking} userId={userId} onChange={onChange} onClose={() => setPanel(null)} />
+      <SummaryDrawer open={panel === 'summary'} reservations={reservations} onClose={() => setPanel(null)} />
+      <CalendarDrawer open={panel === 'calendar'} value={rd} worked={worked} turno={turno} onPick={d => { setRd(d); setPanel(null); }} onClose={() => setPanel(null)} />
     </>
   );
 }
 
-function ResDrawer({ r, pid, userId, onChange, onClose }: { r: ERes; pid: string; userId: string; onChange: () => Promise<void>; onClose: () => void }) {
-  const toast = useToast();
-  const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState(false);
-  const [spaces, setSpaces] = useState<{ id: string; spaceCode: string }[] | null>(null);
-  const [method, setMethod] = useState('EFECTIVO');
-  const active = ACTIVE.includes(r.status);
-  const toPay = r.invoice?.status === 'PENDIENTE';
-  const early = r.startAt.getTime() > Date.now(); // R-16: el ingreso se registra desde el inicio reservado
-
-  // Plazas del mismo tipo libres en el horario de la reserva (con el margen de la sucursal); la actual va primero.
-  // Si se pasó de hora, sigue ocupando la plaza hasta que salga: se busca hasta ahora como mínimo.
-  useEffect(() => {
-    if (!active || !r.vtype) return;
-    setSpaces(null);
-    getSpaceAvailability(pid, r.vtype, r.startAt, new Date(Math.max(r.endAt.getTime(), Date.now())))
-      .then(x => setSpaces(list(x).filter((s: any) => s.available && s.isActive !== false && s.id !== r.spaceId)))
-      .catch(() => setSpaces([]));
-  }, [active, pid, r.vtype, r.startAt, r.endAt, r.spaceId]);
-
-  // Corre una acción, recarga la lista y avisa; el cajón queda abierto con la reserva actualizada.
-  const run = async <T,>(fn: () => Promise<T>, ok: string | ((res: T) => string), type: 'ok' | 'info' = 'ok') => {
-    setBusy(true);
-    try {
-      const res = await fn();
-      await onChange();
-      toast(typeof ok === 'function' ? ok(res) : ok, type);
-    } catch (x) { toast(apiError(x, 'No se pudo completar la acción. Intentá de nuevo.'), 'err'); }
-    setBusy(false);
-  };
-
-  const moveTo = (id: string) => run(() => changeReservationSpace(r.id, id, userId), `Reserva ${r.code} movida a la plaza ${spaces?.find(s => s.id === id)?.spaceCode}.`);
-  // R-21: si su plaza seguía ocupada por alguien que se pasó de hora, el backend la pasó a otra libre.
-  const checkedIn = (res: any) => {
-    const code = res?.data?.parkingSpace?.spaceCode ?? r.space;
-    return `Ingreso de ${r.plate} registrado en la plaza ${code}${code !== r.space ? `: la ${r.space} seguía ocupada` : ''}.`;
-  };
-  const cancel = async () => { setConfirm(false); await run(() => cancelReservation(r.id, userId), `Reserva ${r.code} cancelada.`, 'info'); onClose(); };
-
-  // R-23: extender de a horas enteras: una hora más desde el fin o, si ya se pasó, la próxima hora entera. El backend valida máximo y cierre.
-  const first = new Date(Math.max(r.endAt.getTime() + 3_600_000, Date.now()));
-  if (first.getMinutes() || first.getSeconds() || first.getMilliseconds()) first.setHours(first.getHours() + 1, 0, 0, 0);
-  const ends = [0, 1, 2].map(n => new Date(first.getTime() + n * 3_600_000));
-  const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:00`;
-  const extend = (end: Date) => run(() => extendReservation(r.id, end, userId), (res: any) => {
-    const moved: { code: string; to: string }[] = res?.data?.moved ?? [];
-    return `Reserva ${r.code} extendida hasta las ${hhmm(end)}.${moved.length ? ` ${plural(moved.length, 'reserva pasó', 'reservas pasaron')} a otra plaza: ${moved.map(m => `${m.code} → ${m.to}`).join(', ')}.` : ''}`;
-  });
-
-  // R-24: servicios de la cochera para agregar o quitar mientras la reserva no terminó (se cobran en la salida).
-  const [offer, setOffer] = useState<Svc[]>([]);
-  useEffect(() => {
-    if (!active) return;
-    getParkingServices(pid).then(x => setOffer(list(x).filter((s: any) => s.expirationDate == null)
-      .map((s: any) => ({ id: s.id, name: s.serviceCatalog?.name ?? 'Servicio', price: Number(s.price) })))).catch(() => setOffer([]));
-  }, [active, pid]);
-  const options = [...r.services, ...offer.filter(s => !r.services.some(x => x.id === s.id))]; // los pedidos conservan su precio
-  const toggleService = (s: Svc) => {
-    const on = r.services.some(x => x.id === s.id);
-    const ids = on ? r.services.filter(x => x.id !== s.id).map(x => x.id) : [...r.services.map(x => x.id), s.id];
-    run(() => setReservationServices(r.id, ids, userId), on ? `${s.name} quitado de ${r.code}.` : `${s.name} agregado a ${r.code}: se cobra en la salida.`);
-  };
-
-  const primary =
-    r.status === 'PENDIENTE' ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => confirmReservation(r.id, userId),`Reserva ${r.code} confirmada.`)}>Confirmar reserva</button>
-      : r.status === 'CONFIRMADA' ? <button type="button" className="btn pri" disabled={busy || early} onClick={() => run(() => checkInReservation(r.id, userId), checkedIn)}>Registrar ingreso</button>
-        : r.status === 'EN CURSO' ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => checkOutReservation(r.id, userId), `Salida de ${r.plate} registrada. Falta cobrar la estadía.`)}>Registrar salida</button>
-          : toPay ? <button type="button" className="btn pri" disabled={busy} onClick={() => run(() => payInvoice(r.invoice!.id, method), `Estadía de ${r.code} cobrada: ${money(r.amount ?? 0)}.`)}>Registrar pago</button>
-            : null;
-
+// Una reserva en la cola: patente, plaza y horario con quién ingresó y salió, estado y la acción que toca.
+function Row({ r, userId, busy, run, onOpen }: { r: ERes; userId: string; busy: boolean; run: ReturnType<typeof useRun>['run']; onOpen: () => void }) {
+  const p = primaryOf(r, userId);
+  const st = stateOf(r);
+  const io = r.status === 'EN CURSO' || r.status === 'FINALIZADA'
+    ? [r.inBy && `Ingresó ${r.inBy}`, r.outBy && `Salió ${r.outBy}`].filter(Boolean).join(' · ') || 'Sin ingreso registrado' : r.services.map(s => s.name).join(', ');
   return (
-    <>
-      <Drawer title={r.code} sub={`Plaza ${r.space} · ${shD(r.date)} ${r.start} – ${r.end}`} onClose={onClose} focusSel=".dfoot .btn:last-child"
-        footer={<div className="dfoot">
-          {(r.status === 'PENDIENTE' || r.status === 'CONFIRMADA') && <button type="button" className="btn danger" disabled={busy} onClick={() => setConfirm(true)}>Cancelar reserva</button>}
-          <button type="button" className="btn" onClick={onClose}>Cerrar</button>
-          {primary}
-        </div>}>
-        <div className="dbody">
-          <div className="fs"><div className="fh"><h3>Cliente</h3></div>
-            <div className="li" style={{ padding: 0 }}><span className="l"><span className="av lg">{initials(...(r.client.n.split(' ') as [string, string]))}</span>
-              <span><div className="nm">{r.client.n}</div><div className="ad">{[r.client.ph, r.client.em].filter(Boolean).join(' · ')}</div></span></span></div>
-          </div>
-          <div className="fs"><div className="fh"><h3>Reserva</h3><span className={`st ${ST[r.status].c}`}>{ST[r.status].l}</span></div>
-            <dl className="dl" style={{ margin: 0 }}>
-              <dt>Desde</dt><dd>{shD(r.date)} · {r.start}</dd>
-              <dt>Hasta</dt><dd>{shD(r.endDate)} · {r.end}
-                {active && <select className="sel" aria-label={`Extender la reserva ${r.code}`} value="" disabled={busy} style={{ marginTop: 6 }}
-                  onChange={ev => ev.target.value && extend(ends[Number(ev.target.value)]!)}>
-                  <option value="">Extender…</option>
-                  {ends.map((d, i) => <option key={i} value={i}>Hasta las {hhmm(d)}{d.toDateString() !== r.endAt.toDateString() ? ` del ${shD(isoD(d))}` : ''}</option>)}
-                </select>}</dd>
-              <dt>Vehículo</dt><dd>{r.vtype ? `${r.vtype} · ` : ''}{r.plate}</dd>
-              <dt>Plaza</dt><dd>{active
-                ? <select className="sel" aria-label={`Plaza de la reserva ${r.code}`} value={r.spaceId} disabled={busy || spaces === null}
-                  onChange={ev => ev.target.value !== r.spaceId && moveTo(ev.target.value)}>
-                  <option value={r.spaceId}>{r.space} (actual)</option>
-                  {(spaces ?? []).map(s => <option key={s.id} value={s.id}>{s.spaceCode}</option>)}
-                </select>
-                : r.space}</dd>
-              <dt>Registrada por</dt><dd>{r.staff || '—'}</dd>
-              {!active && r.services.length > 0 && <><dt>Servicios</dt><dd>{r.services.map(s => `${s.name} (${money(s.price)})`).join(', ')}</dd></>}
-            </dl>
-            {active && options.length > 0 && <>
-              <p className="ctx" style={{ margin: '12px 0 6px' }}>Servicios</p>
-              <div className="optlist" role="group" aria-label={`Servicios de la reserva ${r.code}`}>
-                {options.map(s => {
-                  const checked = r.services.some(x => x.id === s.id);
-                  return (
-                    <button key={s.id} type="button" role="checkbox" aria-checked={checked} className="opt" disabled={busy} onClick={() => toggleService(s)}>
-                      <span className="grow">{s.name}</span><span className="tag">+{money(s.price)}</span>
-                      {checked && <Check className="i" aria-hidden="true" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </>}
-            {overdue(r) && <p className="ctx" style={{ margin: '8px 0 0' }}>Se pasó de hora: reservó hasta las {r.end} del {shD(r.endDate)}. Al registrar la salida se cobran las horas extra.</p>}
-            {active && spaces?.length === 0 && <p className="ctx" style={{ margin: '8px 0 0' }}>No hay otra plaza libre para este vehículo en ese horario.</p>}
-            {r.status === 'CONFIRMADA' && early && <p className="ctx" style={{ margin: '8px 0 0' }}>El ingreso se registra desde las {r.start} del {shD(r.date)}.</p>}
-          </div>
-          <div className="fs"><div className="fh"><h3>Importe</h3>{r.invoice && <span className={`st ${toPay ? 'warn' : 'ok'}`}>{toPay ? 'Por cobrar' : 'Cobrada'}</span>}</div>
-            {r.amount != null
-              ? <dl className="dl" style={{ margin: 0 }}>
-                {r.bill && billLines(r.bill, r.services).map(([l, v]) => <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{money(v)}</dd></div>)}
-                <dt><b>Total</b></dt><dd><b>{money(r.amount)}</b></dd>
-              </dl>
-              : <p className="ctx" style={{ margin: 0 }}>Se calcula al registrar la salida: horas reservadas, más las extra si se quedó más tiempo, más los servicios.</p>}
-            {toPay && <>
-              <p className="ctx" style={{ margin: '12px 0 6px' }}>Medio de pago</p>
-              <div className="seg" role="group" aria-label="Medio de pago">
-                {METHODS.map(([k, l]) => <button type="button" key={k} aria-pressed={method === k} onClick={() => setMethod(k)}>{l}</button>)}
-              </div>
-            </>}
-          </div>
-        </div>
-      </Drawer>
-      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body={`${r.client.n} pierde la plaza ${r.space} reservada.`} ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)} /></Presence>
-    </>
+    <div className="e-row" role="row">
+      <div role="cell"><span className="e-pl">{r.plate}</span><div className="e-sub">{[r.code, r.bm, r.client.n].filter(Boolean).join(' · ')}</div></div>
+      <div role="cell"><b>Plaza {r.space} · {r.start} – {hhmm(reservedEnd(r))}{r.endDate !== r.date ? ` (${shD(r.endDate)})` : ''}</b><div className="e-sub" title={io}>{io || '—'}</div></div>
+      <span role="cell" className={`st ${st.c}`}>{st.l}</span>
+      <div role="cell" className="e-acts">
+        {p ? <button type="button" className="btn sm pri" aria-label={`${p.label} ${r.plate}`} disabled={busy || p.disabled}
+          onClick={() => p.key === 'pay' ? onOpen() : run(p.call!, p.ok!)}>{p.label}</button> : <span />}
+        <button type="button" className="btn sm" aria-label={`Gestionar la reserva ${r.code}`} onClick={onOpen}>Gestionar</button>
+      </div>
+    </div>
   );
 }
