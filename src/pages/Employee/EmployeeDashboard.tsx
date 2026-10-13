@@ -13,7 +13,6 @@ import ResDrawer from './ResDrawer';
 import SummaryDrawer from './SummaryDrawer';
 import WalkInDrawer from './WalkInDrawer';
 import { hhmm, list, normERes, overdue, person, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes, type Status } from './employee.lib';
-import '../../styles/employee.scss';
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 const POLL_MS = 30_000;
@@ -54,7 +53,7 @@ export default function EmployeeDashboard() {
   }, [refresh]);
 
   return (
-    <OwnerShell theme="emp">
+    <OwnerShell>
       <PanelBar home="/employee" role="Empleado" onRefresh={refresh} />
       <main className="e-wrap">
         {status === 'error' ? <ErrorBox what="las reservas" onRetry={refresh} />

@@ -21,7 +21,13 @@
     "src/components/Owner/ui/Menu.tsx",
     "src/components/Owner/ui/PanelBar.tsx",
     "src/styles/ui.scss",
-    "src/styles/home.scss"
+    "src/styles/home.scss",
+    "src/pages/Employee/EmployeeDashboard.tsx",
+    "src/pages/Employee/ResDrawer.tsx",
+    "src/pages/Employee/WalkInDrawer.tsx",
+    "src/pages/Employee/SummaryDrawer.tsx",
+    "src/pages/Employee/CalendarDrawer.tsx",
+    "src/styles/base.scss"
   ],
   "forbiddenRoutes": [
     "/profile"

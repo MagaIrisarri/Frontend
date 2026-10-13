@@ -29,7 +29,7 @@ for (const rel of manifest.files) {
   const rules = rel.endsWith('.scss') ? SCSS_RULES : TSX_RULES;
   readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
     const code = rel.endsWith('.scss') ? line.replace(/\/\*.*?\*\//g, '') : line.replace(/\/\/.*$/, '');
-    if (rel.endsWith('.scss') && /^\s*(--[a-z0-9-]+:|\.light\b.*--)/.test(code) && rel.endsWith('owner.scss')) return;
+    if (rel.endsWith('.scss') && /^\s*(--[a-z0-9-]+:|\.light\b.*--)/.test(code) && rel.endsWith('base.scss')) return;
     for (const [re, why] of rules) if (re.test(code)) errors.push(`${rel}:${i + 1}: ${why}\n    ${line.trim().slice(0, 140)}`);
   });
 }

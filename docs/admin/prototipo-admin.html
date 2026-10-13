@@ -152,7 +152,7 @@ button,input,select{font:inherit;color:inherit}button{cursor:pointer}
 <script>
 /* Prototipo del rol administrador. HTML único con datos de ejemplo en memoria: nada se guarda al recargar.
    Las clases (.panel .tbl .seg .st .drawer .dbody .dfoot .fs .fh .btn .icon-btn .inp .sel .field) son las del sistema
-   de interfaz (owner.scss / ui.scss); lo nuevo está marcado en docs (Marcas: .split .side .main .bi .gh .mr). */
+   de interfaz (base.scss / ui.scss); lo nuevo está marcado en docs (Marcas: .split .side .main .bi .gh .mr). */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');

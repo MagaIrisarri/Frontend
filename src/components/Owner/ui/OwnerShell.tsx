@@ -1,11 +1,11 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { ToastProvider } from './Toasts';
-import '../../../styles/owner.scss';
+import '../../../styles/base.scss';
 import '../../../styles/ui.scss';
 
 // Raíz del rol dueño: aplica los estilos con alcance .owner, avisos y el tooltip de [data-tip] del prototipo.
 // bare: sin fondo ni alto mínimo, para capas que se montan sobre otras pantallas (p. ej. Mi perfil en Home).
-export default function OwnerShell({ children, bare, theme }: { children: ReactNode; bare?: boolean; theme?: string }) { // theme: clase extra con otros tokens (p. ej. 'emp', la terminal del empleado)
+export default function OwnerShell({ children, bare }: { children: ReactNode; bare?: boolean }) {
   const tip = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function OwnerShell({ children, bare, theme }: { children: ReactN
   }, []);
 
   return (
-    <div className={['owner', bare && 'bare', theme].filter(Boolean).join(' ')}>
+    <div className={['owner', bare && 'bare'].filter(Boolean).join(' ')}>
       <ToastProvider>{children}</ToastProvider>
       <div className="tip" ref={tip} aria-hidden="true" />
     </div>

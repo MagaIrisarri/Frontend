@@ -104,7 +104,7 @@ function WalkIn({ parking, userId, onChange, onClose }: WalkInProps) {
 
         {plateSt === 'ok' && <>
           <section className="fs"><div className="fh"><h3>Vehículo</h3></div>
-            <div className="e-two">
+            <div className="grid2">
               <Field label="Marca" error={err.brandId}>{(id, aria) => <select className="sel" id={id} {...aria} value={v.brandId} onChange={e => { setV(x => ({ ...x, brandId: e.target.value, modelId: '' })); setErr(x => ({ ...x, brandId: '' })); }}>
                 <option value="">Elegir…</option>{brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>}</Field>
               <Field label="Modelo" error={err.modelId}>{(id, aria) => <select className="sel" id={id} {...aria} value={v.modelId} disabled={!v.brandId} onChange={set('modelId')}>
@@ -115,8 +115,8 @@ function WalkIn({ parking, userId, onChange, onClose }: WalkInProps) {
           </section>
 
           <section className="fs"><div className="fh"><h3>Cliente</h3></div>
-            <div className="e-two"><Input label="Nombre" value={v.name} onChange={set('name')} error={err.name} /><Input label="Apellido" value={v.last_name} onChange={set('last_name')} error={err.last_name} /></div>
-            <div className="e-two"><Input label="DNI" placeholder="Sin puntos" inputMode="numeric" maxLength={8} value={v.dni} onChange={set('dni')} error={err.dni} />
+            <div className="grid2"><Input label="Nombre" value={v.name} onChange={set('name')} error={err.name} /><Input label="Apellido" value={v.last_name} onChange={set('last_name')} error={err.last_name} /></div>
+            <div className="grid2"><Input label="DNI" placeholder="Sin puntos" inputMode="numeric" maxLength={8} value={v.dni} onChange={set('dni')} error={err.dni} />
               <Input label="Teléfono (opcional)" type="tel" placeholder="3415550123" value={v.phone} onChange={set('phone')} error={err.phone} /></div>
             <Input label="Email" type="email" autoComplete="off" value={v.email} onChange={set('email')} error={err.email}
               hint="Si no tiene cuenta se crea con su DNI como contraseña y la cambia al entrar." />

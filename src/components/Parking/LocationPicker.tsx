@@ -7,7 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Field, Input } from '../Owner/ui/Field';
 import { PROVINCES, nearArea, reverseGeocode, searchAddress, searchLocalities, type GeoArea, type GeoPlace } from '../../services/geocoding';
 import { norm } from '../../utils/search';
-import '../../styles/owner.scss';
+import '../../styles/base.scss';
 import '../../styles/ui.scss';
 
 // Todo lo que describe dónde está una cochera. El selector lo muestra y lo edita; el formulario lo guarda.

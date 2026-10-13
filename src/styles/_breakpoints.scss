@@ -1,0 +1,3 @@
+// Los tres cortes de toda la app (SM, MD y LG, requisito de la cátedra). Ningún .scss escribe otro ancho en una media query.
+$sm: 720px;  // SM: teléfono, hasta 720 px
+$md: 1000px; // MD: tablet, hasta 1000 px; más ancho es LG (escritorio)

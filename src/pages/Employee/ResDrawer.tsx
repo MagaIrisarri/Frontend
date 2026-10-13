@@ -115,7 +115,7 @@ export default function ResDrawer({ r, parking, userId, onChange, onClose }: { r
               {r.status === 'FINALIZADA' && r.outAt && <><dt>Salida real</dt><dd>{hhmm(r.outAt)}{r.bill?.extraHours ? ` · ${plural(r.bill.extraHours, 'hora extra', 'horas extra')}` : ''}</dd></>}
               <dt>Registrada por</dt><dd>{r.staff || '—'}</dd>
             </dl>
-            {active && <div className="e-two">
+            {active && <div className="grid2">
               <Field label="Extender">{(id, aria) => <select className="sel" id={id} {...aria} aria-label={`Extender la reserva ${r.code}`} value="" disabled={busy}
                 onChange={ev => ev.target.value && extend(ends[Number(ev.target.value)]!)}>
                 <option value="">Elegir…</option>
@@ -155,7 +155,7 @@ export default function ResDrawer({ r, parking, userId, onChange, onClose }: { r
           </section>}
 
           {due && <section className="fs"><div className="fh"><h3>Cobro</h3></div>
-            <div className="e-two">
+            <div className="grid2">
               <Field label="Medio de pago">{(id, aria) => <select className="sel" id={id} {...aria} value={method} onChange={e => { setMethod(e.target.value); setReceived(''); setReceipt(''); }}>
                 {METHODS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}</Field>
               {cash

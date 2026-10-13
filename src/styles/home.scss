@@ -1,5 +1,6 @@
 // Solo lo propio de Home: superficies flotantes sobre el mapa, barra superior, panel de cocheras y pines.
-// Lo genérico (listas, tarjetas, panel lateral, 44 px en móvil) vive en ui.scss. Todo bajo .owner.
+// Lo genérico (listas, tarjetas, panel lateral) vive en ui.scss; los 44 px, en base.scss. Todo bajo .owner.
+@use 'breakpoints' as *;
 .owner{
 
 .home{background:var(--bg)}
@@ -58,7 +59,7 @@
 .pin{background:var(--surface);color:var(--tx);box-shadow:0 0 0 1px var(--line),0 4px 12px rgba(0,0,0,.25)}
 .pin:hover{transform:scale(1.05)}
 .pin.na{background:var(--raised);color:var(--tx3)}
-.pin.sel{background:var(--ac);color:#fff;transform:scale(1.05);box-shadow:0 0 0 4px var(--ac-soft),var(--shadow)}
+.pin.sel{background:var(--ac);color:var(--on-ac);transform:scale(1.05);box-shadow:0 0 0 4px var(--ac-soft),var(--shadow)}
 .pin.sel.na{background:var(--hover);color:var(--tx2)}
 .pin small{font-size:11px;font-weight:500;opacity:.8}
 .cluster{background:var(--tx);color:var(--bg);cursor:pointer;box-shadow:var(--shadow)}
@@ -77,20 +78,20 @@
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.maplibregl-ctrl-attrib{background:var(--surface)!important;-webkit-backdrop-filter:none;backdrop-filter:none}}
 .maplibregl-canvas-container{isolation:isolate} /* los pines (z-index 10–30) se apilan entre sí, pero nunca por encima de los controles del mapa */
 .maplibregl-ctrl-bottom-right{transition:right .25s cubic-bezier(.3,.9,.3,1),bottom .25s cubic-bezier(.3,.9,.3,1)}
-@media(min-width:721px){.home:has(.hpanel:not(.out)) .maplibregl-ctrl-bottom-right{right:400px}} /* los controles no quedan tapados por el panel de cocheras */
-@media(max-width:720px){.home:has(.hpanel:not(.out)) .maplibregl-ctrl-bottom-right{bottom:80px}} /* sobre la hoja asomada */
+@media(min-width:$sm + 1){.home:has(.hpanel:not(.out)) .maplibregl-ctrl-bottom-right{right:400px}} /* los controles no quedan tapados por el panel de cocheras */
+@media(max-width:$sm){.home:has(.hpanel:not(.out)) .maplibregl-ctrl-bottom-right{bottom:80px}} /* sobre la hoja asomada */
 .maplibregl-ctrl-group button+button{border-top:1px solid var(--soft)!important}
 .dark & .maplibregl-ctrl-group .maplibregl-ctrl-icon{filter:invert(1)}
 
 /* ───── Móvil y escritorio ───── */
-@media(max-width:720px){
+@media(max-width:$sm){
   .hpanel::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0;flex:none}
   .htop{top:12px;left:12px;right:12px;gap:8px;flex-wrap:wrap}
   .htop .hcenter{order:3;flex-basis:100%;max-width:none}
   .areabtn{top:calc(12px + var(--ctl)*2 + 8px + 12px)} /* la barra ocupa dos filas (botones y buscador): el botón va debajo de ambas */
   .htop .lbl-d{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)} /* solo ícono, el nombre accesible se conserva */
 }
-@media(min-width:721px){
+@media(min-width:$sm + 1){
   .hpanel{left:auto;top:72px;right:16px;bottom:24px;height:auto;width:384px;border-radius:var(--r-lg)}
 }
 

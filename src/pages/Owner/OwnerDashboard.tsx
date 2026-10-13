@@ -113,7 +113,7 @@ export default function OwnerDashboard() {
     </Empty>);
   else body = (
     <div className="panel tw"><table className="tbl br">
-      <colgroup><col /><col style={{ width: 176 }} /><col style={{ width: '24%' }} /><col style={{ width: 158 }} /><col style={{ width: 152 }} /></colgroup>
+      <colgroup><col /><col style={{ width: 176 }} /><col style={{ width: '24%' }} /><col style={{ width: 176 }} /><col style={{ width: 152 }} /></colgroup>
       <thead><tr><th>Sucursal</th><th>Plazas</th><th>Ocupación en vivo</th><th>Estado</th><th><span className="sr">Acciones</span></th></tr></thead>
       <tbody>{list.map(p => {
         const n = pct(p), o = oc(p), t = tot(p);
