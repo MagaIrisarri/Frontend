@@ -84,6 +84,7 @@ function WalkIn({ parking, userId, onChange, onClose }: WalkInProps) {
       await onChange();
       const space = res?.data?.parkingSpace?.spaceCode;
       toast(`Ingreso de ${plate} registrado${space ? ` en la plaza ${space}` : ''}.`);
+      if (res?.accountCreated) toast(`Se creó la cuenta de ${v.email.trim()}; su contraseña inicial es su DNI.`, 'info');
       onClose();
     } catch (x) { toast(apiError(x, 'No se pudo registrar el ingreso.'), 'err'); }
     setBusy(false);
