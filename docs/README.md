@@ -1,0 +1,32 @@
+# Documentación — Estacionamiento COM 301 (Frontend)
+
+## Propuesta
+
+[proposal.md](https://github.com/MagaIrisarri/TPDSW/blob/main/proposal.md)
+
+## Pull requests
+
+| Entrega | Backend | Frontend |
+|---|---|---|
+| Regularidad | https://github.com/MagaIrisarri/Backend/pulls | https://github.com/MagaIrisarri/Frontend/pulls |
+
+## Instalación y ejecución
+
+- Frontend: [README](../README.md#instalación)
+- Backend: [README](https://github.com/MagaIrisarri/Backend#instalación)
+
+## Minutas y seguimiento
+
+Están en la documentación del backend: [docs/README.md](https://github.com/MagaIrisarri/Backend/blob/main/docs/README.md#minutas-de-reunión-y-avance).
+
+## Alcance
+
+- [revision-alcance.md](revision-alcance.md): cada requisito de la propuesta y el código que lo cumple.
+
+## Notas por rol
+
+| Rol | Notas de diseño y reglas | Prototipo |
+|---|---|---|
+| Dueño | [owner-turnos-notas.md](owner/owner-turnos-notas.md): reglas de negocio (R-), limitaciones (L-) y decisiones (D-) | [prototipo-owner.html](owner/prototipo-owner.html) |
+| Empleado | [diseno-empleado-mostrador.md](employee/diseno-empleado-mostrador.md) | [mostrador-servicio-cocheras.html](employee/mostrador-servicio-cocheras.html) |
+| Administrador | [admin-permisos-notas.md](admin/admin-permisos-notas.md) | [prototipo-admin.html](admin/prototipo-admin.html) |
