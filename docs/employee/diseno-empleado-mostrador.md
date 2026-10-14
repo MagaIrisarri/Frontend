@@ -1,6 +1,6 @@
 # Terminal del empleado: diseño y cliente sin cuenta (actualizado 12/10/2026)
 
-Base: ramas prueba-valen-fr (1ed8c11) y prueba-valen-bk (59cd593). Prototipo: artifact "Mostrador ServicioCocheras" (v38). Este documento es la referencia para implementar la maqueta.
+Base: ramas prueba-valen-fr (1ed8c11) y prueba-valen-bk (59cd593). La maqueta (artifact "Mostrador ServicioCocheras", v38) se retiró del repo; este documento conserva sus decisiones.
 
 ## Lo que ya hace el empleado (código)
 Registrar ingreso/salida, cobrar (solo medio de pago), cambiar plaza (R-15), extender de a horas (R-23), agregar/quitar servicios (R-24), cancelar. Todo en `EmployeeDashboard.tsx`.

@@ -94,7 +94,7 @@ export function App() {
         {/* =========================================================
             RUTAS DE DUEÑO (DUEÑO)
            ========================================================= */}
-        {/* Panel del dueño (owner-design/owner.html): una sola raíz con navegación propia */}
+        {/* Panel del dueño: una sola raíz con navegación propia */}
         <Route
           path="/owner"
           element={

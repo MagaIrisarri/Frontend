@@ -2,14 +2,14 @@
 
 Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Frontend separados), con el estado de cada punto. Es parte del arnés: los `CLAUDE.md` de los dos repos apuntan acá.
 
-- **Revisado el 2026-10-13** leyendo el código (no se corrieron pruebas): Backend `dc461d8` (`prueba-valen-bk`), Frontend `8329c04` (`prueba-valen-fr`), y `main` (Backend) y `master` (Frontend) en GitHub.
+- **Revisado el 2026-10-14** leyendo el código y los commits (solo se corrieron las pruebas del Backend afectadas por D-10): Backend `aa56d66` (`prueba-valen-bk`), Frontend `66e80c5` (`prueba-valen-fr`), y `main` (Backend, `1d95828`) y `master` (Frontend, `b8383d4`) en GitHub. Ninguna rama de trabajo está mergeada todavía.
 - **No repite** [revision-alcance.md](revision-alcance.md), que tiene cada CRUD, listado y CUU del proposal con su evidencia. Acá van los requisitos técnicos, las reglas de la FAQ, las entregas, la documentación, la gestión y la guía de estilo.
 - Al cerrar una fila, se actualiza su estado con el hash del commit, como en las notas del dueño.
 
 ## Resumen
 
-- **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo ya están, sin commit). Lo funcional cumple (revision-alcance.md), con un riesgo de la FAQ: el detalle de reservas no pide datos al backend. Para la entrega faltan las minutas, los links a los PR y el merge a `main` y `master`.
-- **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, sin commit). Faltan los tests versionados con su evidencia (4 del backend más uno de integración; uno de componente y uno e2e del frontend), la documentación de la API, el deploy y el video.
+- **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), con un riesgo de la FAQ: el detalle de reservas no pide datos al backend. Para la entrega faltan las minutas, los links a los PR y el merge a `main` y `master`.
+- **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, Backend `a183668`, Frontend `82162df`). Faltan los tests versionados con su evidencia (4 del backend más uno de integración; uno de componente y uno e2e del frontend), la documentación de la API, el deploy y el video.
 
 ## Fuentes
 
@@ -50,10 +50,10 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Reg. | Capas | Cumple | Route → Controller → Service → Repository en cada módulo | — |
 | Reg. | Validar entradas e informar errores por la API | Cumple | zod con `validateSchema`; `AppError` y `errorHandler` (409 por datos únicos, 500 sin stack en producción) | — |
 | Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple, con matiz | `package.json` y `pnpm-lock.yaml`; `tsx` corre las pruebas | Falta un script `test` |
-| Apr. | 1 test automatizado por integrante (4) | No cumple en el repo | 10 pruebas en `src/**/*.test.ts`, locales y sin versionar por convención (`CLAUDE.md`) | La cátedra no las ve ni puede atribuirlas. Versionarlas con un script `test`, y que cada integrante escriba al menos una |
+| Apr. | 1 test automatizado por integrante (4) | No cumple en el repo | 13 pruebas en `src/**/*.test.ts`, locales y sin versionar por convención (`CLAUDE.md`) | La cátedra no las ve ni puede atribuirlas. Versionarlas con un script `test`, y que cada integrante escriba al menos una |
 | Apr. | 1 test de integración | No cumple en el repo | Las `*.db.test.ts` corren contra MySQL (p. ej. `Reservation.db.test.ts`) | Versionar al menos una |
-| Apr. | Login con autenticación propia o de terceros, con 2 niveles de acceso o más | Cumple (sin commit) | `POST /api/users/login` verifica la contraseña (argon2) y devuelve un JWT firmado con `JWT_SECRET`, vigente 8 h (`signToken` en `src/Shared/middlewares/auth.ts`). 4 roles. El frontend lo manda en `Authorization: Bearer` desde una sola instancia de axios (`src/services/api.ts`) | — |
-| Apr. | Proteger las rutas según el nivel de acceso | Cumple (sin commit) | `auth(...roles)` en cada ruta protegida: 401 sin token o con uno inválido o de un usuario dado de baja, 403 con otro rol. `self(campo)` exige que el id del propio usuario en la ruta o el body sea el del token, salvo el administrador. Pertenencia (L-37): `ownParking`, `ownVehicle`, `ownReservation` y `staffOfInvoice` exigen que la cochera, el vehículo, la reserva o la factura sean del usuario. Públicas: registro, login y las lecturas del mapa. Lo prueban `src/Shared/middlewares/auth.db.test.ts` (token vencido, adulterado y de un usuario dado de baja) y `e2e/audit.api.spec.ts` (test 26), las dos locales | — |
+| Apr. | Login con autenticación propia o de terceros, con 2 niveles de acceso o más | Cumple (Backend `a183668`, Frontend `82162df`) | `POST /api/users/login` verifica la contraseña (argon2) y devuelve un JWT firmado con `JWT_SECRET`, vigente 8 h (`signToken` en `src/Shared/middlewares/auth.ts`). 4 roles. El frontend lo manda en `Authorization: Bearer` desde una sola instancia de axios (`src/services/api.ts`) | — |
+| Apr. | Proteger las rutas según el nivel de acceso | Cumple (Backend `a183668`, Frontend `82162df`) | `auth(...roles)` en cada ruta protegida: 401 sin token o con uno inválido o de un usuario dado de baja, 403 con otro rol. `self(campo)` exige que el id del propio usuario en la ruta o el body sea el del token, salvo el administrador. Pertenencia (L-37): `ownParking`, `ownVehicle`, `ownReservation` y `staffOfInvoice` exigen que la cochera, el vehículo, la reserva o la factura sean del usuario. Públicas: registro, login y las lecturas del mapa. Lo prueban `src/Shared/middlewares/auth.db.test.ts` (token vencido, adulterado y de un usuario dado de baja) y `e2e/audit.api.spec.ts` (test 26), las dos locales | — |
 | Apr. | Ambientes (environment del framework o `.env`) | Cumple, con matiz | Variables de entorno con valores por defecto y `NODE_ENV`, documentadas en el README de `main` | No hay `.env.example` ni se carga un `.env` (Node 22 lo trae con `--env-file`) |
 
 ## Requisitos técnicos — Frontend (3.1.2)
@@ -63,7 +63,7 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Reg. | Framework de frontend | Cumple | React 19 con Vite | — |
 | Reg. | HTML5 | Cumple | — | — |
 | Reg. | CSS según una biblioteca, guía o framework | Cumple | SCSS con un solo sistema de interfaz, y Tailwind solo para layout ([CLAUDE.md](../CLAUDE.md)) | — |
-| Reg. | Mobile-first | Cumple (sin commit) | Los estilos base son los del teléfono y MD/LG se agregan con `min-width` ([_breakpoints.scss](../src/styles/_breakpoints.scss), `base.scss`, `ui.scss`, `home.scss` e `index.css`). `check-standard` rechaza `max-width` en una media query. Se comparó el estilo calculado de 35 pantallas en 7 anchos y en táctil, antes y después: no cambia nada visible, salvo la fila de total del resumen mensual, que en escritorio quedaba apretada en la primera columna (choque con `.tot` de `ui.scss`) y ahora es una fila de tabla | — |
+| Reg. | Mobile-first | Cumple (Frontend `82162df`) | Los estilos base son los del teléfono y MD/LG se agregan con `min-width` ([_breakpoints.scss](../src/styles/_breakpoints.scss), `base.scss`, `ui.scss`, `home.scss` e `index.css`). `check-standard` rechaza `max-width` en una media query. Se comparó el estilo calculado de 35 pantallas en 7 anchos y en táctil, antes y después: no cambia nada visible, salvo la fila de total del resumen mensual, que en escritorio quedaba apretada en la primera columna (choque con `.tot` de `ui.scss`) y ahora es una fila de tabla | — |
 | Reg. | 3 cortes: SM, MD y LG | Cumple | `src/styles/_breakpoints.scss` (720 y 1000 px) | — |
 | Reg. | UX/UI que no requiera manual | Cumple | Reglas de interfaz en `CLAUDE.md`; se juzga en la defensa | — |
 | Reg. | Eventos, errores amigables, reactividad, input y output property | Cumple | Por ejemplo, `LocationPicker` recibe un `PlaceValue` (input) y devuelve `onChange` (output); los errores se muestran con `useToast` y `ErrorBox` | — |
@@ -72,7 +72,7 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Reg. | Patrón de diseño OO, si es posible | Sin relevar | — | Es opcional |
 | Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple, con matiz | `package.json` | Playwright está instalado pero no figura en `package.json`: un clon nuevo no puede correr las e2e |
 | Apr. | 1 test unitario de un componente | No cumple | Solo está `tests/owner.lib.test.ts`, que prueba lógica, no un componente, y no está versionado | Un test de componente versionado, con su dependencia en `package.json` |
-| Apr. | 1 test end-to-end | No cumple en el repo | 14 specs de Playwright en `e2e/`, excluidas por `.gitignore` | Versionar al menos una, con `playwright.config.ts` |
+| Apr. | 1 test end-to-end | No cumple en el repo | 17 specs de Playwright en `e2e/` (más `mockApi.ts`), excluidas por `.gitignore` | Versionar al menos una, con `playwright.config.ts` |
 | Apr. | Login y acceso según el nivel de usuario | Cumple | `ProtectedRoute allowedRoles` en [App.tsx](../src/App.tsx): CLIENTE, DUEÑO, EMPLEADO y ADMINISTRADOR | Protege la navegación; el backend controla lo mismo en cada ruta (ver la tabla anterior) |
 | Apr. | Ambientes | Cumple, con matiz | `.env` con `VITE_API_URL` y `VITE_MAPTILER_API_KEY` | El `.env` está versionado (en `master` y en esta rama) aunque `.gitignore` lo excluye, y no hay `.env.example`. La key de MapTiler es de navegador: conviene restringirla por dominio |
 
@@ -83,8 +83,8 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 | Regla | Estado | Evidencia | Qué falta |
 |---|---|---|---|
 | El detalle de un listado pide datos al backend y muestra al menos 2 clases de negocio, o lleva al CRUD | Parcial | Estacionamientos: [ParkingSpaceMap.tsx](../src/pages/ParkingSpace/ParkingSpaceMap.tsx) pide la cochera, las plazas y la disponibilidad. Reservas por fecha: el panel de [OwnerReservations.tsx](../src/pages/Owner/OwnerReservations.tsx) muestra lo que ya trajo el listado y no hace un pedido propio | Que el detalle de la reserva pida `GET /api/reservations/:id`, que ya existe |
-| Los CRUD mínimos se usan desde la app (front y back) | Cumple (sin commit) | TipoVehículo, CRUD simple de regularidad, tiene pantalla en el panel del administrador: [AdminVehicleTypes.tsx](../src/pages/Admin/AdminVehicleTypes.tsx) (`/admin/vehicle-types`, RA-11 en [admin-permisos-notas.md](admin/admin-permisos-notas.md)) | — |
-| Al menos 2 CUU relacionados | Cumple | Reservar → registrar el ingreso (check-in) → registrar el uso de servicios → facturar: cada uno usa lo que registró el anterior | — |
+| Los CRUD mínimos se usan desde la app (front y back) | Cumple (Frontend `82162df`) | TipoVehículo, CRUD simple de regularidad, tiene pantalla en el panel del administrador: [AdminVehicleTypes.tsx](../src/pages/Admin/AdminVehicleTypes.tsx) (`/admin/vehicle-types`, RA-11 en [admin-permisos-notas.md](admin/admin-permisos-notas.md)) | — |
+| Al menos 2 CUU relacionados | Cumple | Reservar → registrar el ingreso (check-in) → registrar el uso de servicios → facturar: cada uno usa lo que registró el anterior. Sin confirmación de reservas desde D-10 (Backend `aa56d66`, Frontend `66e80c5`): el proposal todavía nombra "Registrar confirmación de reserva" y hay que cambiarlo por "Registrar check-in" | — |
 
 ## Entregas y documentación (3.3, 3.4 y docs.md)
 
@@ -111,7 +111,7 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 
 ## Gestión y evaluación (4 y 5)
 
-- **Gestión** (la cátedra la marca "en revisión"): pide declarar una metodología ágil (Scrum, XP u otra), minutas y seguimiento de features y bugs. La herramienta es libre si se enlaza. Hoy se usan Notion y ramas por feature con PR ([`docs/README.md` del Backend](https://github.com/MagaIrisarri/Backend/blob/main/docs/README.md)). Faltan nombrar la metodología y cargar las minutas.
+- **Gestión** (la cátedra la marca "en revisión"): pide declarar una metodología ágil (Scrum, XP u otra), minutas y seguimiento de features y bugs. La herramienta es libre si se enlaza. Hoy se usan Notion y ramas por feature con PR ([`docs/README.md` del Backend](https://github.com/MagaIrisarri/Backend/blob/main/docs/README.md)). Faltan cargar las minutas. La metodología quedó nombrada (Kanban) en el `docs/README.md` del Backend, pendiente de que el grupo la confirme.
 - **Evaluación:** se miran los requisitos de la etapa, UX/UI y buenas prácticas, el uso apropiado de la tecnología, la documentación, **la participación de cada integrante**, **el uso de git**, la defensa oral, la gestión y la innovación.
 
 ## Guía de estilo (Airbnb, sugerida)

@@ -26,8 +26,8 @@ Están en la documentación del backend: [docs/README.md](https://github.com/Mag
 
 ## Notas por rol
 
-| Rol | Notas de diseño y reglas | Prototipo |
-|---|---|---|
-| Dueño | [owner-turnos-notas.md](owner/owner-turnos-notas.md): reglas de negocio (R-), limitaciones (L-) y decisiones (D-) | [prototipo-owner.html](owner/prototipo-owner.html) |
-| Empleado | [diseno-empleado-mostrador.md](employee/diseno-empleado-mostrador.md) | [mostrador-servicio-cocheras.html](employee/mostrador-servicio-cocheras.html) |
-| Administrador | [admin-permisos-notas.md](admin/admin-permisos-notas.md) | [prototipo-admin.html](admin/prototipo-admin.html) |
+| Rol | Notas de diseño y reglas |
+|---|---|
+| Dueño | [owner-turnos-notas.md](owner/owner-turnos-notas.md): reglas de negocio (R-), limitaciones (L-) y decisiones (D-) |
+| Empleado | [diseno-empleado-mostrador.md](employee/diseno-empleado-mostrador.md) |
+| Administrador | [admin-permisos-notas.md](admin/admin-permisos-notas.md) |

@@ -20,7 +20,7 @@ type Key = 'car' | 'moto' | 'truck';
 
 const hm = (t?: string) => (t ?? '').slice(0, 5);
 
-// Alta y edición de sucursal en un panel lateral (owner-design/owner.html › openParkingForm).
+// Alta y edición de sucursal en un panel lateral.
 // `parking`: la sucursal a editar, 'new' para el alta o null con el panel cerrado (el cierre se anima).
 export default function ParkingDrawer({ parking, onClose }: { parking: Parking | 'new' | null; onClose: () => void }) {
   return <Shown when={parking}>{p => <ParkingForm parking={p === 'new' ? null : p} onClose={onClose} />}</Shown>;

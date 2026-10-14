@@ -1,5 +1,5 @@
 // Base del sistema de interfaz de toda la app (dueño, cliente, Home, administrador y empleado): tokens, controles, tablas y capas.
-// Nació del prototipo del dueño (docs/owner/prototipo-owner.html). Todo queda bajo .owner para no tocar el resto de la app.
+// Nació de un prototipo HTML del dueño (retirado del repo). Todo queda bajo .owner para no tocar el resto de la app.
 // El tema sale de la clase .light/.dark que ThemeContext pone en <html>.
 // Paleta de alto contraste (la de la terminal del empleado, legible a pleno sol): bordes de campo y anillos visibles.
 @use 'breakpoints' as *;

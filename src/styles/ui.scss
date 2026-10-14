@@ -1,4 +1,4 @@
-// Componentes compartidos del sistema de diseño, más allá del prototipo del dueño: filas/tarjetas de lista, panel lateral con navegación,
+// Componentes compartidos del sistema de diseño, más allá de base.scss: filas/tarjetas de lista, panel lateral con navegación,
 // objetivos táctiles de 44 px en móvil. Los usa cualquier pantalla dentro de <OwnerShell>; no se crean estilos por pantalla.
 // Va después de base.scss (que importa OwnerShell) y todo queda bajo .owner.
 @use 'breakpoints' as *;
@@ -217,7 +217,7 @@
 .pager{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 4px 0;border-top:1px solid var(--soft)}
 .pgbtns{display:flex;gap:4px}
 
-/* ───── Terminal del empleado (pages/Employee, maqueta v38 en docs/employee/) ─────
+/* ───── Terminal del empleado (pages/Employee) ─────
    Disposición propia de la terminal de mostrador; prefijo e- para no chocar con las clases del dueño (.occ, .tag, .bar, .sum). */
 
 /* ───── Cabecera, ocupación y herramientas ───── */

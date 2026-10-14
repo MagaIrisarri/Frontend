@@ -13,7 +13,7 @@ const IVA = ['Responsable Inscripto', 'Monotributo', 'Exento'];
 // shortcut: proposal, datos fiscales y preferencias de aviso se guardan en el navegador (el backend no los tiene) y las preferencias no filtran los avisos de /api/notifications, pasarlos al usuario en el servidor
 const store = <T,>(key: string, fallback: T): T => { try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || '{}') }; } catch { return fallback; } };
 
-// "Mi perfil" en panel lateral (owner-design/owner.html › openMe). Reemplaza a la página /profile; lo abre cualquier rol.
+// "Mi perfil" en panel lateral. Reemplaza a la página /profile; lo abre cualquier rol.
 export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
   const me = useAuthStore(s => s.user) ?? {};
   const setUser = useAuthStore(s => s.setUser);
