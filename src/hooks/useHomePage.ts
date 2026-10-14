@@ -6,7 +6,7 @@ import type { Parking } from '../types/parking.types';
 import type { MapFilters, VehicleFilterType } from '../types/mapFilters.types';
 import { DEFAULT_MAP_FILTERS } from '../types/mapFilters.types';
 import { useAuthStore } from '../stores/authStore';
-import { getParkingMinPrice, getParkingPriceForCategory } from '../utils/parkingPriceUtils';
+import { getParkingMinPrice, getParkingPriceForType } from '../utils/parkingPriceUtils';
 import { localityKey, matchesQuery } from '../utils/search';
 import { useTheme } from '../context/ThemeContext';
 import { distanceKm, type LngLat } from '../utils/distance';
@@ -164,7 +164,7 @@ export function useHomePage() {
   // Cocheras filtradas por buscador y precio, y ordenadas por precio (las sin tarifa quedan al final)
   const filteredParkings = useMemo(() => {
     const priceOf = (p: Parking) =>
-      filters.vehicleType ? getParkingPriceForCategory(p, filters.vehicleType) : getParkingMinPrice(p);
+      filters.vehicleType ? getParkingPriceForType(p, filters.vehicleType.id) : getParkingMinPrice(p);
     let list = parkings.filter((p) => matchesQuery(searchQuery, p.name, p.address, p.neighborhood, p.locality, p.province));
     if (filters.locality) list = list.filter((p) => localityKey(p) === filters.locality);
     if (mapArea) list = list.filter((p) => inArea(p, mapArea));

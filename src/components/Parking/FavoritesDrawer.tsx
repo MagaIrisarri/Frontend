@@ -75,10 +75,10 @@ export function FavoritesDrawer({
                       <Clock className="i sm" aria-hidden="true" />
                       {p.openingTime} - {p.closingTime} hs
                     </span>
-                    {p.carCapacity !== undefined && p.carCapacity > 0 && (
+                    {!!p.totalCapacity && (
                       <span className="tag mute">
                         <VICON.AUTO className="i sm" aria-hidden="true" />
-                        {p.carCapacity} plazas
+                        {p.totalCapacity} plazas
                       </span>
                     )}
                   </div>

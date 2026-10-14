@@ -9,7 +9,7 @@ import { getEmployeesByOwner } from '../../services/employee.service';
 import { usePagedList } from '../../hooks/usePagedList';
 import { useAsync, useDebounced } from '../../hooks/useAsync';
 import { revealOnMobile } from '../../utils/layout';
-import { VT, capOf, hrs, maintOf, money, occOf, pct, priceOf, svcOf, missing, type ParkingLike } from '../Owner/owner.lib';
+import { capOf, hrs, maintOf, money, occOf, pct, priceOf, svcOf, missing, typePlural, typesOf, type ParkingLike } from '../Owner/owner.lib';
 
 interface Parking extends ParkingLike {
   name: string; address: string; neighborhood?: string | null; locality: string; province?: string | null; postalCode?: string;
@@ -104,7 +104,7 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
     () => p.owner?.id ? getEmployeesByOwner(p.owner.id) : Promise.resolve([]), [p.owner?.id]);
 
   const s = stateOf(p);
-  const types = VT.filter(t => capOf(p, t.k) > 0);
+  const types = typesOf(p).filter(t => capOf(p, t.id) > 0);
   const gone = missing(p);
   const m = metrics.data;
   const crew = (team.data ?? []).filter(u => u.parkingId === p.id);
@@ -119,7 +119,7 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
         <span className={`st ${s.c}`}>{s.l}</span>
       </div>
       {!p.isActive && <p className="ctx" role="note">Pausada por su dueño: los clientes no la ven ni reservan en ella.</p>}
-      {gone.length > 0 && <p className="st warn" role="note"><AlertTriangle className="i sm" />Sin tarifa para {gone.map(t => t.pl.toLowerCase()).join(', ')}: esos clientes no pueden reservar.</p>}
+      {gone.length > 0 && <p className="st warn" role="note"><AlertTriangle className="i sm" />Sin tarifa para {gone.map(t => typePlural(t.name).toLowerCase()).join(', ')}: esos clientes no pueden reservar.</p>}
 
       <div className="fs"><div className="fh"><h3>Dueño</h3>{p.owner?.id && <button type="button" className="link" onClick={() => onOwner(p.owner!.id)}>Ver usuario</button>}</div>
         <dl className="dl">
@@ -142,13 +142,13 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
           <div className="panel tw"><table className="tbl">
             <thead><tr><th>Tipo</th><th className="r">En servicio</th><th className="r">Ocupadas</th><th className="r">Mantenimiento</th><th className="r">Tarifa por hora</th></tr></thead>
             <tbody>{types.map(t => {
-              const pr = priceOf(p, t.k);
+              const pr = priceOf(p, t.id);
               return (
-                <tr key={t.k}>
-                  <td className="nm" data-label="Tipo">{t.pl}</td>
-                  <td className="r" data-label="En servicio">{svcOf(p, t.k)}</td>
-                  <td className="r" data-label="Ocupadas">{occOf(p, t.k)}</td>
-                  <td className="r" data-label="Mantenimiento">{maintOf(p, t.k)}</td>
+                <tr key={t.id}>
+                  <td className="nm" data-label="Tipo">{typePlural(t.name)}</td>
+                  <td className="r" data-label="En servicio">{svcOf(p, t.id)}</td>
+                  <td className="r" data-label="Ocupadas">{occOf(p, t.id)}</td>
+                  <td className="r" data-label="Mantenimiento">{maintOf(p, t.id)}</td>
                   <td className="r" data-label="Tarifa por hora">{pr ? money(pr.price) : <span className="st warn">Sin tarifa</span>}</td>
                 </tr>
               );

@@ -12,7 +12,7 @@ import { createReservation } from '../../services/reservation.service';
 
 interface ReservarState {
   vehicleId: string;
-  vehicleType: string;
+  vehicleTypeId: string; // R-30: las plazas del mismo tipo de vehículo
 }
 
 function generateHourOptions(openingTime: string, closingTime: string): string[] {
@@ -72,7 +72,7 @@ export function ParkingSpaceMap() {
   };
 
   useEffect(() => {
-    if (!state?.vehicleId || !state?.vehicleType) {
+    if (!state?.vehicleId || !state?.vehicleTypeId) {
       navigate('/');
       return;
     }
@@ -101,12 +101,12 @@ export function ParkingSpaceMap() {
   });
 
   useEffect(() => {
-    if (!isHorarioValid || !id || !state?.vehicleType || !startTime || !endTime) {
+    if (!isHorarioValid || !id || !state?.vehicleTypeId || !startTime || !endTime) {
       setSpacesWithAvailability(null);
       setSelectedSpaceId(null);
       return;
     }
-    getSpaceAvailability(id, state.vehicleType, startTime, endTime).then((res) => {
+    getSpaceAvailability(id, state.vehicleTypeId, startTime, endTime).then((res) => {
       setSpacesWithAvailability(res.data);
       setSelectedSpaceId(null);
     });

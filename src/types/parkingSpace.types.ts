@@ -1,7 +1,7 @@
 export interface ParkingSpace{
   id: string;
   spaceCode: string;
-  vehicleType: string;
+  vehicleType: { id: string; name: string };
   isActive: boolean;
   parking: string;
   state: 'LIBRE' | 'OCUPADO' | 'MANTENIMIENTO';
