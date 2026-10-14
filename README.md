@@ -1,73 +1,72 @@
-# React + TypeScript + Vite
+# Estacionamiento COM 301 — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web del sistema de reservas de cocheras: búsqueda en mapa y reserva para clientes, y paneles para dueños, empleados (mostrador) y administrador.
+React 19 + TypeScript + Vite, React Router, axios y zustand. Consume la API de [MagaIrisarri/Backend](https://github.com/MagaIrisarri/Backend).
 
-Currently, two official plugins are available:
+📄 Documentación del proyecto: [docs/README.md](docs/README.md)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Requisitos
 
-## React Compiler
+- Node.js 22 o superior
+- pnpm 10 (`npm install -g pnpm`)
+- El backend corriendo (ver su [README](https://github.com/MagaIrisarri/Backend#instalación))
+- Una API key gratuita de [MapTiler](https://www.maptiler.com/cloud/) para los mapas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Instalación
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/MagaIrisarri/Frontend.git
+cd Frontend
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Crear un archivo `.env` en la raíz:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```env
+VITE_API_URL=http://localhost:3000
+VITE_MAPTILER_API_KEY=<tu clave de MapTiler>
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Variable | Para qué |
+|---|---|
+| `VITE_API_URL` | URL del backend |
+| `VITE_MAPTILER_API_KEY` | Mapas de búsqueda y ubicación de cocheras |
+
+## Ejecución
+
+```bash
+pnpm dev
+```
+
+Abre la app en `http://localhost:5173`. Tiene que ser ese puerto: es el origen que el backend habilita por CORS.
+
+Otros scripts:
+
+| Script | Qué hace |
+|---|---|
+| `pnpm build` | Chequeo de tipos y build de producción en `dist/` |
+| `pnpm preview` | Sirve el build de producción |
+| `pnpm verify --fast` | Chequeo del estándar visual, tipos y build |
+
+## Usuarios de prueba
+
+Los carga el backend al arrancar. Todos con contraseña `password123`:
+
+| Rol | Email | Qué puede hacer |
+|---|---|---|
+| Cliente | `cliente1@cocheras.com` | Buscar cocheras, reservar, gestionar vehículos y reservas |
+| Dueño | `dueno1@cocheras.com` | Sucursales, plazas, tarifas, servicios, empleados y turnos, reservas y resumen |
+| Empleado | `empleado1@cocheras.com` | Mostrador: confirmar, ingreso, salida y cobro |
+| Administrador | `admin@cocheras.com` | Usuarios, cocheras, catálogo de servicios y vehículos |
+
+## Estructura
+
+```
+src/
+  pages/        pantallas por rol (Admin, Owner, Employee) y mapa de plazas
+  components/   componentes reutilizables y drawers del cliente
+  services/     llamadas a la API (axios)
+  hooks/        lógica de estado de las pantallas
+  types/        interfaces y tipos de los datos de la API
+  utils/        validaciones y formatos compartidos
 ```
