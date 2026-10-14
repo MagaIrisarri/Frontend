@@ -4,6 +4,7 @@ export interface Reservation {
   rating?: number | null; // R-27
   startTime: string;
   endTime: string;
+  createdAt?: string | null;
   vehicle: any;
   parkingSpace: any;
   status: string;

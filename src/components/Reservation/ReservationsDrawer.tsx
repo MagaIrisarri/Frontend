@@ -40,6 +40,19 @@ const STATUS_FILTERS = {
   history: [['all', 'Todas'], ['FINALIZADA', 'Finalizadas'], ['CANCELADA', 'Canceladas']],
 } as const;
 
+const ms = (iso?: string | null) => (iso ? new Date(iso).getTime() : 0);
+const createdOf = (r: Reservation) => ms(r.createdAt ?? r.startTime); // las anteriores a createdAt usan su inicio
+const live = (r: Reservation) => r.status === 'EN CURSO';
+
+// Orden de las activas. Próximas: primero las en curso (arriba la que vence antes), después la que se pone en curso antes.
+type Sort = 'next' | 'recent' | 'old';
+const SORTS: Record<Sort, [string, (a: Reservation, b: Reservation) => number]> = {
+  next: ['Próximas', (a, b) => Number(live(b)) - Number(live(a)) || ms(live(a) ? a.endTime : a.startTime) - ms(live(b) ? b.endTime : b.startTime)],
+  recent: ['Recientes', (a, b) => createdOf(b) - createdOf(a)],
+  old: ['Antiguas', (a, b) => createdOf(a) - createdOf(b)],
+};
+const byStartDesc = (a: Reservation, b: Reservation) => ms(b.startTime) - ms(a.startTime);
+
 const names = (r: any) => {
   const brand = r.vehicle?.brand?.name || (typeof r.vehicle?.brand === 'string' ? r.vehicle.brand : null) || r.brand;
   const model = r.vehicle?.model?.name || (typeof r.vehicle?.model === 'string' ? r.vehicle.model : null) || r.model;
@@ -99,17 +112,19 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
   );
   const base = tab === 'active' ? active : history;
 
-  // Filtros: texto (cochera, dirección, plaza, patente, vehículo), estado y período de la fecha de inicio.
+  // Filtros: texto (cochera, dirección, plaza, patente, vehículo), estado y, en el historial, período de la fecha de inicio
+  // (las activas son de hoy en adelante, así que ahí no filtraría nada).
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<string>('all');
   const [period, setPeriod] = useState<Period>('all');
+  const [sort, setSort] = useState<Sort>('next');
   const hasFilters = !!q.trim() || status !== 'all' || period !== 'all';
   const clearFilters = () => { setQ(''); setStatus('all'); setPeriod('all'); };
   const list = base.filter((r) => {
     const n = names(r);
     return matchesQuery(q, n.parking, n.address, n.space, n.plate, n.vehicle) && (status === 'all' || r.status === status) && inPeriod(r.startTime, period);
-  });
-  const changeTab = (t: 'active' | 'history') => { setStatus('all'); onTabChange(t); };
+  }).sort(tab === 'active' ? SORTS[sort][1] : byStartDesc);
+  const changeTab = (t: 'active' | 'history') => { setStatus('all'); setPeriod('all'); onTabChange(t); };
 
   const confirmCancel = async () => {
     if (!confirming || !onCancelReservation) return;
@@ -154,6 +169,12 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
         <dl className="dl">
           <dt>Reserva</dt>
           <dd><span className="plate">{r.code || `R-${r.id.slice(0, 6).toUpperCase()}`}</span></dd>
+          {r.createdAt && (
+            <>
+              <dt>Creada</dt>
+              <dd>{formatReservationDate(r.createdAt)}</dd>
+            </>
+          )}
           <dt>Empleado</dt>
           <dd>{staff || 'Sin empleado asignado'}</dd>
           <dt>Desde</dt>
@@ -234,9 +255,17 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
                   <button key={k} type="button" aria-pressed={status === k} onClick={() => setStatus(k)}>{l}</button>
                 ))}
               </div>
-              <select className="sel" aria-label="Período" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
-                {PERIODS.map((p) => <option key={p.k} value={p.k}>{p.l}</option>)}
-              </select>
+              {tab === 'active' ? (
+                <div className="seg" role="group" aria-label="Ordenar">
+                  {(Object.keys(SORTS) as Sort[]).map((k) => (
+                    <button key={k} type="button" aria-pressed={sort === k} onClick={() => setSort(k)}>{SORTS[k][0]}</button>
+                  ))}
+                </div>
+              ) : (
+                <select className="sel" aria-label="Período" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
+                  {PERIODS.map((p) => <option key={p.k} value={p.k}>{p.l}</option>)}
+                </select>
+              )}
             </FilterBar>
           )}
 

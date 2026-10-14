@@ -16,8 +16,8 @@ const PLATE_HELP = 'Letras y números, sin espacios.';
 
 // R-29: ingreso de mostrador. Patente, vehículo, cliente y horas; el inicio (ahora, sin segundos) lo fija el servidor.
 export default function WalkInDrawer({ open, ...p }: WalkInProps & { open: boolean }) { return <Presence open={open}><WalkIn {...p} /></Presence>; }
-type WalkInProps = { parking: EParking; userId: string; onChange: () => Promise<void>; onClose: () => void };
-function WalkIn({ parking, userId, onChange, onClose }: WalkInProps) {
+type WalkInProps = { parking: EParking; onChange: () => Promise<void>; onClose: () => void };
+function WalkIn({ parking, onChange, onClose }: WalkInProps) {
   const toast = useToast();
   const [v, setV] = useState(EMPTY);
   const [hours, setHours] = useState(parking.minReservationHours || 1);
@@ -80,7 +80,7 @@ function WalkIn({ parking, userId, onChange, onClose }: WalkInProps) {
       const res = await walkInReservation({
         parkingId: parking.id, plate, brandId: v.brandId, modelId: v.modelId, hours: h, serviceIds: svcIds.length ? svcIds : undefined,
         name: v.name.trim(), last_name: v.last_name.trim(), dni: v.dni.trim(), email: v.email.trim(), phone: v.phone.trim() || undefined,
-      }, userId);
+      });
       await onChange();
       const space = res?.data?.parkingSpace?.spaceCode;
       toast(`Ingreso de ${plate} registrado${space ? ` en la plaza ${space}` : ''}.`);

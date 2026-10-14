@@ -1,7 +1,6 @@
-import axios from 'axios';
+import { api } from './api';
 import type { UpdateVehicle, CreateVehicle } from '@/types/vehicle.types.js';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 
 export const getUserVehicle = (userId: string) => api.get(`/api/vehicles/client/${userId}`).then(res => res.data);
@@ -15,9 +14,9 @@ export const getOneVehicle = (id: string) => api.get(`/api/vehicles/${id}`).then
 // Panel del administrador: todos los vehículos registrados y alta de aseguradoras.
 export const getVehicles = () => api.get('/api/vehicles').then(res => res.data);
 export interface CatalogImportResult { unique: number; brandsNew: number; modelsNew: number; reactivated: number; existing: number; skipped: number; sample: { brand: string; model: string; type: string }[] }
-// Solo agrega marcas y modelos que faltan. Con dryRun el backend cuenta sin escribir (vista previa). Lo pide un administrador (x-user-id).
-export const importCatalog = (items: { brand: string; model: string; type: string }[], dryRun: boolean, userId: string): Promise<CatalogImportResult> =>
-  api.post('/api/catalog/import', { items, dryRun }, { headers: { 'x-user-id': userId } }).then(res => res.data.data);
+// Solo agrega marcas y modelos que faltan. Con dryRun el backend cuenta sin escribir (vista previa). Solo lo puede pedir un administrador.
+export const importCatalog = (items: { brand: string; model: string; type: string }[], dryRun: boolean): Promise<CatalogImportResult> =>
+  api.post('/api/catalog/import', { items, dryRun }).then(res => res.data.data);
 export const createInsurance =(data: { name: string }) => api.post('/api/insurances', data).then(res => res.data);
 
 

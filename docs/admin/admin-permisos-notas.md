@@ -17,9 +17,10 @@ El prototipo usa las clases del sistema de interfaz (`.panel`, `.tbl`, `.seg`, `
 | Cocheras | Sí | No | No | No | No existe (solo "Ver cocheras" dentro de cada dueño) | Vista nueva: lista + detalle con filtros |
 | Vehículos | Sí | No | No | No | Igual | Ninguno |
 | Marcas y modelos | Sí | Solo con el CSV del DNRPA (agrega las que faltan) | No | No | Marcas solo lectura, sin modelos | Lista + detalle de modelos agrupados por tipo, con filtro; pestaña "Actualizar con CSV" |
-| Tipos de vehículo | — | — | — | — | ABM completo | Se elimina la vista; la API del backend queda intacta |
+| Tipos de vehículo | Sí | Sí | Sí, salvo los tipos base | Sí, salvo los base y los que están en uso | `AdminVehicleTypes.tsx` sobre `AdminCatalog` (RA-11, 2026-10-13, sin commit) | Era la vista que se había quitado: vuelve porque TipoVehículo es un CRUD simple de regularidad y la cátedra lo pide en front y back |
 | Seguros | Sí | Sí | No | No | Igual | Ninguno |
 | Servicios | Sí | Sí | Sí | Sí | Igual | Ninguno |
+| Feriados | Sí (los nacionales) | Sí, nacionales (D-09) | No | Sí (abre las sucursales que cerraban) | Vista nueva `AdminHolidays` (sin commit) | Lista del año, alta y baja. No ve los propios de cada dueño, ni elige qué sucursales cierran: eso es del dueño |
 
 ## Reglas de negocio a replicar
 
@@ -37,13 +38,13 @@ Las valida el servidor; el frontend solo las anticipa.
 | RA-08 | Email, DNI y teléfono son únicos (409), tanto en el alta como en la edición, para cualquier rol. |
 | RA-09 | DNI de 7 u 8 dígitos; nombre y apellido de al menos 2 caracteres; teléfono de 6 a 15 dígitos; contraseña de al menos 6; mayor de 18 años. |
 | RA-10 | El rol no se edita. |
-| RA-11 | Marcas, modelos y tipos de vehículo son solo lectura. Cada modelo pertenece a una marca y a un tipo; el tipo no depende de la marca. |
+| RA-11 | Marcas y modelos son solo lectura (salvo el CSV, RA-14). Cada modelo pertenece a una marca y a un tipo; el tipo no depende de la marca. Los tipos de vehículo tienen ABM (`VehicleType.Service.ts`, 409 en cada caso): el nombre es único sin mayúsculas, tildes ni espacios de más; AUTO, MOTO y CAMIONETA son la base (el CSV les asigna los modelos por nombre) y no se renombran ni se dan de baja; un tipo con modelos o vehículos activos no se da de baja ni se renombra a otra categoría. La categoría con la que se cobra y estaciona la calcula el backend (`categorizeVehicleType`) y la pantalla solo la muestra. |
 | RA-12 | Seguros: solo listar y agregar. Una aseguradora ya elegida por clientes no se edita ni se borra. |
 | RA-13 | Servicios: nombre de al menos 2 caracteres y descripción de al menos 5. Eliminar no afecta lo que ya lo usa. |
 | RA-14 | Actualizar con CSV solo agrega marcas y modelos que faltan; nunca borra ni edita lo existente. Es idempotente: cargar dos veces el mismo archivo agrega 0 la segunda. |
 | RA-15 | El archivo se lee en el navegador (hasta 25 MB). Se toman marca, modelo y tipo de automotor (`automotor_marca_descripcion`, `automotor_modelo_descripcion`, `automotor_tipo_descripcion`), se deduplican y se pide una vista previa (`dryRun`) antes de confirmar. Si faltan columnas, se avisa cuáles. |
 | RA-16 | Marca y modelo se comparan sin distinguir mayúsculas ni tildes. Una marca o modelo dado de baja que vuelve a aparecer en el archivo se reactiva. El tipo sale de `categorizeVehicleType`. |
-| RA-17 | Se omiten los tipos que no son de pasajeros (acoplados, semirremolques, tractores, chasis, ómnibus, minibuses) y se cuentan como omitidos en la vista previa. Solo un administrador puede importar (el servidor lo comprueba con `x-user-id`). |
+| RA-17 | Se omiten los tipos que no son de pasajeros (acoplados, semirremolques, tractores, chasis, ómnibus, minibuses) y se cuentan como omitidos en la vista previa. Solo un administrador puede importar (el servidor lo comprueba con el token). |
 | RA-19 | Cocheras es de solo lectura: alta, edición, pausa y tarifas son del dueño. La lista trae todas, activas y pausadas, y se filtra por texto (nombre, dirección, barrio o dueño), por localidad con su provincia (hay localidades homónimas) y por estado. |
 | RA-20 | Estado en texto además de color: "Activa", "Pausada" o "Falta tarifa" (activa, pero sin tarifa vigente para algún tipo con plazas: esos clientes no pueden reservar). |
 | RA-21 | El detalle muestra dueño, horario y reglas de reserva, personal activo de la sucursal, plazas por tipo (en servicio, ocupadas, en mantenimiento) con su tarifa por hora, y el movimiento (reservas por estado y facturado). Las métricas se piden al abrir la cochera, no por fila. |
@@ -62,7 +63,7 @@ Las valida el servidor; el frontend solo las anticipa.
 | LA-04 | Cambiar la sucursal de un empleado que tiene turnos o reservas en la actual dejaba turnos huérfanos: el servidor solo validaba que la sucursal fuera del dueño. | Resuelta por RA-18. |
 | LA-05 | El listado de usuarios trae solo `ownerId` y `parkingId`. El nombre del dueño sale de la misma lista; el de la sucursal hay que pedirlo (`getParkingsByOwner`). | Abierta (DA-03). |
 | LA-06 | `getModels(brandId)` devuelve todos los modelos de la marca, sin paginar, con `brand` y `vehicleType`. Verificado en `Model.Repository.ts`. | Cerrada. |
-| LA-07 | No hay autenticación (ver `revision-alcance.md`): las rutas de usuarios las puede llamar cualquiera y la identidad viaja en `x-user-id`, que se puede falsificar. La importación del CSV comprueba que ese id sea de un administrador activo, pero no es una barrera real. | Abierta: sin autenticación real el panel no se puede proteger. |
+| LA-07 | No había autenticación: las rutas de usuarios las podía llamar cualquiera y la identidad viajaba en `x-user-id`, que se podía falsificar. | Cerrada (sin commit): el login devuelve un JWT y las rutas del panel exigen `auth(ADMINISTRADOR)`. Cada recurso se controla además contra su dueño (L-37, notas del dueño). |
 | DA-01 | Mover un empleado a otro dueño: el servidor no lo permite y el prototipo tampoco. | Sin decidir. |
 | DA-02 | ¿Restablecer contraseña del usuario desde el admin? | Sin decidir. |
 | DA-03 | Nombre de la sucursal en el listado: ¿lo trae el endpoint o se pide aparte? | Sin decidir. |
@@ -74,8 +75,8 @@ Las valida el servidor; el frontend solo las anticipa.
 
 | Archivo | Cambio |
 | --- | --- |
-| `pages/Admin/AdminPanel.tsx` y `App.tsx` | Quitar "Tipos de vehículo" de `VIEWS` y de las rutas (las vistas quedan en 6 más Cocheras). Actualizar la fila de `docs/revision-alcance.md`. |
-| `pages/Admin/AdminVehicleTypes.tsx` | Eliminar, y quitarlo de `scripts/standard.json` si está. |
+| `pages/Admin/AdminPanel.tsx` y `App.tsx` | "Tipos de vehículo" vuelve a `VIEWS` y a las rutas (`/admin/vehicle-types`), después de Marcas y modelos. |
+| `pages/Admin/AdminVehicleTypes.tsx` y `AdminCatalog.tsx` | Envoltorio de `AdminCatalog` con `services/vehicleType.service.ts`. Las filas `locked` (tipos base) no tienen menú. Los dos están en `scripts/standard.json`; su prueba es `e2e/admin.vehicle-types.spec.ts`. |
 | `pages/Admin/AdminBrands.tsx` | Reemplazar `AdminCatalog` por la vista lista + detalle. Cargar marcas con `getBrands` y modelos con `getModels(brandId)` al elegir una. `Model.vehicleType` ya existe en `types/vehicle.types.ts`. Dos pestañas: catálogo y "Actualizar con CSV" (`components/Admin/CatalogImport.tsx` y `utils/dnrpaCsv.ts`). |
 | `pages/Admin/AdminParkings.tsx`, `AdminPanel.tsx`, `App.tsx` y `services/parking.service.ts` | Vista nueva "Cocheras" (de 6 a 7 vistas): `FilterBar` arriba, lista a la izquierda y detalle a la derecha con las clases de lista + detalle de Marcas. Agregar `getAllParkings`. Reusa `owner.lib` (`VT`, `capOf`, `svcOf`, `occOf`, `priceOf`, `missing`, `hrs`). No reusa el panel "Ver cocheras" de Usuarios, que queda como está. |
 | `hooks/usePagedList.ts`, `hooks/useAsync.ts`, `components/Owner/ui/Pager.tsx`, `utils/layout.ts` | Lista paginada en el servidor con respuestas descartables y paginador "26–50 de 120"; carga de datos de apoyo con sus cuatro estados; `revealOnMobile` lleva el detalle a la vista en pantallas angostas. |

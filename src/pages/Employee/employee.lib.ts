@@ -56,8 +56,8 @@ export const stateOf = (r: ERes): { l: string; c: string } =>
 
 // Acción principal de una reserva según su estado; la usan la fila y el detalle. El cobro no tiene llamada: pide el medio en el detalle.
 export interface Action { key: 'confirm' | 'in' | 'out' | 'pay'; label: string; disabled?: boolean; call?: () => Promise<any>; ok?: string | ((res: any) => string) }
-export function primaryOf(r: ERes, userId: string): Action | null {
-  if (r.status === 'PENDIENTE') return { key: 'confirm', label: 'Confirmar', call: () => confirmReservation(r.id, userId), ok: `Reserva ${r.code} confirmada.` };
+export function primaryOf(r: ERes): Action | null {
+  if (r.status === 'PENDIENTE') return { key: 'confirm', label: 'Confirmar', call: () => confirmReservation(r.id), ok: `Reserva ${r.code} confirmada.` };
   if (r.status === 'CONFIRMADA') {
     const early = r.startAt.getTime() > Date.now(); // R-16: el ingreso se registra desde el inicio reservado
     // R-21: si su plaza seguía ocupada por alguien que se pasó de hora, el backend la pasó a otra libre.
@@ -65,9 +65,9 @@ export function primaryOf(r: ERes, userId: string): Action | null {
       const code = res?.data?.parkingSpace?.spaceCode ?? r.space;
       return `Ingreso de ${r.plate} registrado en la plaza ${code}${code !== r.space ? `: la ${r.space} seguía ocupada` : ''}.`;
     };
-    return { key: 'in', label: early ? `Desde ${hhmm(r.startAt)}` : 'Registrar ingreso', disabled: early, call: () => checkInReservation(r.id, userId), ok };
+    return { key: 'in', label: early ? `Desde ${hhmm(r.startAt)}` : 'Registrar ingreso', disabled: early, call: () => checkInReservation(r.id), ok };
   }
-  if (r.status === 'EN CURSO') return { key: 'out', label: 'Registrar salida', call: () => checkOutReservation(r.id, userId), ok: `Salida de ${r.plate} registrada. Falta cobrar la estadía.` };
+  if (r.status === 'EN CURSO') return { key: 'out', label: 'Registrar salida', call: () => checkOutReservation(r.id), ok: `Salida de ${r.plate} registrada. Falta cobrar la estadía.` };
   if (r.status === 'FINALIZADA' && toPay(r)) return { key: 'pay', label: 'Cobrar' };
   return null;
 }

@@ -20,7 +20,11 @@ const TSX_RULES = [
   [/\brounded(?:-[a-z0-9]+)?\b|\bshadow(?:-[a-z0-9/]+)?\b/, 'radio o sombra de Tailwind: usá --r-sm/md/lg y --shadow'],
   [/\bfont-(?:medium|semibold|bold|extrabold|black)\b|\btracking-[a-z]+\b|(?<=[\s"'`])uppercase(?=\s)|\btext-(?:xs|sm|base|lg|xl|\dxl|\[)/, 'tipografía de Tailwind: el sistema fija 14 px / pesos 500-600'],
 ];
-const SCSS_RULES = [[/#[0-9a-fA-F]{3,8}\b(?<!#fff)(?<!#FFF)(?<!#ffffff)/, 'hex suelto en SCSS: solo #fff sobre fondos de acento; el resto son tokens']];
+const MOBILE_FIRST = [/@media[^{]*max-width/, 'media query max-width: el CSS es mobile-first (requisito de la cátedra), la base es el teléfono y se agranda con min-width:$sm + 1 o $md + 1'];
+const SCSS_RULES = [
+  [/#[0-9a-fA-F]{3,8}\b(?<!#fff)(?<!#FFF)(?<!#ffffff)/, 'hex suelto en SCSS: solo #fff sobre fondos de acento; el resto son tokens'],
+  MOBILE_FIRST,
+];
 
 const errors = [];
 for (const rel of manifest.files) {
@@ -33,6 +37,10 @@ for (const rel of manifest.files) {
     for (const [re, why] of rules) if (re.test(code)) errors.push(`${rel}:${i + 1}: ${why}\n    ${line.trim().slice(0, 140)}`);
   });
 }
+// La hoja global (index.css) no es del sistema de interfaz, pero también es CSS de la app: mobile-first igual.
+readFileSync(resolve(root, 'src/index.css'), 'utf8').split('\n').forEach((line, i) => {
+  if (MOBILE_FIRST[0].test(line)) errors.push(`src/index.css:${i + 1}: ${MOBILE_FIRST[1]}\n    ${line.trim().slice(0, 140)}`);
+});
 
 // Mi perfil es un panel (useOpenProfile), nunca una ruta; tampoco hay páginas de cliente que dupliquen los paneles.
 const app = readFileSync(resolve(root, 'src/App.tsx'), 'utf8');

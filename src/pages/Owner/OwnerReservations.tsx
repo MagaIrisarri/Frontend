@@ -227,7 +227,7 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
 }
 
 function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
-  const { employees, ownerId, refresh } = useOwner();
+  const { employees, refresh } = useOwner();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const staff = employees.filter(e => e.parkingId === r.pid);
@@ -236,7 +236,7 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
 
   const assign = async (id: string) => {
     try {
-      await assignReservationEmployee(r.id, id, ownerId);
+      await assignReservationEmployee(r.id, id);
       await refresh();
       toast(`Reserva ${r.code} asignada a ${empName(employees.find(x => x.id === id))}.`);
     } catch (x) { toast(apiError(x), 'err'); }
@@ -244,7 +244,7 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
   // shortcut: proposal, falta pedir motivo de cancelación y definir la regla de reembolso
   const cancel = async () => {
     try {
-      await cancelReservation(r.id, ownerId);
+      await cancelReservation(r.id);
       setConfirm(false);
       onClose();
       await refresh();

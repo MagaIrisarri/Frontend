@@ -14,13 +14,13 @@ Estado al 10/10/2026: fases 1 a 3 implementadas. Commits: Backend `d8e7c10` (ram
 
 ## Estados de un feriado
 
-Decidido (D-01): dos estados por sucursal, **Cerrada** (por defecto) y **Abre** (con los turnos de ese día de la semana). Editar el día en "Por fecha" crea una excepción y el calendario lo marca **Modificado ↺** (restablecer vuelve a la semana tipo). La opción "Horario especial" del prototipo no se implementó.
+Decidido (D-01, D-09): dos estados por sucursal, **Trabaja** (por defecto, con los turnos de ese día de la semana) y **Cierra** (la sucursal se adhiere al feriado). Editar el día en "Por fecha" crea una excepción y el calendario lo marca **Modificado ↺** (restablecer vuelve a la semana tipo). La opción "Horario especial" del prototipo no se implementó.
 
-| Aspecto | Cerrada | Abre |
+| Aspecto | Trabaja | Cierra |
 | --- | --- | --- |
-| Qué se guarda | Nada (es el valor por defecto) | Fila `HolidayParking` |
-| Si cambia la semana tipo | No aplica | El feriado cambia con ella, salvo que tenga excepción |
-| Etiqueta en el calendario | Feriado | Feriado · abre / Modificado ↺ |
+| Qué se guarda | Nada (es el valor por defecto) | Fila `HolidayAdhesion` |
+| Si cambia la semana tipo | El feriado cambia con ella, salvo que tenga excepción | No aplica |
+| Etiqueta en el calendario | Feriado · trabaja / Modificado ↺ | Feriado |
 | Cerrar con reservas activas o pendientes | Se rechaza (R-10) | — |
 
 ## Reglas de negocio
@@ -36,7 +36,7 @@ Decidido (D-01): dos estados por sucursal, **Cerrada** (por defecto) y **Abre** 
 | R-07 | Toda reserva tiene un empleado asignado ("Registrada por"), editable mientras está en curso o reservada. | Parcial: editable en el detalle de la reserva, solo por el personal de la sucursal y con un empleado de esa sucursal (Backend `e1ea225`). Un empleado con turnos cargados o reservas activas asignadas no se da de baja (409, Backend `da0b04b`). No es obligatorio: las reservas online y las ya guardadas tienen `attendedBy` nulo hasta el check-in. |
 | R-08 | Aviso de jornada: ámbar por encima de 8 h por día y rojo por encima de 12 h. No bloquea. | Implementada en frontend. |
 | R-09 | Las fechas pasadas son de solo lectura. Hoy y el futuro se editan hasta unos 6 meses adelante. | Implementada (backend y frontend). Horizonte en `PLANNING_HORIZON_MONTHS`, ver D-06. |
-| R-10 | Los feriados son una lista general del dueño. Cada sucursal cierra por defecto y guarda solo lo que cambia. No se cierra un feriado con reservas activas o pendientes. | Implementada. El alta de un feriado se rechaza (409 con `details.conflicts`) si alguna sucursal tiene reservas activas o pendientes ese día (Backend `da0b04b`). |
+| R-10 | Los feriados nacionales los carga el administrador y los ven todos los dueños; cada dueño suma los propios (de su localidad o nacionales que faltan), que solo ve él. Hay a lo sumo un feriado por fecha para cada dueño: si el administrador carga como nacional una fecha propia, se fusionan y se conserva lo que eligió cada sucursal. Cada sucursal trabaja por defecto y se adhiere (cierra) si su dueño lo elige; no se cierra con reservas activas o pendientes ese día. | Implementada (sin commit, D-09). Cargar un feriado no cierra nada; el 409 con `details.conflicts` aparece al cerrar una sucursal (`ScheduleService.setHolidayOpen`). Lo prueban `Holiday.db.test.ts` y `Schedule.db.test.ts`. Antes (Backend `da0b04b`): lista global del dueño y cierre por defecto. |
 | R-11 | Cambiar la semana tipo no pisa las excepciones por fecha ya cargadas. | Implementada (probada en `Schedule.db.test.ts`). |
 | R-12 | Una excepción idéntica a la semana tipo se descarta sola. | Implementada. |
 | R-13 | No se registra el ingreso (check-in) de una reserva cuyo horario ya terminó. | Implementada (Backend `a23eec2`, Frontend `60f4c27`). Backend: `ReservationService.checkIn` responde 400 "La reserva ya venció". Frontend: la terminal del empleado no lista pendientes ni confirmadas vencidas. |
@@ -54,20 +54,20 @@ Decidido (D-01): dos estados por sucursal, **Cerrada** (por defecto) y **Abre** 
 | R-25 | Al editar un vehículo, marca y modelo tienen que coincidir y el tipo sale del modelo, igual que en el alta. No se cambia el tipo de un vehículo con reservas pendientes, confirmadas o en curso, porque su plaza es de ese tipo. | Implementada (Backend `282e86d`, Frontend `b25da64`). Backend: `VehicleService.update` con `resolveModel` (compartido con el alta) y `VehicleRepository.countActiveReservations`; antes la edición no guardaba marca, modelo ni seguro. Probada en `Vehicle.db.test.ts`. Frontend: al editar, un seguro vacío se manda como `null` y lo quita. |
 | R-26 | Cada reserva tiene un código (`cod_reserva` del DER): `R-` y 6 caracteres, único y guardado en la base. Si el que sale del id ya existe, se elige otro id. | Implementada (Backend `99802ae`, Frontend `d00ae2a`). Backend: `Reservation.code` (`reservationCode`), lo genera `createReservationAtomically`; al arrancar, `fillMissingCodes` completa las reservas anteriores con el mismo código que ya mostraba la interfaz. Frontend: `normRes` usa el `code` del backend. |
 | R-27 | El cliente puede valorar, si quiere, una reserva finalizada con 1 a 5 estrellas, una sola vez. Solo la valora el cliente de esa reserva. | Implementada (Backend `99802ae`, Frontend `d00ae2a`). Backend: `PATCH /api/reservations/:id/rating` (`ReservationService.rate`). Frontend: estrellas en Mis reservas (`components/Owner/ui/Stars.tsx`); el dueño la ve en el detalle de la reserva y el promedio por sucursal en el resumen mensual. |
-| R-28 | Se manda un recordatorio por email al cliente `REMINDER_HOURS_BEFORE` (2) horas antes del inicio de una reserva pendiente o confirmada, una sola vez. Una reserva creada dentro de esa ventana lo recibe en la vuelta siguiente (`REMINDER_CHECK_MINUTES`, 5 min). Si el envío falla, se reintenta en la vuelta siguiente. | Implementada (Backend `99802ae`). Backend: `ReservationService.sendReminders`, `Reservation.reminderSentAt` y `Shared/utils/mailer.ts` (SMTP con `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` y `MAIL_FROM`; sin `SMTP_HOST` el mail se escribe en la consola). Ver L-27. |
+| R-28 | Se avisa al cliente en la app (notificación `RECORDATORIO`) `REMINDER_HOURS_BEFORE` (2) horas antes del inicio de una reserva pendiente o confirmada, una sola vez. Una reserva creada dentro de esa ventana lo recibe en la vuelta siguiente (`REMINDER_CHECK_MINUTES`, 5 min). Si falla, se reintenta en la vuelta siguiente. | Implementada (Backend `99802ae`). Backend: `ReservationService.sendReminders`, `Reservation.reminderSentAt` y el aviso de `NotificationService`. El sistema no envía mails: se quitó `nodemailer` y las variables `SMTP_*`. Ver L-27. |
 | R-29 | El empleado registra en el mostrador a un cliente sin reserva: el inicio es la hora actual sin segundos y el fin, inicio + N horas completas (mínimo 1, hasta el cierre del mismo día); la reserva nace en curso con la plaza ocupada. Un vehículo que sigue adentro en cualquier sucursal (aunque pasado de hora) no entra de nuevo. La reserva guarda quién registró el ingreso, quién la salida y la hora real de salida. El empleado carga nombre, apellido, DNI y email del cliente (teléfono opcional): si el email no tiene cuenta, se crea una con el DNI como contraseña. El cliente entra con email y DNI y no puede registrar vehículos ni reservar hasta cambiarla por una de 6 caracteres o más que no sea su DNI (403; el perfil se abre solo y lo pide); nacimiento y teléfono los completa cuando quiera; si la tiene, el vehículo queda a su nombre. | Backend implementado (`020a8ac`; cuenta con el DNI: ver el commit siguiente): `POST /api/reservations/walk-in`, `checkedInBy`/`checkedOutBy`/`checkedOutAt`, extender en horas completas desde el inicio. Frontend pendiente. Diseño en `docs/employee/diseno-empleado-mostrador.md`. |
 
 ## Modelo de datos
 
-Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado cerrado; si no, la semana tipo.
+Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado adherido (la sucursal cierra); si no, la semana tipo.
 
 | Entidad del documento | Implementación | Notas |
 | --- | --- | --- |
 | TurnoEmpleado (semana tipo) | `EmployeeShift` (existente) | Una fila por día; `PUT /api/shifts/template/:parkingId/:dayOfWeek` reemplaza el día entero. |
 | CierrePlantilla | `ShiftClosure` | |
 | ExcepcionDia + ExcepcionTurno / ExcepcionCierre | `DayException` con `shifts` y `closures` en JSON | Copia completa del día (D-02). Sin "creada por / creada en" (ver L-16). |
-| Feriado | `Holiday` | `origin`: oficial o manual. |
-| FeriadoSucursal | `HolidayParking` | Solo existe si la sucursal abre. |
+| Feriado | `Holiday` | `origin`: oficial o manual. `owner`: null para los nacionales (administrador o siembra), el dueño para los propios. |
+| FeriadoSucursal | `HolidayAdhesion` | Solo existe si la sucursal se adhiere y cierra (D-09). Reemplaza a `HolidayParking` ("abre"), cuya tabla `holiday_parking` queda sin uso: se puede borrar a mano. |
 | Reserva | `Reservation.attendedBy` | Ver R-07. |
 | AuditoriaTurno | No implementada | Ver L-16. |
 
@@ -97,7 +97,7 @@ Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado c
 | L-20 | Accesibilidad | Sin prueba con lector de pantalla. | Auditoría WCAG. | Abierta: hay teclado (flechas, Suprimir, Escape, menús). |
 | L-21 | Modo claro | No revisado en vista por fecha, feriados y resumen. | Revisar contrastes. | Abierta. |
 | L-22 | Datos | Ids de ejemplo en memoria. | Ids del servidor. | Resuelta. |
-| L-23 | Roles | Solo existe el rol dueño. | Permisos y dashboard de empleado. | Parcial (Backend `a23eec2`, Frontend `60f4c27`, rama Frontend `recuperar-admin-empleado`). Se rehicieron con el estilo y los componentes del panel del dueño (`PanelBar` compartida). Empleado (`/employee`): reservas de su sucursal por fecha, con filtros y detalle en cajón para confirmar, registrar ingreso y salida, cambiar la plaza (R-15), cancelar y cobrar (también una factura que quedó por cobrar). Administrador (`/admin`): ABM de tipos de vehículo y del catálogo de servicios (`AdminCatalog`). Cada rol ve solo su panel. Backend: confirmación, ingreso, salida y cambio de plaza solo los hace un empleado activo de la sucursal o su dueño (`ReservationService.assertStaffOf`, 403; la confirmación desde Backend `cbf17d7`, Frontend `6fe87fc`). Falta: autenticación real (hoy el usuario llega en `x-user-id` sin token) y permisos en cobrar y los ABM del administrador. |
+| L-23 | Roles | Solo existe el rol dueño. | Permisos y dashboard de empleado. | Parcial (Backend `a23eec2`, Frontend `60f4c27`, rama Frontend `recuperar-admin-empleado`). Se rehicieron con el estilo y los componentes del panel del dueño (`PanelBar` compartida). Empleado (`/employee`): reservas de su sucursal por fecha, con filtros y detalle en cajón para confirmar, registrar ingreso y salida, cambiar la plaza (R-15), cancelar y cobrar (también una factura que quedó por cobrar). Administrador (`/admin`): ABM de tipos de vehículo y del catálogo de servicios (`AdminCatalog`). Cada rol ve solo su panel. Backend: confirmación, ingreso, salida y cambio de plaza solo los hace un empleado activo de la sucursal o su dueño (`ReservationService.assertStaffOf`, 403; la confirmación desde Backend `cbf17d7`, Frontend `6fe87fc`). La autenticación real (JWT) y los permisos por rol en cobrar y en los ABM del administrador quedaron hechos (sin commit); la pertenencia por recurso también (L-37); los feriados globales siguen en L-38. |
 | L-24 | Horizonte | 52 semanas atrás y 26 adelante. | Acordar con negocio. | Abierta (mismos valores). |
 | L-25 | Empleados | Un empleado pertenece a una sola sucursal. | Confirmar rotación. | Parcial: el frontend no cambia de sucursal a quien tiene turnos o reservas pendientes. |
 | L-26 | Buscar en esta zona | El filtro del mapa es local e instantáneo; el spinner dura un mínimo fijo (500 ms) para que se perciba. | Atarlo a la carga real si la búsqueda pasa al servidor. | Abierta. |
@@ -106,11 +106,13 @@ Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado c
 | L-29 | Notificaciones (reubicación) | Al extender una reserva (R-23), las reservas siguientes que se pasan a otra plaza (`moved`) no avisan a sus clientes; solo se avisa al de la reserva extendida. | Devolver el cliente en `moved` y notificarlo. | Abierta. |
 | L-30 | Notificaciones (transferencias) | Las transferencias de reservas por turnos o feriados no notifican al empleado destino (ver L-07). | Notificar al empleado asignado en `Schedule.Service`. | Abierta. |
 | L-31 | Notificaciones (entrega) | Se piden por polling cada 30 s (pausado con la pestaña oculta) y se listan las últimas 50 por usuario, sin purga ni paginación. | Pasar a SSE si hace falta inmediatez; purgar o paginar con uso real. | Abierta. |
-| L-32 | Notificaciones (recordatorio) | El aviso en la app del recordatorio (R-28) sale junto con el mail: un cliente sin email, o con el envío fallando, no lo recibe. | Separar el aviso del mail en `sendReminders`. | Abierta. |
+| L-32 | Notificaciones (recordatorio) | El recordatorio (R-28) salía junto con el mail: un cliente sin email, o con el envío fallando, no lo recibía. | Se quitó el mail: `sendReminders` solo deja el aviso en la app. | Cerrada. |
 | L-33 | Catálogo del DNRPA (tipos) | La importación omite los tipos que no son de pasajeros con una lista fija de palabras (acoplado, semirremolque, tractor, chasis, ómnibus, minibús…). `vehiculos.json` ya trajo algunos como AUTO y no se limpian. | Revisar la lista si el DNRPA cambia sus descripciones; limpiar el catálogo sembrado. | Abierta. |
 | L-35 | Alta de empleado (dueños) | El selector de dueños del panel del administrador trae hasta 100 dueños activos. | Pasar a un buscador si hay más. | Abierta. |
 | L-36 | Cuenta creada en el mostrador | El email que carga el empleado no se verifica (no hay mails ni SMS) y la contraseña inicial es el DNI, que conoce quien tenga los datos del cliente. Un email mal escrito deja la cuenta con un email ajeno; el administrador puede corregirlo. | Verificar el email con un enlace cuando haya envío de mails. El cambio de contraseña ya se exige antes de cargar vehículos o reservar (`mustChangePassword`). | Abierta (`Reservation.Repository.createWalkIn`). |
-| L-34 | Catálogo del DNRPA (permiso) | `POST /api/catalog/import` comprueba que `x-user-id` sea un administrador activo, pero ese header se puede falsificar: no hay autenticación (ver `revision-alcance.md`). | Sesión o token firmado. | Abierta. |
+| L-34 | Catálogo del DNRPA (permiso) | `POST /api/catalog/import` comprobaba que `x-user-id` fuera un administrador activo, pero ese header se podía falsificar. | Sesión o token firmado. | Cerrada (sin commit): JWT, y la ruta exige `auth(ADMINISTRADOR)`. |
+| L-37 | Permisos por recurso | La ruta controla el rol y que el id del propio usuario sea el del token (`self` en `Shared/middlewares/auth.ts`), pero no que el recurso sea suyo: un cliente puede editar o borrar el vehículo de otro, reservar con un `vehicleId` ajeno o leer `GET /reservations/:id` y `GET /vehicles/:id` de otros; un dueño puede escribir sobre una cochera, plaza, tarifa, turno o feriado ajeno por su id. Las acciones de reserva del personal sí lo controlan (`assertStaffOf`), y también los empleados del dueño (`findOwnedEmployee`). | Mover la pertenencia a cada servicio si se abre la API a terceros. | Cerrada (sin commit): `ownParking`, `ownVehicle`, `ownReservation` y `staffOfInvoice` en `Shared/middlewares/auth.ts`, con `isStaffOf` como única regla del personal. Lo prueba `auth.db.test.ts`. |
+| L-38 | Feriados globales | `POST /api/holidays` y `DELETE /api/holidays/:id` los hace cualquier dueño y valen para todas las sucursales del sistema (R-10). Abrir o cerrar un feriado sí es por sucursal y solo de su dueño. | Que los feriados nacionales los cargue el administrador y cada dueño sume fechas propias. | Cerrada (sin commit): D-09 y R-10. |
 
 ## Decisiones
 
@@ -123,7 +125,8 @@ Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado c
 | D-05 | Feriados | Lista general y excepciones por sucursal | Decidido e implementado |
 | D-06 | Horizonte de planificación | Unos 6 meses | Decidido: 6 meses (confirmado 10/10/2026). Una sola constante: `src/Shared/constants/schedule.ts` (repo Backend) |
 | D-07 | Horas del resumen mensual | Programadas ahora; fichaje después | Decidido (recomendación) |
-| D-08 | Fuente de los feriados | Calendario oficial + edición manual | Decidido (recomendación). Siguiente paso acordado: que los feriados oficiales y puentes los mantenga el rol administrador (ver L-12). Para después. |
+| D-08 | Fuente de los feriados | Calendario oficial + edición manual | Decidido. Los nacionales ya los carga el administrador desde su panel (D-09); la importación anual desde la fuente oficial sigue pendiente (L-12). |
+| D-09 | Feriados por rol y por sucursal | Nacionales del administrador, propios del dueño (solo él los ve) y adhesión por sucursal; por defecto trabaja | Decidido el 13/10/2026 e implementado (sin commit). Adherirse = cerrar todo el día; para otro horario se usa el día especial. Sucursales del mismo dueño pueden elegir distinto (localidad, zona, personal). Reemplaza el cierre por defecto de D-01 y R-10. |
 
 ## Fuente de feriados para el administrador (L-12, D-08)
 
@@ -133,20 +136,20 @@ Revisado el 11/10/2026. `GET https://api.argentinadatos.com/v1/feriados/{año}` 
 - 2026: 20 fechas; el seed tiene 16. Faltan los puentes del 23/3, el 10/7 y el 7/12 y la visita papal del 9/11.
 - 2027: ya publicado, 16 fechas y todavía sin puentes (se decretan más adelante).
 - Límites: la fuente es La Nación, no el Boletín Oficial. Es un servicio gratuito, sin garantía de disponibilidad y sin límites de uso publicados. Por eso se consulta solo al importar un año, nunca en un pedido del dueño, y se reimporta cuando salen decretos nuevos.
-- Encaje: `Holiday.origin` ya distingue `oficial` y `manual`, y la fecha es única. Importar un año es un alta por fecha con `origin: 'oficial'` que no toca los `manual`. El dueño sigue con `GET /api/holidays` y `PUT /api/holidays/:id/parkings/:parkingId`, sin cambios.
+- Encaje: `Holiday.origin` ya distingue `oficial` y `manual`, y hay un solo feriado nacional por fecha. Importar un año es un alta por fecha con `origin: 'oficial'` que no toca los `manual`. El dueño sigue con `GET /api/holidays` y `PUT /api/holidays/:id/parkings/:parkingId`, sin cambios.
 
 Decidir antes de implementar:
 
-1. **Puentes.** Son días no laborables, optativos para el sector privado. Con R-10 cada sucursal cierra por defecto, así que importar un puente cerraría todas las cocheras ese día. Opciones: no importarlos, o guardar el `tipo` y que en los puentes las sucursales abran por defecto.
-2. **Reservas existentes.** `HolidayService.create` no revisa reservas: un feriado nuevo cierra todas las sucursales aunque tengan reservas activas ese día, en contra de R-10. Ya pasa con el alta manual; una importación de 20 fechas lo vuelve mucho más probable. La importación debería responder 409 con `details.conflicts`, como el resto de los feriados.
+1. **Puentes.** Resuelto por D-09: las sucursales trabajan por defecto, así que importar un puente no cierra ninguna. Antes: con R-10 cada sucursal cerraba por defecto, así que importar un puente cerraba todas las cocheras ese día. Opciones: no importarlos, o guardar el `tipo` y que en los puentes las sucursales abran por defecto.
+2. **Reservas existentes.** Resuelto por D-09: cargar un feriado no cierra nada, y las reservas se revisan cuando un dueño cierra una sucursal (409). Antes: `HolidayService.create` no revisaba reservas: un feriado nuevo cierra todas las sucursales aunque tengan reservas activas ese día, en contra de R-10. Ya pasa con el alta manual; una importación de 20 fechas lo vuelve mucho más probable. La importación debería responder 409 con `details.conflicts`, como el resto de los feriados.
 3. **Fechas que cambian.** Si un trasladable cambia de fecha, el alta por fecha deja cargada la anterior. Mostrar al administrador las diferencias (fechas nuevas y fechas que ya no aparecen) en vez de borrar solo.
-4. **Permisos.** `/api/holidays` no tiene control de rol (L-23). Para que solo el administrador cargue la lista oficial hace falta.
+4. **Permisos.** Resuelto: solo el administrador carga y quita los nacionales (`Holiday.Route.ts`, D-09). Antes: `/api/holidays` no tenía control de rol (L-23). Para que solo el administrador cargue la lista oficial hace falta.
 
 ## Pendiente respecto del proposal
 
 Confirmar reserva y facturación de la estadía: implementadas en la terminal del empleado (ver L-23, R-13 y R-14; Backend `a23eec2`, Frontend `60f4c27`).
 
-Sin cambios: estacionamientos por localidad, vehículos por tipo (marca, modelo, seguro), motivo de cancelación y reembolso, registrar uso de servicio, recordatorio por email.
+Sin cambios: estacionamientos por localidad, vehículos por tipo (marca, modelo, seguro), motivo de cancelación y reembolso, registrar uso de servicio, recordatorio (ahora solo en la app).
 
 ## Diferencias con el prototipo
 

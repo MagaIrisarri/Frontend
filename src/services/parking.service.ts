@@ -1,6 +1,5 @@
-﻿import axios from "axios";
+﻿import { api } from './api';
 import type { CreateParkingInput, UpdateParkingInput } from '../types/parking.types';
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 export const getParking = () => api.get('/api/parkings/active').then(res => res.data.data);
 export const getPriceParking = (id: string, vehicleType: string) =>

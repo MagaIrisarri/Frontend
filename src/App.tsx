@@ -23,6 +23,8 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminVehicles from './pages/Admin/AdminVehicles';
 import AdminBrands from './pages/Admin/AdminBrands';
 import AdminInsurances from './pages/Admin/AdminInsurances';
+import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes';
+import AdminHolidays from './pages/Admin/AdminHolidays';
 
 /**
  * Componentes de redirección para preservar compatibilidad con enlaces y marcadores previos
@@ -69,7 +71,7 @@ export function App() {
           }
         />
 
-        {/* Administrador: usuarios, cocheras, catálogo de marcas y modelos (con el CSV del DNRPA), seguros y servicios */}
+        {/* Administrador: usuarios, cocheras, catálogo de marcas y modelos (con el CSV del DNRPA), tipos de vehículo, seguros, servicios y feriados nacionales */}
         <Route
           path="/admin"
           element={
@@ -83,8 +85,10 @@ export function App() {
           <Route path="parkings" element={<AdminParkings />} />
           <Route path="vehicles" element={<AdminVehicles />} />
           <Route path="brands" element={<AdminBrands />} />
+          <Route path="vehicle-types" element={<AdminVehicleTypes />} />
           <Route path="insurances" element={<AdminInsurances />} />
           <Route path="services" element={<AdminService />} />
+          <Route path="holidays" element={<AdminHolidays />} />
         </Route>
 
         {/* =========================================================

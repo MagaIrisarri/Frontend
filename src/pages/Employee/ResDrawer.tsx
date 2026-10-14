@@ -14,7 +14,7 @@ import { ACTIVE, GRACE_MIN, HOUR, METHODS, extraAt, hhmm, list, overdue, primary
 const CARD_HINT = 'Se cobra en el posnet. El sistema guarda solo el medio y el comprobante, nunca los datos de la tarjeta.';
 
 // Detalle de una reserva: cliente, reserva, servicios, importe y cobro, con la acción principal en el pie.
-export default function ResDrawer({ r, parking, userId, onChange, onClose }: { r: ERes; parking: EParking; userId: string; onChange: () => Promise<void>; onClose: () => void }) {
+export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; parking: EParking; onChange: () => Promise<void>; onClose: () => void }) {
   const pid = parking.id;
   const { run, busy } = useRun(onChange);
   const [confirm, setConfirm] = useState(false);
@@ -26,7 +26,7 @@ export default function ResDrawer({ r, parking, userId, onChange, onClose }: { r
   const due = toPay(r);
   const st = stateOf(r);
   const early = r.startAt.getTime() > Date.now(); // R-16: el ingreso se registra desde el inicio reservado
-  const p = primaryOf(r, userId);
+  const p = primaryOf(r);
 
   // Plazas del mismo tipo libres en el horario de la reserva (con el margen de la sucursal); la actual va primero.
   // Si se pasó de hora, sigue ocupando la plaza hasta que salga: se busca hasta ahora como mínimo.
@@ -38,15 +38,15 @@ export default function ResDrawer({ r, parking, userId, onChange, onClose }: { r
       .catch(() => setSpaces([]));
   }, [active, pid, r.vtype, r.startAt, r.endAt, r.spaceId]);
 
-  const moveTo = (id: string) => run(() => changeReservationSpace(r.id, id, userId), `Reserva ${r.code} movida a la plaza ${spaces?.find(s => s.id === id)?.spaceCode}.`);
-  const cancel = async () => { setConfirm(false); await run(() => cancelReservation(r.id, userId), `Reserva ${r.code} cancelada.`, 'info'); onClose(); };
+  const moveTo = (id: string) => run(() => changeReservationSpace(r.id, id), `Reserva ${r.code} movida a la plaza ${spaces?.find(s => s.id === id)?.spaceCode}.`);
+  const cancel = async () => { setConfirm(false); await run(() => cancelReservation(r.id), `Reserva ${r.code} cancelada.`, 'info'); onClose(); };
 
   // R-23: extender de a horas enteras: una hora más desde el fin o, si ya se pasó, la próxima hora entera. El backend valida máximo y cierre.
   const first = new Date(Math.max(r.endAt.getTime() + HOUR, Date.now()));
   if (first.getMinutes() || first.getSeconds() || first.getMilliseconds()) first.setHours(first.getHours() + 1, 0, 0, 0);
   const ends = [0, 1, 2].map(n => new Date(first.getTime() + n * HOUR));
   const hh = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:00`;
-  const extend = (end: Date) => run(() => extendReservation(r.id, end, userId), (res: any) => {
+  const extend = (end: Date) => run(() => extendReservation(r.id, end), (res: any) => {
     const moved: { code: string; to: string }[] = res?.data?.moved ?? [];
     return `Reserva ${r.code} extendida hasta las ${hh(end)}.${moved.length ? ` ${plural(moved.length, 'reserva pasó', 'reservas pasaron')} a otra plaza: ${moved.map(m => `${m.code} → ${m.to}`).join(', ')}.` : ''}`;
   });
@@ -62,7 +62,7 @@ export default function ResDrawer({ r, parking, userId, onChange, onClose }: { r
   const toggleService = (s: Svc) => {
     const on = r.services.some(x => x.id === s.id);
     const ids = on ? r.services.filter(x => x.id !== s.id).map(x => x.id) : [...r.services.map(x => x.id), s.id];
-    run(() => setReservationServices(r.id, ids, userId), on ? `${s.name} quitado de ${r.code}.` : `${s.name} agregado a ${r.code}: se cobra en la salida.`);
+    run(() => setReservationServices(r.id, ids), on ? `${s.name} quitado de ${r.code}.` : `${s.name} agregado a ${r.code}: se cobra en la salida.`);
   };
 
   // Importe: con factura, su detalle (R-14); antes de la salida, una estimación con la tarifa vigente y las horas extra de ahora.

@@ -41,7 +41,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isOwner: boolean;
   isClient: boolean;
-  setUser: (user: CurrentUser | null) => void;
+  setUser: (user: CurrentUser | null, token?: string) => void; // el token llega solo con el login
   logout: () => void;
 }
 
@@ -68,7 +68,7 @@ export const useAuthStore = create<AuthState>()(
         normalizeRole(getInitialUser()?.type || getInitialUser()?.role) !== 'ADMINISTRADOR' &&
         normalizeRole(getInitialUser()?.type || getInitialUser()?.role) !== 'EMPLEADO',
 
-      setUser: (user: CurrentUser | null) => {
+      setUser: (user: CurrentUser | null, token?: string) => {
         if (!user) {
           localStorage.removeItem('user');
           localStorage.removeItem('parkflow_user_id');
@@ -92,6 +92,7 @@ export const useAuthStore = create<AuthState>()(
         };
 
         localStorage.setItem('user', JSON.stringify(enrichedUser));
+        if (token) localStorage.setItem('token', token); // lo lee services/api.ts
         const userId = enrichedUser.id || enrichedUser._id;
         if (userId) {
           localStorage.setItem('parkflow_user_id', userId);

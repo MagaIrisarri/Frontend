@@ -229,7 +229,7 @@ export default function OwnerShifts() {
     let bd = null;
     if (m?.source === 'holiday-closed') bd = <span className="bd hol" data-tip={m.holiday?.name}>Feriado</span>;
     else if (m?.modified && m.editable) bd = <button type="button" className="bd mod" data-tip="Restablecer a la semana tipo" onClick={() => reset(d)}>Modificado ↺</button>;
-    else if (m?.holiday?.open) bd = <span className="bd" data-tip={m.holiday.name}>Feriado · abre</span>;
+    else if (m?.holiday?.open) bd = <span className="bd" data-tip={m.holiday.name}>Feriado · trabaja</span>;
     else if (isToday) bd = <span className="bd today">Hoy</span>;
     else if (past) bd = <span className="bd past">Pasado</span>;
     return <div className={`ch${isToday ? ' td' : ''}`} key={d}><span>{DAYS[d]} {+iso.slice(8)}</span>{bd}</div>;
@@ -375,7 +375,7 @@ export default function OwnerShifts() {
   );
 }
 
-// D-01: dos estados por sucursal, Cerrada (por defecto) y Abre. Editar un día abierto lo marca "Modificado" en el calendario.
+// D-01, D-09: dos estados por sucursal, Trabaja (por defecto) y Cierra (se adhiere al feriado). Editar un día que trabaja lo marca "Modificado" en el calendario.
 function Holidays({ parkingId, parkingName, onChange }: { parkingId: string; parkingName: string; onChange: () => void }) {
   const toast = useToast();
   const [list, setList] = useState<Holiday[] | null>(null);
@@ -394,7 +394,7 @@ function Holidays({ parkingId, parkingName, onChange }: { parkingId: string; par
     try {
       await setHolidayOpen(h.id, parkingId, open);
       await load(); onChange();
-      toast(open ? `${parkingName} abre el ${fmtD(h.date)} con los turnos del ${DAYS_LONG[wdOf(h.date)]}.` : `${parkingName} cierra el ${fmtD(h.date)}.`, 'ok', () => setOpen(h, !open));
+      toast(open ? `${parkingName} trabaja el ${fmtD(h.date)} con los turnos del ${DAYS_LONG[wdOf(h.date)]}.` : `${parkingName} cierra el ${fmtD(h.date)}.`, 'ok', () => setOpen(h, !open));
     } catch (x) {
       const n = conflictsOf(x).length;
       toast(n ? `No se puede cerrar el ${fmtD(h.date)}: hay ${plural(n, 'reserva activa o pendiente', 'reservas activas o pendientes')}.` : apiError(x), 'err');
@@ -402,29 +402,29 @@ function Holidays({ parkingId, parkingName, onChange }: { parkingId: string; par
   };
   const add = async () => {
     if (!nd || nd < now) return toast('Elegí una fecha desde hoy.', 'err');
-    try { await createHoliday(nd, nn.trim() || 'Fecha especial'); setNd(''); setNn(''); await load(); onChange(); toast(`${cap(fmtD(nd))} agregado a todas las sucursales. Cierran por defecto.`); }
+    try { await createHoliday(nd, nn.trim() || 'Fecha especial'); setNd(''); setNn(''); await load(); onChange(); toast(`${cap(fmtD(nd))} agregado a tus sucursales. Trabajan salvo que las cierres.`); }
     catch (x) { toast(apiError(x), 'err'); }
   };
   const remove = async () => {
     const h = del!;
     setDel(null);
-    try { await removeHoliday(h.id); await load(); onChange(); toast(`${h.name} quitado de todas las sucursales.`, 'info'); }
+    try { await removeHoliday(h.id); await load(); onChange(); toast(`${h.name} quitado de tus sucursales.`, 'info'); }
     catch (x) { toast(apiError(x), 'err'); }
   };
 
   return (
     <div className="fs">
       <div className="fh"><h3>Feriados y fechas especiales</h3></div>
-      <p className="ctx" style={{ margin: '0 0 10px' }}>La lista es general: todas las sucursales cierran por defecto. Acá elegís qué hace <b>{parkingName}</b> en cada fecha. Para un horario distinto, abrí el día y editalo en “Por fecha”.</p>
+      <p className="ctx" style={{ margin: '0 0 10px' }}>Los feriados nacionales los carga el administrador, y podés sumar fechas propias, que solo ven tus sucursales. Por defecto todas trabajan: acá elegís si <b>{parkingName}</b> cierra cada fecha. Para un horario distinto, editá el día en “Por fecha”.</p>
       {list === null ? <span className="sk" style={{ height: 40 }} /> : list.length ? (
         <div className="list">{list.map(h => (
           <div className="li" key={h.id}>
-            <span className="l"><span><div className="nm">{cap(fmtD(h.date))}</div><div className="ad">{h.name}{h.origin === 'oficial' ? ' · oficial' : ''}</div></span></span>
+            <span className="l"><span><div className="nm">{cap(fmtD(h.date))}</div><div className="ad">{h.name} · {h.scope === 'propio' ? 'propio' : 'nacional'}</div></span></span>
             <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <select className="sel" style={{ width: 'auto' }} aria-label={`Qué hace ${parkingName} el ${h.date}`} value={h.open ? 'o' : 'c'} onChange={ev => setOpen(h, ev.target.value === 'o')}>
-                <option value="c">Cerrada</option><option value="o">Abre con turnos del {DAYS_LONG[wdOf(h.date)]}</option>
+                <option value="o">Trabaja con turnos del {DAYS_LONG[wdOf(h.date)]}</option><option value="c">Cierra</option>
               </select>
-              <button type="button" className="icon-btn" data-tip="Quitar feriado de todas las sucursales" aria-label={`Quitar ${h.name}`} onClick={() => setDel(h)}><Trash2 className="i" /></button>
+              {h.scope === 'propio' && <button type="button" className="icon-btn" data-tip="Quitar fecha propia" aria-label={`Quitar ${h.name}`} onClick={() => setDel(h)}><Trash2 className="i" /></button>}
             </span>
           </div>
         ))}</div>
@@ -432,9 +432,9 @@ function Holidays({ parkingId, parkingName, onChange }: { parkingId: string; par
       <div className="toolbar" style={{ marginTop: 12, justifyContent: 'flex-start' }}>
         <input type="date" className="inp" style={{ width: 'auto' }} min={now} aria-label="Fecha" value={nd} onChange={ev => setNd(ev.target.value)} />
         <input className="inp" style={{ width: 260 }} placeholder="Nombre (ej. Feriado puente)" aria-label="Nombre de la fecha" maxLength={60} value={nn} onChange={ev => setNn(ev.target.value)} />
-        <button type="button" className="btn" onClick={add}><Plus className="i sm" />Agregar a todas las sucursales</button>
+        <button type="button" className="btn" onClick={add}><Plus className="i sm" />Agregar a mis sucursales</button>
       </div>
-      <Shown when={del}>{h => <ConfirmModal title={`¿Quitar ${h.name}?`} body="Se quita de la lista de todas las sucursales. Las que lo tenían abierto vuelven a su semana tipo." ok="Quitar feriado" danger onConfirm={remove} onClose={() => setDel(null)} />}</Shown>
+      <Shown when={del}>{h => <ConfirmModal title={`¿Quitar ${h.name}?`} body="Se quita de tus sucursales. Las que cerraban ese día vuelven a su semana tipo." ok="Quitar feriado" danger onConfirm={remove} onClose={() => setDel(null)} />}</Shown>
     </div>
   );
 }

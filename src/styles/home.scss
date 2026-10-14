@@ -15,9 +15,10 @@
 .me.hfloat{position:relative}
 
 /* ───── Barra superior ───── */
-.htop{position:absolute;top:16px;left:16px;right:16px;z-index:35;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
+.htop{position:absolute;top:12px;left:12px;right:12px;z-index:35;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;pointer-events:none}
 .htop>*{pointer-events:auto}
-.htop .hcenter{display:flex;align-items:center;gap:8px;flex:1;max-width:672px}
+.htop .hcenter{display:flex;align-items:center;gap:8px;flex:1 1 100%;order:3} /* en el teléfono el buscador baja a su propia fila */
+.htop .lbl-d{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)} /* solo ícono, el nombre accesible se conserva */
 .htop .hend{display:flex;align-items:center;gap:8px}
 .htop .search{flex:1;width:auto;min-width:140px}
 .htop .search .i{top:calc((var(--ctl) - 16px)/2)}
@@ -27,7 +28,7 @@
 .htop .icon-btn.hfloat{width:var(--ctl);height:var(--ctl)}
 .vwrap{position:relative;flex:none}
 .menu.vmenu{position:absolute;right:0;top:calc(100% + 4px);left:auto;width:260px;z-index:40}
-.vmenu button{height:auto;min-height:36px;padding:6px 10px;justify-content:space-between;text-align:left}
+.vmenu button{height:auto;min-height:44px;padding:6px 10px;justify-content:space-between;text-align:left}
 .vmenu button>span:first-child{display:flex;gap:10px;align-items:center;min-width:0}
 .vmenu small{display:block;font-size:12px;color:var(--tx3)}
 .vmenu button[aria-checked=true]{background:var(--ac-soft);color:var(--ac-tx)}
@@ -35,6 +36,7 @@
 
 /* ───── Panel de cocheras (listado / detalle) ───── */
 .hpanel{position:absolute;z-index:30;left:0;right:0;bottom:0;height:62vh;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;box-shadow:0 0 0 1px var(--soft),0 8px 24px rgba(0,0,0,.4);} /* sombra corta: con --shadow (40px) el panel dejaba un recorte oscuro sobre el mapa */
+.hpanel::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0;flex:none} /* agarre de la hoja */
 .hpanel.out{pointer-events:none} /* el movimiento lo da useSwipeClose */
 .hpanel .dhead{padding:12px 12px 12px 16px;align-items:center}
 .hpanel .dbody{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;padding:12px 16px 16px;overflow-x:hidden} /* minmax(0,…): sin esto los textos nowrap ensanchan la columna y aparece la barra horizontal */
@@ -54,7 +56,7 @@
 .li .nm2{display:flex;gap:8px;align-items:center}
 
 /* ───── Pines y controles del mapa ───── */
-.areabtn{position:absolute;top:calc(16px + var(--ctl) + 12px);left:0;right:0;width:fit-content;margin-inline:auto;z-index:5}
+.areabtn{position:absolute;top:calc(12px + var(--ctl)*2 + 8px + 12px);left:0;right:0;width:fit-content;margin-inline:auto;z-index:5} /* en el teléfono la barra ocupa dos filas (botones y buscador): el botón va debajo de ambas */
 .pin,.cluster{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;user-select:none;transition:transform .12s}
 .pin{background:var(--surface);color:var(--tx);box-shadow:0 0 0 1px var(--line),0 4px 12px rgba(0,0,0,.25)}
 .pin:hover{transform:scale(1.05)}
@@ -78,21 +80,20 @@
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.maplibregl-ctrl-attrib{background:var(--surface)!important;-webkit-backdrop-filter:none;backdrop-filter:none}}
 .maplibregl-canvas-container{isolation:isolate} /* los pines (z-index 10–30) se apilan entre sí, pero nunca por encima de los controles del mapa */
 .maplibregl-ctrl-bottom-right{transition:right .25s cubic-bezier(.3,.9,.3,1),bottom .25s cubic-bezier(.3,.9,.3,1)}
-@media(min-width:$sm + 1){.home:has(.hpanel:not(.out)) .maplibregl-ctrl-bottom-right{right:400px}} /* los controles no quedan tapados por el panel de cocheras */
-@media(max-width:$sm){.home:has(.hpanel:not(.out)) .maplibregl-ctrl-bottom-right{bottom:80px}} /* sobre la hoja asomada */
+.home:has(.hpanel:not(.out)) .maplibregl-ctrl-bottom-right{bottom:80px} /* sobre la hoja asomada */
 .maplibregl-ctrl-group button+button{border-top:1px solid var(--soft)!important}
 .dark & .maplibregl-ctrl-group .maplibregl-ctrl-icon{filter:invert(1)}
 
-/* ───── Móvil y escritorio ───── */
-@media(max-width:$sm){
-  .hpanel::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0;flex:none}
-  .htop{top:12px;left:12px;right:12px;gap:8px;flex-wrap:wrap}
-  .htop .hcenter{order:3;flex-basis:100%;max-width:none}
-  .areabtn{top:calc(12px + var(--ctl)*2 + 8px + 12px)} /* la barra ocupa dos filas (botones y buscador): el botón va debajo de ambas */
-  .htop .lbl-d{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)} /* solo ícono, el nombre accesible se conserva */
-}
+/* ───── Responsive, mobile-first: lo de arriba es el teléfono (SM); desde MD, barra en una fila y panel flotante a la derecha ───── */
 @media(min-width:$sm + 1){
+  .htop{top:16px;left:16px;right:16px;gap:12px;flex-wrap:nowrap}
+  .htop .hcenter{order:0;flex-basis:0%;max-width:672px}
+  .htop .lbl-d{position:static;width:auto;height:auto;overflow:visible;clip:auto}
+  .areabtn{top:calc(16px + var(--ctl) + 12px)}
   .hpanel{left:auto;top:72px;right:16px;bottom:24px;height:auto;width:384px;border-radius:var(--r-lg)}
+  .hpanel::before{content:none}
+  .home:has(.hpanel:not(.out)) .maplibregl-ctrl-bottom-right{right:400px;bottom:0} /* los controles no quedan tapados por el panel de cocheras */
 }
+@media(min-width:$sm + 1) and (pointer:fine){.vmenu button{min-height:36px}}
 
 }

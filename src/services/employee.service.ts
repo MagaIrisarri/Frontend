@@ -1,5 +1,4 @@
-import axios from 'axios';
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
+import { api } from './api';
 
 export const getEmployeesByOwner = (ownerId: string, status?: 'BAJA') =>
   api.get(`/api/users/${ownerId}/employee`, { params: { status } }).then(res => res.data.data);

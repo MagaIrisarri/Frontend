@@ -1,6 +1,5 @@
-import axios from "axios";
+import { api } from './api';
 import type { Service, ServiceInput } from '../types/service.types';
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 export const getService = (serviceId: string) =>
   api.get(`/api/service-catalog/${serviceId}`).then(res => res.data);

@@ -8,7 +8,7 @@ import type { Parking } from '../../types/parking.types';
 import type { Vehicle } from '../../types/vehicle.types';
 import type { ServicePrice } from '../../types/servicePrice.types';
 import type { VehicleFilterType } from '../../types/mapFilters.types';
-import { matchesVehicleCategory } from '../../utils/parkingPriceUtils';
+import { getUnavailableReason, matchesVehicleCategory } from '../../utils/parkingPriceUtils';
 import { useAuthStore } from '../../stores/authStore';
 import { Drawer } from '../Owner/ui/Layer';
 import OwnerShell from '../Owner/ui/OwnerShell';
@@ -44,6 +44,14 @@ const normalizeVehicleType = (rawType: any): string => {
   if (typeName.includes('CAMIONETA') || typeName.includes('VAN') || typeName.includes('UTIL')) return 'CAMIONETA';
   return 'AUTO';
 };
+
+// Por qué no se reserva con ese vehículo en esta cochera (la misma regla que el listado); null si se puede.
+// Sin tarifa el backend responde 409; sin plazas libres ahora, igual que el listado, se marca no disponible.
+const blockedFor = (parking: any, v: any) => {
+  const t = normalizeVehicleType(v?.vehicleType);
+  return getUnavailableReason(parking, t === 'MOTOCICLETA' ? 'MOTO' : (t as 'AUTO' | 'CAMIONETA'));
+};
+const BLOCKED = { NO_PRICE: 'Sin tarifa en esta cochera', NO_SPACE: 'Sin plazas libres' };
 
 const VEHICLE_UI = {
   MOTOCICLETA: { label: 'Moto', Icon: VICON.MOTO },
@@ -362,7 +370,7 @@ export function ReservationBookingDrawer({
       <div className="dfoot">
         <button type="button" className="btn" onClick={onClose}>Cancelar</button>
         {step === 'vehicle' ? (
-          <button type="button" className="btn pri" disabled={!selectedVehicle} onClick={() => setStep('details')}>
+          <button type="button" className="btn pri" disabled={!selectedVehicle || !!blockedFor(parking, selectedVehicle)} onClick={() => setStep('details')}>
             Siguiente<ChevronRight className="i sm" />
           </button>
         ) : (
@@ -418,19 +426,20 @@ export function ReservationBookingDrawer({
                   </Empty>
                 ) : (
                   <div className="optlist" role="radiogroup" aria-labelledby="bk-veh">
-                    {vehicles.map((v) => {
+                    {[...vehicles].sort((a, b) => Number(!!blockedFor(parking, a)) - Number(!!blockedFor(parking, b))).map((v) => {
                       const isSelected = selectedVehicle?.id === v.id;
                       const type = normalizeVehicleType(v.vehicleType) as keyof typeof VEHICLE_UI;
                       const brandName = typeof v.brand === 'object' ? v.brand?.name : v.brand || '';
                       const modelName = typeof v.model === 'object' ? v.model?.name : v.model || '';
                       const free = type === 'MOTOCICLETA' ? spaces[1].free : type === 'CAMIONETA' ? spaces[2].free : spaces[0].free;
                       const { Icon, label } = VEHICLE_UI[type];
+                      const blocked = blockedFor(parking, v);
                       return (
-                        <button key={v.id} type="button" role="radio" aria-checked={isSelected} className="opt" onClick={() => setSelectedVehicle(v)}>
+                        <button key={v.id} type="button" role="radio" aria-checked={isSelected} className="opt" disabled={!!blocked} onClick={() => setSelectedVehicle(v)}>
                           <Icon className="i" aria-hidden="true" />
                           <span className="grow">
                             <span className="plate">{v.plate}</span>
-                            <small>{[brandName, modelName].filter(Boolean).join(' ')} · {label} · {plural(free, 'plaza libre', 'plazas libres')}</small>
+                            <small>{[brandName, modelName].filter(Boolean).join(' ')} · {label} · {blocked ? BLOCKED[blocked] : plural(free, 'plaza libre', 'plazas libres')}</small>
                           </span>
                           {isSelected && <Check className="i" aria-hidden="true" />}
                         </button>

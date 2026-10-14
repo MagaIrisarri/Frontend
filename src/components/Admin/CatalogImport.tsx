@@ -3,7 +3,6 @@ import { AlertCircle, FileUp, RefreshCw } from 'lucide-react';
 import { Empty, SkeletonRows } from '../Owner/ui/Page';
 import { Field, apiError } from '../Owner/ui/Field';
 import { useToast } from '../Owner/ui/Toasts';
-import { useAuthStore } from '../../stores/authStore';
 import { importCatalog, type CatalogImportResult } from '../../services/vehicle.service';
 import { CsvError, MAX_CATALOG_ITEMS, MAX_CSV_BYTES, parseDnrpaCsv, type CatalogRow } from '../../utils/dnrpaCsv';
 import { cap, plural } from '../../pages/Owner/owner.lib';
@@ -12,8 +11,6 @@ import { cap, plural } from '../../pages/Owner/owner.lib';
 // y recién al confirmar agrega. Nunca borra ni edita lo existente.
 export default function CatalogImport({ onDone }: { onDone: () => void }) {
   const toast = useToast();
-  const me = useAuthStore(s => s.user);
-  const userId = String(me?.id || me?._id || '');
   const [read, setRead] = useState<{ rows: CatalogRow[]; total: number } | null>(null);
   const [preview, setPreview] = useState<CatalogImportResult | null>(null);
   const [status, setStatus] = useState<'idle' | 'working' | 'ready' | 'saving'>('idle');
@@ -25,7 +22,7 @@ export default function CatalogImport({ onDone }: { onDone: () => void }) {
 
   const check = async (data: { rows: CatalogRow[]; total: number }) => {
     setStatus('working'); setNetError('');
-    try { setPreview(await importCatalog(data.rows, true, userId)); setStatus('ready'); }
+    try { setPreview(await importCatalog(data.rows, true)); setStatus('ready'); }
     catch (x) { setNetError(apiError(x, 'No pudimos revisar el archivo. Revisá tu conexión e intentá de nuevo.')); setStatus('idle'); }
   };
 
@@ -49,7 +46,7 @@ export default function CatalogImport({ onDone }: { onDone: () => void }) {
     if (!read) return;
     setStatus('saving');
     try {
-      const done = await importCatalog(read.rows, false, userId);
+      const done = await importCatalog(read.rows, false);
       toast(`Se agregaron ${plural(done.modelsNew, 'modelo', 'modelos')} y ${plural(done.brandsNew, 'marca', 'marcas')}.`);
       reset();
       onDone();

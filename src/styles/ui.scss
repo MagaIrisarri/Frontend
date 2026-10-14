@@ -66,13 +66,13 @@
 
 /* ───── Paneles del cliente (Favoritos, Reservas, Vehículos, Facturas) ───── */
 .dhead .tl{display:flex;gap:8px;align-items:flex-start}
-.dhead .tl .icon-btn{margin-left:-6px}
 .dbody.stack{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;padding-top:16px}
 .dbody.stack>.st{white-space:normal}
 .dbody.stack>.seg:first-child{overflow:visible;position:sticky;top:-8px;z-index:2;box-shadow:0 0 0 8px var(--surface)} /* las pestañas (Activas/Historial) no se van con el scroll de una lista larga; overflow visible: un .seg con scroll se encogía a 0 en la grilla cuando la lista era más alta que el panel, y las filas de abajo lo pisaban */
 .pcard.nc{cursor:default}.pcard.nc:hover{background:var(--raised)}
 .pcard .acts{display:flex;gap:8px;flex-wrap:wrap}
-.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.grid2{display:grid;grid-template-columns:1fr;gap:12px}
+.grid2.keep{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} /* pares de datos cortos (nombre/apellido, DNI/teléfono) siguen en dos columnas también en el teléfono */
 .btn.errtx{color:var(--err)}
 .rcard{display:grid;gap:10px;padding:14px;border-radius:var(--r-lg);background:var(--raised)}
 .rcard .rtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
@@ -98,11 +98,6 @@
 .invrow .iamt b{display:block;font-size:17px;font-weight:600}
 .invrow .iamt span{color:var(--tx3);font-size:12.5px}
 .drawer .empty{background:var(--raised)}
-@media(max-width:$sm){
-  .grid2{grid-template-columns:1fr}
-  .grid2.keep{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} /* pares de datos cortos (nombre/apellido, DNI/teléfono) siguen en dos columnas */
-  .dhead .tl .icon-btn{margin-left:0}
-}
 
 /* ───── Disponibilidad, opciones elegibles y resumen de costo ───── */
 .acells{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -113,6 +108,9 @@
 .optlist{display:grid;gap:8px}
 .opt{display:flex;align-items:center;gap:12px;width:100%;padding:12px;border:1px solid transparent;border-radius:var(--r-lg);background:var(--raised);color:var(--tx);text-align:left}
 .opt:hover{background:var(--hover)}
+.opt:disabled{opacity:.5;cursor:not-allowed}
+.opt:disabled:hover{background:var(--raised)}
+.opt:disabled:active{transform:none}
 .opt[aria-checked=true]{border-color:var(--focus);background:color-mix(in srgb,var(--ac) 12%,var(--surface))}
 .opt .grow{min-width:0}
 .opt small{display:block;font-weight:400;font-size:12.5px;color:var(--tx3)}
@@ -126,15 +124,13 @@
 .tot b{font-size:17px;font-weight:600}
 
 /* ───── Panel lateral: lado izquierdo, ancho medio y navegación ───── */
-.drawer.mid{width:min(680px,100%)}
-.drawer.left{left:0;right:auto;width:320px;max-width:calc(100vw - 48px)}
-/* Móvil: los paneles son hojas que suben desde abajo (como en iOS) y se cierran hacia abajo; el menú (.left) sigue de costado.
-   --kb (la altura del teclado) la escribe useLayer con visualViewport, así el pie de botones queda por encima del teclado. */
-@media(max-width:$sm){
-  .drawer:not(.left){top:auto;left:0;right:0;bottom:var(--kb,0px);width:100%;max-height:min(92dvh,calc(100dvh - var(--kb,0px) - 8px));border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom)}
-  .drawer:not(.left)::before{content:"";display:block;width:36px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 0;flex:none}
-  .drawer:not(.left) .dhead{padding-top:12px}
-}
+.drawer.left{left:0;width:320px;max-width:calc(100vw - 48px)}
+/* Teléfono: los paneles son hojas que suben desde abajo (como en iOS) y se cierran hacia abajo; el menú (.left) es de costado siempre.
+   Desde MD entran por el costado derecho (ver el final). --kb (la altura del teclado) la escribe useLayer con visualViewport,
+   así el pie de botones queda por encima del teclado. */
+.drawer:not(.left){top:auto;left:0;right:0;bottom:var(--kb,0px);width:100%;max-height:min(92dvh,calc(100dvh - var(--kb,0px) - 8px));border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+.drawer:not(.left)::before{content:"";display:block;width:36px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 0;flex:none}
+.drawer:not(.left) .dhead{padding-top:12px}
 .drawer.left .dfoot .btn{flex:1;justify-content:center}
 .drawer .brand{margin:0}
 .snav{display:grid;gap:20px;padding-top:16px;align-content:start}
@@ -189,13 +185,13 @@
 
 /* ───── Lista + detalle (Marcas y modelos, Cocheras, Usuarios): lista paginada a la izquierda, detalle del elegido a la derecha ───── */
 .split{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
-.split .side{flex:0 0 320px;min-width:0;padding:12px;display:grid;gap:8px}
-.split .main{flex:1 1 480px;min-width:0;padding:20px 24px;display:grid;gap:0;align-content:start}
+.split .side{flex:1 1 100%;min-width:0;padding:12px;display:grid;gap:8px}
+.split .main{flex:1 1 480px;min-width:0;padding:16px;display:grid;gap:0;align-content:start}
 .split .main>p{margin:0 0 12px}
 .split .main>.fs{border-top:1px solid var(--soft)}.split .main>.fs:last-child{padding-bottom:0}
-.split .main .dl{margin:0;grid-template-columns:176px 1fr}
-.split .bl{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;max-height:60vh;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:opacity .12s}
-.bi{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;min-height:40px;padding:6px 12px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--tx);text-align:left}
+.split .main .dl{margin:0;grid-template-columns:1fr}
+.split .bl{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;max-height:260px;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:opacity .12s}
+.bi{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:6px 12px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--tx);text-align:left}
 .bi:hover{background:var(--hover)}.bi[aria-current=true]{background:var(--ac-soft);color:var(--ac-tx);font-weight:500}
 .bi[aria-current=true] .ad{color:var(--ac-tx)}
 .bi .st{flex:none}
@@ -209,6 +205,7 @@
 /* Dentro del detalle las tablas no son una tarjeta más: se alinean con los títulos de cada bloque */
 .split .main .panel{background:none;border:0;border-radius:0;box-shadow:none}
 .split .main .tbl :is(th,td):first-child{padding-left:0}.split .main .tbl :is(th,td):last-child{padding-right:0}
+.split .main .tbl tr{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px 0}.split .main .tbl .nm{white-space:normal}
 .mtools{display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;padding-bottom:12px}
 .mtools .search{flex:1 1 220px;max-width:none}
 .mscroll{max-height:62vh;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
@@ -219,22 +216,20 @@
 .mr{padding:11px 12px;border-bottom:1px solid var(--soft);font-weight:500}
 .pager{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 4px 0;border-top:1px solid var(--soft)}
 .pgbtns{display:flex;gap:4px}
-@media(max-width:$md){.split .main .tbl tr{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px 0}.split .main .tbl td{min-width:0}.split .main .tbl .nm{white-space:normal}}
-@media(max-width:$sm){.split .side{flex:1 1 100%}.split .main{padding:16px}.split .bl{max-height:260px}.bi{min-height:44px}.split .main .dl{grid-template-columns:1fr}}
 
 /* ───── Terminal del empleado (pages/Employee, maqueta v38 en docs/employee/) ─────
    Disposición propia de la terminal de mostrador; prefijo e- para no chocar con las clases del dueño (.occ, .tag, .bar, .sum). */
 
 /* ───── Cabecera, ocupación y herramientas ───── */
-.e-wrap{max-width:1040px;margin:0 auto;padding:16px 16px 40px;display:grid;gap:16px}
+.e-wrap{max-width:1040px;margin:0 auto;padding:16px 16px 84px;display:grid;gap:16px} /* abajo, lugar para el botón fijo de ingreso */
 .e-wrap>*{min-width:0}
-.e-hd{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 16px;padding-bottom:14px;border-bottom:1px solid var(--edge)}
-.e-who{grid-area:1/1;min-width:0}
+.e-hd{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:12px 16px;padding-bottom:14px;border-bottom:1px solid var(--edge)}
+.e-who{min-width:0}
 .e-who b{display:block;font-size:15px;font-weight:600}
-.e-occ{grid-area:2/1;display:flex;gap:8px;flex-wrap:wrap}
-.e-tb{grid-area:1/2;display:flex;gap:6px;align-items:center;justify-self:end}
-.e-new{grid-area:2/2;justify-self:end}
-.e-chip{display:grid;gap:5px;width:132px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);box-shadow:0 0 0 1px var(--edge),var(--card-sh)}
+.e-occ{display:flex;gap:8px;flex-wrap:wrap}
+.e-tb{order:2;display:flex;gap:6px;align-items:center}
+.e-new{order:3;position:fixed;left:16px;right:16px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:6;box-shadow:var(--shadow)} /* hasta MD, fijo abajo al alcance del pulgar */
+.e-chip{display:grid;gap:5px;flex:1;min-width:max-content;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);box-shadow:0 0 0 1px var(--edge),var(--card-sh)}
 .e-chip span{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--tx2);white-space:nowrap}
 .e-chip b{color:var(--tx);font-weight:600}
 .e-meter{height:4px;border-radius:2px;background:var(--soft);overflow:hidden}
@@ -251,14 +246,15 @@
 .e-grp>h2{display:flex;gap:8px;align-items:center;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2)}
 .e-grp>h2 b{font-weight:500;color:var(--tx3)}
 .e-list{display:grid;gap:1px;width:100%;background:var(--div);border-radius:var(--r-md);overflow:hidden;box-shadow:0 0 0 1px var(--edge),var(--card-sh)}
-.e-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 148px 258px;align-items:center;gap:12px;height:64px;padding:10px 12px;background:var(--surface)}
+.e-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"a s" "b b" "c c";align-items:center;gap:12px;min-height:64px;padding:10px 12px;background:var(--surface)}
 .e-row:hover{background:var(--raised)}
 .e-row>div:nth-child(-n+2){min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .e-pl{font:600 16px var(--mono);letter-spacing:.06em}
 .e-sub{margin-top:2px;overflow:hidden;font-size:12.5px;color:var(--tx3);white-space:nowrap;text-overflow:ellipsis}
 .e-row .st{justify-self:start}
-.e-acts{display:grid;grid-template-columns:150px 96px;gap:12px;justify-content:end}
-.e-acts .btn{width:100%;justify-content:center}
+.e-row>:nth-child(1){grid-area:a}.e-row>:nth-child(2){grid-area:b}.e-row>:nth-child(3){grid-area:s;justify-self:end}.e-row>:nth-child(4){grid-area:c}
+.e-acts{display:grid;grid-template-columns:1fr 96px;gap:12px}
+.e-acts .btn{width:100%;height:44px;justify-content:center}
 .e-empty{display:grid;gap:12px;justify-items:center;padding:28px 16px;text-align:center;background:var(--surface);color:var(--tx2);border-radius:var(--r-md);box-shadow:0 0 0 1px var(--edge),var(--card-sh)}
 
 /* ───── Contenido de los paneles ───── */
@@ -275,8 +271,8 @@
 .e-vt.ok{background:color-mix(in srgb,var(--ok) 14%,var(--surface));color:var(--ok)}
 .e-vt.err{background:color-mix(in srgb,var(--err) 14%,var(--surface));color:var(--err)}
 .e-vt.ok b,.e-vt.err b{color:inherit}
-.e-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:1px}
-.e-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:38px;padding:6px 12px;border:1px solid var(--inp);border-radius:var(--r-md);background:var(--raised);font-size:13.5px;text-align:left}
+.e-opts{display:grid;grid-template-columns:1fr;gap:8px;padding:1px}
+.e-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:6px 12px;border:1px solid var(--inp);border-radius:var(--r-md);background:var(--raised);font-size:13.5px;text-align:left}
 .e-opt:hover{background:var(--hover)}
 .e-opt>span:last-child{color:var(--tx2);white-space:nowrap}
 .e-opt[aria-checked=true]{background:var(--ac-soft);border-color:var(--ac);color:var(--ac-tx)}
@@ -285,14 +281,13 @@
 .e-step{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .e-step output{min-width:64px;text-align:center;font-weight:600}
 .e-step .dim{flex-basis:100%}
-.e-link{border:0;background:none;padding:0;color:var(--ac-tx);text-align:left;text-decoration:underline;font-size:12.5px}
 
 /* calendario de días con los que trabaja el empleado */
 .e-cm{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .e-cm b::first-letter{text-transform:uppercase}
 .e-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
 .e-cal .wd{padding-block:4px;font-size:12px;color:var(--tx3)}
-.e-cal button{position:relative;height:42px;border:0;border-radius:var(--r-md);background:transparent}
+.e-cal button{position:relative;height:44px;border:0;border-radius:var(--r-md);background:transparent}
 .e-cal button:hover{background:var(--raised)}
 .e-cal button[aria-pressed=true]{background:var(--ac);color:var(--on-ac)}
 .e-cal button[aria-current=date]{box-shadow:inset 0 0 0 1px var(--ac)}
@@ -308,19 +303,33 @@
 .e-tw th{position:sticky;top:0;background:var(--raised);color:var(--tx2);font-weight:500}
 .e-tw tfoot td{position:sticky;bottom:0;background:var(--raised);border-bottom:0;font-weight:600}
 .e-range{margin-left:auto}
-@media(max-width:$md){
-  .e-hd{grid-template-columns:minmax(0,1fr)}
-  .e-who,.e-occ,.e-tb,.e-new{grid-area:auto;justify-self:stretch}
-  .e-tb{order:2}.e-new{order:3}
-  .e-new{position:fixed;left:16px;right:16px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:6;box-shadow:var(--shadow)}
-  .e-wrap{padding-bottom:84px}
-  .e-chip{flex:1;width:auto;min-width:max-content}
-  .e-row{height:auto;min-height:64px;grid-template-columns:1fr auto;grid-template-areas:"a s" "b b" "c c"}
-  .e-row>:nth-child(1){grid-area:a}.e-row>:nth-child(2){grid-area:b}.e-row>:nth-child(3){grid-area:s;justify-self:end}.e-row>:nth-child(4){grid-area:c}
-  .e-acts{grid-template-columns:1fr 96px;justify-content:stretch}
-  .e-acts .btn{height:44px}
+
+/* ───── Responsive, mobile-first: lo de arriba es el teléfono (SM); MD y LG solo agregan con min-width (_breakpoints.scss) ───── */
+@media(min-width:$sm + 1){
+  .dhead .tl .icon-btn{margin-left:-6px}
+  .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  /* los paneles entran por el costado derecho */
+  .drawer:not(.left){top:0;right:0;bottom:0;left:auto;width:560px;max-height:none;border-radius:0;padding-bottom:0}
+  .drawer.mid{width:min(680px,100%)}.drawer.wide{width:min(1080px,100%)}
+  .drawer:not(.left)::before{content:none}
+  .drawer:not(.left) .dhead{padding-top:16px}
+  .split .side{flex:0 0 320px}.split .main{padding:20px 24px}.split .main .dl{grid-template-columns:176px 1fr}.split .bl{max-height:60vh}.bi{min-height:40px}
+  .e-opts{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-@media(max-width:$sm){.e-opts{grid-template-columns:1fr}}
-@media(max-width:$sm),(pointer:coarse){.e-cal button{height:44px}.e-opt{min-height:44px}.e-link{display:inline-flex;align-items:center;min-height:44px}}
+@media(min-width:$md + 1){
+  .split .main .tbl .nm{white-space:nowrap}
+  /* terminal del empleado: cabecera en dos columnas y cada reserva en una sola fila */
+  .e-hd{grid-template-columns:minmax(0,1fr) auto}
+  .e-who{grid-area:1/1}.e-occ{grid-area:2/1}.e-tb{grid-area:1/2;order:0;justify-self:end}
+  .e-new{grid-area:2/2;order:0;justify-self:end;position:static;z-index:auto;box-shadow:none}
+  .e-wrap{padding-bottom:40px}
+  .e-chip{flex:initial;width:132px;min-width:auto}
+  .e-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 148px 258px;grid-template-areas:"a b s c";height:64px;min-height:auto}
+  .e-row>:nth-child(3){justify-self:start}
+  .e-acts{grid-template-columns:150px 96px;justify-content:end}
+}
+/* con mouse o trackpad, controles más chicos (táctil sigue en 44 px a cualquier ancho) */
+@media(min-width:$sm + 1) and (pointer:fine){.e-cal button{height:42px}.e-opt{min-height:38px}}
+@media(min-width:$md + 1) and (pointer:fine){.e-acts .btn{height:30px}}
 
 }

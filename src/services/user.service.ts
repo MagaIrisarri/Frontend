@@ -1,7 +1,6 @@
-import axios from "axios";
+import { api } from './api';
 import type { formInitialState } from "../types/user.types";
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 export const updateUser = (id: string, datos: Partial<typeof formInitialState>) => api.put(`/api/users/${id}`, datos).then(res => res.data);
 export const removeUser = (id: string) => api.delete(`/api/users/${id}`).then(res => res.data);

@@ -1,5 +1,4 @@
-import axios from "axios";
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
+import { api } from './api';
 
 export const getParkingServices = (parkingId: string) =>
   api.get(`/api/parkings/${parkingId}/service-prices`).then(res => res.data.data || res.data);

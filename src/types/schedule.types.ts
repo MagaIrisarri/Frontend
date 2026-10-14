@@ -21,7 +21,8 @@ export interface Holiday {
   date: string;
   name: string;
   origin: 'oficial' | 'manual';
-  open?: boolean; // solo cuando se pide con parkingId
+  scope: 'nacional' | 'propio'; // nacional: lo carga el administrador; propio: lo ve solo su dueño (R-10)
+  open?: boolean; // solo cuando se pide con parkingId; por defecto true (la sucursal trabaja)
 }
 
 // Detalle de un 409 de turnos/feriados (R-05, R-06, R-10).

@@ -4,7 +4,7 @@ import PanelBar from '../../components/Owner/ui/PanelBar';
 
 const VIEWS: [string, string][] = [
   ['/admin', 'Panel'], ['/admin/users', 'Usuarios'], ['/admin/parkings', 'Cocheras'], ['/admin/vehicles', 'Vehículos'],
-  ['/admin/brands', 'Marcas y modelos'], ['/admin/insurances', 'Seguros'], ['/admin/services', 'Servicios'],
+  ['/admin/brands', 'Marcas y modelos'], ['/admin/vehicle-types', 'Tipos de vehículo'], ['/admin/insurances', 'Seguros'], ['/admin/services', 'Servicios'], ['/admin/holidays', 'Feriados'],
 ];
 
 // Raíz del panel del administrador, con la misma barra y estilos que el del dueño.

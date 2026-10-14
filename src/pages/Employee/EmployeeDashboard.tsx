@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import axios from 'axios';
 import { ChevronLeft, ChevronRight, MapPin, Plus, Search } from 'lucide-react';
 import OwnerShell from '../../components/Owner/ui/OwnerShell';
 import PanelBar from '../../components/Owner/ui/PanelBar';
@@ -7,6 +6,7 @@ import { Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
 import { useAuthStore } from '../../stores/authStore';
 import { getReservationsByParking } from '../../services/reservation.service';
+import { api } from '../../services/api';
 import { DOW, VT, addD, occOf, shD, svcOf, today, wdOf } from '../Owner/owner.lib';
 import CalendarDrawer, { AHEAD_DAYS, BACK_DAYS } from './CalendarDrawer';
 import ResDrawer from './ResDrawer';
@@ -14,7 +14,6 @@ import SummaryDrawer from './SummaryDrawer';
 import WalkInDrawer from './WalkInDrawer';
 import { hhmm, list, normERes, overdue, person, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes, type Status } from './employee.lib';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 const POLL_MS = 30_000;
 const SEGS: ['all' | Status, string][] = [['all', 'Todas'], ['PENDIENTE', 'Pendientes'], ['CONFIRMADA', 'Confirmadas'], ['EN CURSO', 'En curso'], ['FINALIZADA', 'Finalizadas'], ['CANCELADA', 'Canceladas']];
 interface Shift { d: number; t: string } // d: 0 = lunes (como DOW), t: "08:00–16:00"
@@ -59,13 +58,13 @@ export default function EmployeeDashboard() {
         {status === 'error' ? <ErrorBox what="las reservas" onRetry={refresh} />
           : status === 'loading' || parking === undefined ? <SkeletonRows n={5} />
             : parking === null ? <Empty icon={<MapPin className="i" />} title="Sin sucursal asignada">Pedile al dueño que te asigne una sucursal desde Personal para ver y operar sus reservas.</Empty>
-              : <Terminal reservations={reservations} parking={parking} shifts={shifts} me={person(user)} userId={userId} onChange={refresh} />}
+              : <Terminal reservations={reservations} parking={parking} shifts={shifts} me={person(user)} onChange={refresh} />}
       </main>
     </OwnerShell>
   );
 }
 
-function Terminal({ reservations, parking, shifts, me, userId, onChange }: { reservations: ERes[]; parking: EParking; shifts: Shift[]; me: string; userId: string; onChange: () => Promise<void> }) {
+function Terminal({ reservations, parking, shifts, me, onChange }: { reservations: ERes[]; parking: EParking; shifts: Shift[]; me: string; onChange: () => Promise<void> }) {
   const now = today();
   const [rd, setRd] = useState(now);
   const [rs, setRs] = useState<'all' | Status>('all');
@@ -113,7 +112,7 @@ function Terminal({ reservations, parking, shifts, me, userId, onChange }: { res
   else queue = groups.filter(g => g[1].length).map(([title, rows]) => (
     <section className="e-grp" key={title}>
       <h2>{title} <b>{rows.length}</b></h2>
-      <div className="e-list" role="table" aria-label={title}>{rows.map(r => <Row key={r.id} r={r} userId={userId} busy={busy} run={run} onOpen={() => setOpenId(r.id)} />)}</div>
+      <div className="e-list" role="table" aria-label={title}>{rows.map(r => <Row key={r.id} r={r} busy={busy} run={run} onOpen={() => setOpenId(r.id)} />)}</div>
     </section>
   ));
 
@@ -147,8 +146,8 @@ function Terminal({ reservations, parking, shifts, me, userId, onChange }: { res
 
       <div className="e-queue">{queue}</div>
 
-      <Shown when={open}>{open => <ResDrawer r={open} parking={parking} userId={userId} onChange={onChange} onClose={() => setOpenId(null)} />}</Shown>
-      <WalkInDrawer open={panel === 'walkin'} parking={parking} userId={userId} onChange={onChange} onClose={() => setPanel(null)} />
+      <Shown when={open}>{open => <ResDrawer r={open} parking={parking} onChange={onChange} onClose={() => setOpenId(null)} />}</Shown>
+      <WalkInDrawer open={panel === 'walkin'} parking={parking} onChange={onChange} onClose={() => setPanel(null)} />
       <SummaryDrawer open={panel === 'summary'} reservations={reservations} onClose={() => setPanel(null)} />
       <CalendarDrawer open={panel === 'calendar'} value={rd} worked={worked} turno={turno} onPick={d => { setRd(d); setPanel(null); }} onClose={() => setPanel(null)} />
     </>
@@ -156,8 +155,8 @@ function Terminal({ reservations, parking, shifts, me, userId, onChange }: { res
 }
 
 // Una reserva en la cola: patente, plaza y horario con quién ingresó y salió, estado y la acción que toca.
-function Row({ r, userId, busy, run, onOpen }: { r: ERes; userId: string; busy: boolean; run: ReturnType<typeof useRun>['run']; onOpen: () => void }) {
-  const p = primaryOf(r, userId);
+function Row({ r, busy, run, onOpen }: { r: ERes; busy: boolean; run: ReturnType<typeof useRun>['run']; onOpen: () => void }) {
+  const p = primaryOf(r);
   const st = stateOf(r);
   const io = r.status === 'EN CURSO' || r.status === 'FINALIZADA'
     ? [r.inBy && `Ingresó ${r.inBy}`, r.outBy && `Salió ${r.outBy}`].filter(Boolean).join(' · ') || 'Sin ingreso registrado' : r.services.map(s => s.name).join(', ');

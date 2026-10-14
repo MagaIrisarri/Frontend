@@ -8,7 +8,7 @@ import { Menu } from '../../components/Owner/ui/Menu';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { plural } from '../Owner/owner.lib';
 
-export interface CatalogItem { id: string; name: string; description?: string }
+export interface CatalogItem { id: string; name: string; description?: string; locked?: boolean } // locked: sin editar ni eliminar
 type Values = { name: string; description: string };
 
 // Lista del catálogo general (tipos de vehículo, servicios, seguros, marcas), con los patrones del panel del dueño.
@@ -77,10 +77,10 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
         <tr key={i.id}>
           <td><span className="nm">{i.name}</span>{i.description && <div className="ad">{i.description}</div>}</td>
           {hasMenu && <td className="r"><div className="acts">
-            <Menu label={`Más acciones de ${i.name}`} button={<MoreVertical className="i" />} items={[
+            {!i.locked && <Menu label={`Más acciones de ${i.name}`} button={<MoreVertical className="i" />} items={[
               ...(api.update ? [{ label: 'Editar', icon: <Pencil className="i" />, onClick: () => setForm(i) }] : []),
               ...(api.remove ? [{ label: 'Eliminar', icon: <Trash2 className="i" />, danger: true, sep: !!api.update, onClick: () => setDel(i) }] : []),
-            ]} />
+            ]} />}
           </div></td>}
         </tr>
       ))}</tbody>

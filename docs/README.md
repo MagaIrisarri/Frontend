@@ -22,6 +22,7 @@ Están en la documentación del backend: [docs/README.md](https://github.com/Mag
 ## Alcance
 
 - [revision-alcance.md](revision-alcance.md): cada requisito de la propuesta y el código que lo cumple.
+- [requisitos-tp.md](requisitos-tp.md): requisitos técnicos, entregas, documentación y guía de estilo de la cátedra, con su estado.
 
 ## Notas por rol
 

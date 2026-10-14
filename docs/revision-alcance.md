@@ -2,7 +2,7 @@
 
 Revisión contra el [proposal](https://github.com/MagaIrisarri/TPDSW/blob/main/proposal.md), hecha leyendo el código local.
 
-- **Primera revisión (2026-10-11):** Backend `25e9aa4`, Frontend `afb326b`. Dejó la edición de Vehículo y el uso de servicio en Parcial, y el recordatorio por email sin hacer.
+- **Primera revisión (2026-10-11):** Backend `25e9aa4`, Frontend `afb326b`. Dejó la edición de Vehículo y el uso de servicio en Parcial, y el recordatorio sin hacer.
 - **Actualización (2026-10-11):** se cerraron los faltantes con Backend `282e86d`, `99802ae` y Frontend `b25da64`, `d00ae2a`. El uso de servicio ya estaba resuelto en Backend `54c16f1` y Frontend `e72f90c` (R-24). Esta vez sí se corrieron las pruebas: pruebas locales del backend contra MySQL, `pnpm verify` completo y las e2e contra el backend real. Todo pasa.
 
 Todo está en las ramas `prueba-valen-bk` y `prueba-valen-fr`, todavía no mergeadas a `main`. **Lo que ve la cátedra en `main` no tiene esto hasta el merge.** Los códigos R-, L- y D- están en [owner-turnos-notas.md](owner/owner-turnos-notas.md).
@@ -18,7 +18,7 @@ Todo está en las ramas `prueba-valen-bk` y `prueba-valen-fr`, todavía no merge
 | CRUD Usuario | Cumple | Backend: [User.Route.ts:25-42](../../Backend/src/User/User.Route.ts#L25-L42) (alta, login, edición, contraseña, baja lógica, reactivar). Frontend: registro en [AuthDrawer.tsx](../src/components/Auth/AuthDrawer.tsx), edición y baja propias en [ProfileDrawer.tsx](../src/components/Profile/ProfileDrawer.tsx), listado, alta (cliente, dueño y empleado), edición y baja en [AdminUsers.tsx](../src/pages/Admin/AdminUsers.tsx) | — |
 | CRUD Estacionamiento | Cumple | Backend: [Parking.Route.ts:18-26](../../Backend/src/Parking/Parking.Route.ts#L18-L26). Frontend: alta y edición en [ParkingDrawer.tsx](../src/pages/Owner/ParkingDrawer.tsx), baja y reactivación en [OwnerDashboard.tsx](../src/pages/Owner/OwnerDashboard.tsx) | — |
 | CRUD Servicio | Cumple | Backend: [ServiceCatalog.Route.ts:16-21](../../Backend/src/ServiceCatalog/ServiceCatalog.Route.ts#L16-L21). Frontend: [AdminService.tsx](../src/pages/Admin/AdminService.tsx) | — |
-| CRUD TipoVehículo | Cumple (solo API) | Backend: [VehicleType.Route.ts:16-21](../../Backend/src/Vehicle/VehicleType/VehicleType.Route.ts#L16-L21). Frontend: sin vista, a propósito: el administrador no administra tipos (solo AUTO, MOTO y CAMIONETA, ver [admin-permisos-notas.md](admin/admin-permisos-notas.md)) | Sin `descripcion` del DER (se decidió documentarlo, ver abajo). Sin pantalla: el CRUD se prueba contra la API |
+| CRUD TipoVehículo | Cumple | Backend: [VehicleType.Route.ts](../../Backend/src/Vehicle/VehicleType/VehicleType.Route.ts) y las reglas en [VehicleType.Service.ts](../../Backend/src/Vehicle/VehicleType/VehicleType.Service.ts): nombre único, tipos base fijos, sin dar de baja ni cambiar de categoría lo que está en uso (RA-11). Frontend: [AdminVehicleTypes.tsx](../src/pages/Admin/AdminVehicleTypes.tsx) en el panel del administrador (2026-10-13, sin commit) | Sin `descripcion` del DER (se decidió documentarlo, ver abajo) |
 | CRUD Vehículo (depende de TipoVehículo) | Cumple | Alta y edición comparten la validación: el modelo existe, marca y modelo coinciden, y el tipo sale del modelo ([Vehicle.Service.ts:20-81](../../Backend/src/Vehicle/Vehicle.Service.ts#L20-L81)). No se cambia el tipo con reservas activas (R-25). Frontend: [VehiclesDrawer.tsx](../src/components/Vehicle/VehiclesDrawer.tsx) | — (la edición se arregló en `282e86d`) |
 | CRUD Ubicacion_playa (depende de Estacionamiento) | Cumple | Backend: [ParkingSpace.Route.ts](../../Backend/src/ParkingSpace/ParkingSpace.Route.ts). Valida que la cochera esté activa en [ParkingSpace.Service.ts](../../Backend/src/ParkingSpace/ParkingSpace.Service.ts). Frontend: [OwnerSpaces.tsx](../src/pages/Owner/OwnerSpaces.tsx) (alta masiva, edición, baja con reubicación) | — |
 | Listado de estacionamientos por localidad → detalle de Ubicacion_playa | Cumple | Select "Localidad" en la barra de filtros ([ListDrawer.tsx:81, 344](../src/components/Home/ListDrawer.tsx#L344)), aplicado en [useHomePage.ts:169](../src/hooks/useHomePage.ts#L169). Además, la búsqueda de texto. Se ve la dirección; el detalle muestra libres y total por tipo y lleva al mapa de plazas ([ParkingSpaceMap.tsx](../src/pages/ParkingSpace/ParkingSpaceMap.tsx)) | — |
@@ -45,7 +45,7 @@ Los CRUD de Usuario, Estacionamiento, Servicio, TipoVehículo, Vehículo y Ubica
 | Vehículos por tipo (patente, marca, modelo, seguro) → detalle del cliente | Cumple | [AdminVehicles.tsx](../src/pages/Admin/AdminVehicles.tsx): filtro por tipo, columnas y drawer del cliente | — |
 | Resumen mensual por estado | Cumple, con matiz | [OwnerReservations.tsx:142, 180](../src/pages/Owner/OwnerReservations.tsx#L180): filtro por estado (finalizadas por defecto), código, desde, hasta y monto neto, con CSV | No muestra `tipo_reserva`, que no existe en el modelo (ver abajo) |
 | Cancelación de reserva | Cumple | `DELETE /:id` → [Service.remove:170](../../Backend/src/Reservation/Reservation.Service.ts#L170): permisos (cliente, administrador o personal de esa sucursal), reglas por estado y anula la factura pendiente. Frontend: cliente, dueño y empleado. También se cancelan solas las vencidas sin ingreso (R-17) | — |
-| Recordatorio por email | Cumple | [Service.sendReminders:236](../../Backend/src/Reservation/Reservation.Service.ts#L236): manda el mail 2 horas antes del inicio, una sola vez, y reintenta si falla (R-28). Usa [mailer.ts](../../Backend/src/Shared/utils/mailer.ts) con SMTP por variables de entorno; sin `SMTP_HOST`, el mail se escribe en la consola | Corre en memoria del proceso (L-27) |
+| Recordatorio de reserva | Cumple | `Service.sendReminders` ([Reservation.Service.ts](../../Backend/src/Reservation/Reservation.Service.ts)): deja una notificación en la app 2 horas antes del inicio, una sola vez, y reintenta si falla (R-28). El sistema no envía mails | Corre en memoria del proceso (L-27) |
 
 **Agregado, fuera del listado:** el cliente puede valorar con estrellas una reserva finalizada (R-27, `valoracion_servicio` del DER). Es opcional y se hace una sola vez. El dueño ve la valoración en el detalle de la reserva y el promedio por sucursal en el resumen mensual.
 
@@ -58,11 +58,10 @@ Los CRUD de Usuario, Estacionamiento, Servicio, TipoVehículo, Vehículo y Ubica
 ## Lo que queda
 
 1. **Mergear a `main`** (esfuerzo bajo). Es lo único que bloquea que la cátedra lo vea.
-2. **Autenticación** (esfuerzo alto; se decidió dejarla fuera). No es un requisito del listado, pero es un riesgo en la defensa:
-   - La identidad sale del header `x-user-id` ([Reservation.Controller.ts](../../Backend/src/Reservation/Reservation.Controller.ts)), y cualquiera puede mandarlo con el id que quiera.
-   - `PUT /reservations/:id` permite cambiar `status` y `attendedById` sin controlar quién lo pide.
-   - Los endpoints de usuarios y vehículos no tienen protección.
-3. **Configurar SMTP para la defensa** (esfuerzo bajo), si se quiere mostrar un mail real: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` y `MAIL_FROM` (sirven Ethereal, Mailtrap o Gmail con contraseña de aplicación).
+2. **Autenticación** (hecha, sin commit; 3.1.1 la pide para la aprobación, ver [requisitos-tp.md](requisitos-tp.md)):
+   - El login devuelve un JWT, y la identidad sale del token, no de un header ([auth.ts](../../Backend/src/Shared/middlewares/auth.ts)).
+   - Cada ruta exige su rol (`auth`) y, cuando recibe el id del propio usuario, que sea el del token (`self`). `PUT /reservations/:id` solo lo usa el personal, y `assertStaffOf` sigue controlando la sucursal.
+   - Cada recurso se controla contra su dueño: la cochera, el vehículo, la reserva y la factura (L-37, cerrada). Los feriados nacionales los carga el administrador y cada sucursal elige si cierra (D-09, L-38 cerrada).
 
 ## Próximas mejoras
 
@@ -92,7 +91,7 @@ Propuestas a partir de la valoración (R-27) y del uso del mapa. Ninguna está i
 
 - **Reserva:** ya tiene `cod_reserva` (`code`, R-26) y `valoracion_servicio` (`rating`, R-27). No tiene `tipo_reserva`: el sistema solo tiene reservas online, así que sería siempre el mismo valor.
 - **Vehículo:** marca, modelo y seguro son entidades (`Brand`, `Model`, `Insurance`), no atributos. El tipo se toma del modelo. Se agregaron color y año.
-- **TipoVehículo:** no tiene `descripcion`. Además, `ParkingSpace.vehicleType` y `ParkingPrice.vehicleType` son texto, no FK al tipo. Si se crea un tipo nuevo que no coincide con AUTO, MOTO o CAMIONETA, no tiene plazas, y el check-out falla con un 500 porque no encuentra tarifa.
+- **TipoVehículo:** no tiene `descripcion`. Además, `ParkingSpace.vehicleType` y `ParkingPrice.vehicleType` son texto, no FK al tipo: guardan la categoría (AUTO, MOTO o CAMIONETA). Un tipo que crea el administrador se cobra y estaciona según su categoría (`categorizeVehicleType`: "Cuatriciclo" como AUTO), porque plazas y tarifas, también la del check-out (`findForCheckout`), se buscan por categoría. Verificado leyendo el código, no con un check-out real.
 - **Usuario:** los subtipos Empleado y Cliente se resuelven con un campo `type` de texto. `ownerId` y `parkingId` del empleado son texto, no FK.
 - **Estacionamiento:** tiene `truckCapacity`, horarios, latitud/longitud, provincia y barrio, que no están en el DER.
 - **Turno_Empleado:** en el DER, `dias_semana` es un solo atributo; en el código hay una fila por día, con FK a la cochera. Se agregaron `DayException`, `ShiftClosure` y `Holiday`.

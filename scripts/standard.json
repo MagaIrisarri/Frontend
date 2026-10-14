@@ -27,7 +27,9 @@
     "src/pages/Employee/WalkInDrawer.tsx",
     "src/pages/Employee/SummaryDrawer.tsx",
     "src/pages/Employee/CalendarDrawer.tsx",
-    "src/styles/base.scss"
+    "src/styles/base.scss",
+    "src/pages/Admin/AdminCatalog.tsx",
+    "src/pages/Admin/AdminVehicleTypes.tsx"
   ],
   "forbiddenRoutes": [
     "/profile"

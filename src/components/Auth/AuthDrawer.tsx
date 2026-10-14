@@ -90,7 +90,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
 
   const finish = (data: any) => {
     const user = data.user || data.data;
-    useAuthStore.getState().setUser(user);
+    useAuthStore.getState().setUser(user, data.token);
     onSuccess?.(user);
     onClose();
     if (user?.mustChangePassword) openProfile(); // R-29: entró con el DNI; el perfil le pide la contraseña nueva

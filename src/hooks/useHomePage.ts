@@ -146,13 +146,13 @@ export function useHomePage() {
   // Dar de baja / cancelar reserva
   const handleCancelReservation = async (reservationId: string) => {
     if (!user?.id) throw new Error('Usuario no identificado');
-    await cancelReservation(reservationId, user.id);
+    await cancelReservation(reservationId);
     fetchClientReservations();
   };
 
   const handleRateReservation = async (reservationId: string, rating: number) => {
     if (!user?.id) throw new Error('Usuario no identificado');
-    await rateReservation(reservationId, rating, user.id);
+    await rateReservation(reservationId, rating);
     fetchClientReservations();
   };
 

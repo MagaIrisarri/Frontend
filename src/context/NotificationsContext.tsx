@@ -30,7 +30,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const res = await getNotifications(userId);
+      const res = await getNotifications();
       setItems(res.data ?? []);
       setUnread(res.unread ?? 0);
       setError(false);
@@ -56,14 +56,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     setItems((prev) => prev.map((n) => (n.id === id && !n.readAt ? { ...n, readAt: new Date().toISOString() } : n)));
     setUnread((n) => Math.max(0, n - 1));
-    try { await markNotificationRead(id, userId); } catch { void load(); }
+    try { await markNotificationRead(id); } catch { void load(); }
   };
 
   const markAll = async () => {
     if (!userId) return;
     setItems((prev) => prev.map((n) => (n.readAt ? n : { ...n, readAt: new Date().toISOString() })));
     setUnread(0);
-    try { await markAllNotificationsRead(userId); } catch { void load(); }
+    try { await markAllNotificationsRead(); } catch { void load(); }
   };
 
   const api = useMemo(() => ({ unread, open: () => setIsOpen(true) }), [unread]);

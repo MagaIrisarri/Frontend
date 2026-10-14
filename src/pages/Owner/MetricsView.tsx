@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import { BarChart3 } from 'lucide-react';
 import OwnerShell from '../../components/Owner/ui/OwnerShell';
 import PanelBar from '../../components/Owner/ui/PanelBar';
 import { Empty, ErrorBox, PageHead } from '../../components/Owner/ui/Page';
 import { money } from './owner.lib';
+import { api } from '../../services/api';
 
 interface Metrics { totalRevenue?: number; activeReservations?: number; occupancyRate?: number; totalCapacity?: number; reservations?: Record<string, number> }
 
@@ -17,7 +17,7 @@ export default function MetricsView() {
 
   const load = () => {
     setState('loading');
-    axios.create({ baseURL: import.meta.env.VITE_API_URL }).get(`/api/parkings/${id}/metrics`)
+    api.get(`/api/parkings/${id}/metrics`)
       .then(res => { setMetrics(res.data?.data || res.data); setState('ok'); })
       .catch(() => setState('error'));
   };
