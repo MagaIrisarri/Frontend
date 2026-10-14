@@ -9,7 +9,8 @@ prompt.md
 .eslintcache
 .stylelintcache
 
-.env
+# .env se versiona a propósito (proyecto privado de la facultad): solo trae la URL de la API y la clave pública del mapa,
+# que igual queda en el JavaScript del navegador. Restringir la clave de MapTiler a localhost. Los .env.local sí se ignoran.
 .env.local
 .env.*.local
 !.env.example
@@ -42,16 +43,17 @@ Thumbs.db
 tsconfig.tsbuildinfo
 package-lock.json
 
-e2e/
+tests/e2e/
 playwright.config.ts
 blob-report/
 playwright/.cache/
 
 # Claude: skills 
-.claude/settings.local.json
 
 # Ralph
-scripts/ralph/prd.json
-scripts/ralph/progress.txt
-scripts/ralph/archive/
-scripts/ralph/.last-branch
+
+# Herramientas de IA (agentes, skills, scripts autónomos): locales de cada integrante, no son parte del producto
+.claude/
+.agents/
+skills-lock.json
+scripts/ralph/
