@@ -31,7 +31,7 @@ Cada paso de una migración se cierra con `pnpm verify`; si falla, el paso no es
 
 1. `scripts/check-standard.mjs` — recorre las pantallas listadas en `scripts/standard.json` y falla ante colores/radios/sombras/tipografía de Tailwind, `dark:`, hex sueltos, `fixed inset-0`, `alert/confirm/prompt`, clases de animación sin plugin; verifica que `/profile` no exista y que las rutas de panel rendericen `<HomePage />`.
 2. `pnpm build` — tipos (`tsc --noEmit`) y bundle.
-3. e2e de Playwright (`e2e/`, local y sin versionar; se omite si la carpeta no existe). `pnpm verify --fast` los omite.
+3. e2e de Playwright (`tests/e2e/`, local y sin versionar; se omite si la carpeta no existe). `pnpm verify --fast` los omite.
 
 Regla de trabajo: una pantalla migrada se agrega a `scripts/standard.json` **en el mismo paso** y lleva su prueba e2e; un archivo borrado se quita del manifiesto (el chequeo falla si lista uno que no existe).
 
@@ -80,6 +80,6 @@ Regla de trabajo: una pantalla migrada se agrega a `scripts/standard.json` **en 
 - Atajos y deuda: `// shortcut: L-xx, <límite>, <cuándo mejorar>`. `grep -rn "shortcut:"` debe coincidir con las filas abiertas de `docs/owner/owner-turnos-notas.md`.
 - Códigos de las notas: **R-** reglas de negocio, **L-** limitaciones, **D-** decisiones. Al resolver uno, se actualiza su estado en las notas con el hash del commit. Los mensajes de commit citan los códigos (`feat: turnos — R-02, R-03, R-04`).
 - Las reglas de negocio se validan en el backend; el frontend solo las anticipa (L-05).
-- Las pruebas (`tests/`, `e2e/`, `playwright.config.ts`) no se versionan: son locales; el arnés (`scripts/verify.mjs`, `check-standard.mjs`, `standard.json`) sí. Todo cambio visible se cierra con `pnpm verify`.
+- Las pruebas (`tests/unit/`, `tests/e2e/`, `playwright.config.ts`) no se versionan: son locales; el arnés (`scripts/verify.mjs`, `check-standard.mjs`, `standard.json`) sí. Todo cambio visible se cierra con `pnpm verify`.
 - Pruebas desactualizadas: cuando un cambio modifica a propósito un comportamiento (etiqueta, regla, ruta o permiso), las pruebas que lo cubren se actualizan en el mismo paso; no se deja una prueba que verifique lo anterior. Como no se versionan, cada uno tiene su copia: después de mergear la rama de otro, se corre `pnpm verify` completo (con e2e) y, ante cada fallo, se decide si es una regresión (se arregla el código) o una prueba vieja (se actualiza a la regla nueva, citando su código: R-18, etc.). Nunca se borra ni se saltea una prueba para que pase.
 - Requisitos de la cátedra (técnicos, entregas, documentación y guía de estilo Airbnb), con su estado: `docs/requisitos-tp.md`. Una regla de este archivo choca con ellos (pruebas sin versionar): sigue vigente hasta que el equipo decida, pero no se da por cumplida.

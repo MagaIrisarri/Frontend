@@ -27,7 +27,7 @@ Decidido (D-01, D-09): dos estados por sucursal, **Trabaja** (por defecto, con l
 
 | Código | Regla | Estado |
 | --- | --- | --- |
-| R-01 | Cada franja del horario de la sucursal necesita al menos un empleado. Las horas sin cobertura no admiten reservas. | Implementada. Backend: `ScheduleService.assertCovered` al crear reservas; solo si la sucursal ya tiene turnos (`shortcut: R-01`). Frontend: huecos y % de cobertura. |
+| R-01 | Cada franja del horario de la sucursal necesita al menos un empleado. Las horas sin cobertura no admiten reservas. | Implementada. Backend: `ScheduleService.assertCovered` al crear, extender, cambiar de plaza y en el mostrador; una sucursal sin turnos no admite reservas (antes se salteaba, `shortcut: R-01`, resuelto). Frontend: huecos y % de cobertura. |
 | R-02 | Los turnos no se solapan. Al mover o estirar un turno sobre otro, el movido se queda con el horario y el otro se recorta, se divide o desaparece. | Implementada. Frontend `place()`; backend rechaza solapes (`normalizeDay`, `findOverlappingInParking`). |
 | R-03 | Soltar un empleado sobre un turno lo divide 50/50 (el nuevo toma la mitad donde se soltó). Sobre un hueco, lo cubre entero. | Implementada en frontend (`dropOn`). |
 | R-04 | Los turnos contiguos del mismo empleado se fusionan. | Implementada en frontend y backend. |

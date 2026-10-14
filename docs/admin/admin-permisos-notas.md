@@ -83,7 +83,7 @@ Las valida el servidor; el frontend solo las anticipa.
 | `pages/Admin/AdminUsers.tsx` | "Nuevo dueño" pasa a "Nuevo usuario". `OwnerDrawer` pasa a un formulario con rol; con empleado, selects de dueño y sucursal dependientes. Agregar el panel de edición. Mostrar sucursal y dueño en la fila del empleado. |
 | `services/user.service.ts` y `services/vehicle.service.ts` | Agregar `createUser(type, datos)` para cliente y dueño (hoy `createOwner` fija `DUEÑO`), `createEmployee(ownerId, datos)`, `updateEmployee(ownerId, id, datos)` e `importCatalog(items, dryRun)`. `updateUser`, `removeUser` y `reactivateUser` ya existen y sirven también para empleados. |
 | `styles/ui.scss` | Agregar las clases de lista + detalle con nombres genéricos. No crear un `.scss` por pantalla. |
-| `scripts/standard.json` y `e2e/` | Agregar las pantallas nuevas o migradas y su prueba e2e. Cerrar con `pnpm verify`. |
+| `scripts/standard.json` y `tests/e2e/` | Agregar las pantallas nuevas o migradas y su prueba e2e. Cerrar con `pnpm verify`. |
 
 Reglas del estándar que el prototipo simplifica:
 - Todo `Drawer` y `ConfirmModal` va dentro de `Presence` o `Shown`: el prototipo los monta y desmonta sin animar.

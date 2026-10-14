@@ -1,5 +1,5 @@
 // Arnés de verificación: un paso falla y se corta. Se corre al cerrar cada paso de una migración.
-//   pnpm verify          estándar + tipos + build + e2e (si hay carpeta e2e/, que es local y no se versiona)
+//   pnpm verify          estándar + tipos + build + e2e (si hay carpeta tests/e2e/, que es local y no se versiona)
 //   pnpm verify --fast   sin e2e
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -19,6 +19,6 @@ const run = (name, cmd, args) => {
 run('Estándar visual', 'node', ['scripts/check-standard.mjs']);
 run('Tipos y build', 'pnpm', ['build']);
 if (fast) console.log('· e2e omitido (--fast)');
-else if (existsSync('e2e')) run('e2e (Playwright)', 'pnpm', ['exec', 'playwright', 'test', '--reporter=line']);
-else console.log('· e2e omitido: no hay carpeta e2e/ (las pruebas son locales)');
+else if (existsSync('tests/e2e')) run('e2e (Playwright)', 'pnpm', ['exec', 'playwright', 'test', '--reporter=line']);
+else console.log('· e2e omitido: no hay carpeta tests/e2e/ (las pruebas son locales)');
 console.log('✓ Verificación completa');

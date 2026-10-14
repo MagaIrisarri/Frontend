@@ -20,7 +20,7 @@ cd Frontend
 pnpm install
 ```
 
-Crear un archivo `.env` en la raíz:
+El repositorio ya trae un `.env` en la raíz (proyecto privado de la facultad), así que no hace falta crearlo. Si hay que cambiarlo:
 
 ```env
 VITE_API_URL=http://localhost:3000
