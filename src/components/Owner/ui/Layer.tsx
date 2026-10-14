@@ -3,6 +3,16 @@ import { ArrowLeft, X } from 'lucide-react';
 import { useClosing } from './Presence';
 import { useSwipeClose } from '../../../hooks/useSwipeClose';
 
+// El scroll de la página se bloquea mientras haya algún panel o modal en pantalla. Se calcula mirando el DOM, no guardando
+// el valor anterior ni contando: así no queda trabado si un panel se abre mientras otro se cierra (detalle de la sucursal →
+// Editar sucursal), si se cierra la sesión o se cambia de pantalla con uno abierto, ni con la recarga en caliente de Vite.
+// Antes, en esos casos, la página quedaba sin scroll en todos los paneles hasta recargar.
+export const syncScrollLock = () => {
+  document.body.style.overflow = document.querySelector('.layer, .modal-root') ? 'hidden' : '';
+};
+const lockScroll = () => { document.body.style.overflow = 'hidden'; };
+const unlockScroll = () => queueMicrotask(syncScrollLock); // la capa ya salió del DOM cuando corre la limpieza del efecto
+
 // Foco al primer campo, Escape cierra, bloquea el scroll y devuelve el foco al abridor (como openLayer/closeLayer del prototipo).
 function useLayer(onClose: () => void, focusSel = '[data-first],input:not([type=hidden]),select,textarea,.dfoot .btn') {
   const ref = useRef<HTMLDivElement>(null);
@@ -10,8 +20,7 @@ function useLayer(onClose: () => void, focusSel = '[data-first],input:not([type=
   close.current = onClose;
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockScroll();
     const t = setTimeout(() => {
       const el = ref.current;
       let first = (el?.querySelector(focusSel) ?? el?.querySelector('.icon-btn')) as HTMLElement | null;
@@ -35,7 +44,7 @@ function useLayer(onClose: () => void, focusSel = '[data-first],input:not([type=
       vv?.removeEventListener('scroll', kb);
       clearTimeout(t);
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
+      unlockScroll();
       if (opener && document.contains(opener)) opener.focus();
     };
   }, [focusSel]);

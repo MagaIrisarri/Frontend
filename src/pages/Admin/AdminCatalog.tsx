@@ -13,7 +13,9 @@ type Values = { name: string; description: string };
 
 // Lista del catálogo general (tipos de vehículo, servicios, seguros, marcas), con los patrones del panel del dueño.
 // Cada acción aparece solo si se pasa su función en `api`: sin create no hay alta, sin update/remove no hay menú.
-export default function AdminCatalog({ title, sub, noun, icon, withDescription, api }: {
+// `actions`: acciones propias de la pantalla en el menú de cada fila (también en las bloqueadas); `onCreated`: el ítem recién creado.
+export interface CatalogAction { label: string; icon: ReactNode; onClick: () => void }
+export default function AdminCatalog({ title, sub, noun, icon, withDescription, api, actions, onCreated }: {
   title: string;
   sub: string;
   noun: { one: string; many: string; nuevo: string }; // "tipo de vehículo", "tipos de vehículo", "Nuevo tipo"
@@ -25,6 +27,8 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
     update?: (id: string, v: Values) => Promise<unknown>;
     remove?: (id: string) => Promise<unknown>;
   };
+  actions?: (item: CatalogItem) => CatalogAction[];
+  onCreated?: (created: any) => void;
 }) {
   const toast = useToast();
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -32,7 +36,7 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
   const [q, setQ] = useState('');
   const [form, setForm] = useState<CatalogItem | 'new' | null>(null);
   const [del, setDel] = useState<CatalogItem | null>(null);
-  const hasMenu = !!(api.update || api.remove);
+  const hasMenu = !!(api.update || api.remove || actions);
   const newBtn = api.create && <button type="button" className="btn pri" onClick={() => setForm('new')}><Plus className="i sm" />{noun.nuevo}</button>;
 
   const load = useCallback(async () => {
@@ -77,9 +81,10 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
         <tr key={i.id}>
           <td><span className="nm">{i.name}</span>{i.description && <div className="ad">{i.description}</div>}</td>
           {hasMenu && <td className="r"><div className="acts">
-            {!i.locked && <Menu label={`Más acciones de ${i.name}`} button={<MoreVertical className="i" />} items={[
-              ...(api.update ? [{ label: 'Editar', icon: <Pencil className="i" />, onClick: () => setForm(i) }] : []),
-              ...(api.remove ? [{ label: 'Eliminar', icon: <Trash2 className="i" />, danger: true, sep: !!api.update, onClick: () => setDel(i) }] : []),
+            {(!i.locked || !!actions?.(i).length) && <Menu label={`Más acciones de ${i.name}`} button={<MoreVertical className="i" />} items={[
+              ...(actions?.(i) ?? []),
+              ...(!i.locked && api.update ? [{ label: 'Editar', icon: <Pencil className="i" />, onClick: () => setForm(i) }] : []),
+              ...(!i.locked && api.remove ? [{ label: 'Eliminar', icon: <Trash2 className="i" />, danger: true, sep: !!api.update || !!actions, onClick: () => setDel(i) }] : []),
             ]} />}
           </div></td>}
         </tr>
@@ -98,7 +103,7 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
       )}
       {body}
       <Shown when={form}>{form => <ItemDrawer item={form === 'new' ? null : form} noun={noun} withDescription={withDescription} api={api}
-        onSaved={async msg => { setForm(null); await load(); toast(msg); }} onClose={() => setForm(null)} />}</Shown>
+        onSaved={async (msg, created) => { setForm(null); await load(); toast(msg); if (created) onCreated?.(created); }} onClose={() => setForm(null)} />}</Shown>
       <Shown when={del}>{del => <ConfirmModal title={`¿Eliminar “${del.name}”?`} body={`Deja de estar disponible para elegir. Lo que ya lo usa no cambia.`}
         ok="Eliminar" back="Volver" danger onConfirm={remove} onClose={() => setDel(null)} />}</Shown>
     </>
@@ -108,7 +113,7 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
 function ItemDrawer({ item, noun, withDescription, api, onSaved, onClose }: {
   item: CatalogItem | null; noun: { one: string; nuevo: string }; withDescription?: boolean;
   api: { create?: (v: Values) => Promise<unknown>; update?: (id: string, v: Values) => Promise<unknown> };
-  onSaved: (msg: string) => void; onClose: () => void;
+  onSaved: (msg: string, created?: unknown) => void; onClose: () => void;
 }) {
   const [v, setV] = useState<Values>({ name: item?.name ?? '', description: item?.description ?? '' });
   const [err, setErr] = useState<Partial<Values> & { general?: string }>({});
@@ -125,8 +130,8 @@ function ItemDrawer({ item, noun, withDescription, api, onSaved, onClose }: {
     const data = { name: v.name.trim(), description: v.description.trim() };
     setBusy(true);
     try {
-      if (item) await api.update!(item.id, data); else await api.create!(data);
-      onSaved(item ? `“${data.name}” actualizado.` : `“${data.name}” creado.`);
+      const res = item ? await api.update!(item.id, data) : await api.create!(data);
+      onSaved(item ? `“${data.name}” actualizado.` : `“${data.name}” creado.`, item ? undefined : res);
     } catch (x) { setErr({ general: apiError(x) }); setBusy(false); }
   };
   const set = (k: keyof Values) => (e: { target: { value: string } }) => { setV(s => ({ ...s, [k]: e.target.value })); setErr(s => ({ ...s, [k]: undefined, general: undefined })); };

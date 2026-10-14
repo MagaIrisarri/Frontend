@@ -8,15 +8,15 @@ import type { Parking } from '../../types/parking.types';
 import type { Vehicle } from '../../types/vehicle.types';
 import type { ServicePrice } from '../../types/servicePrice.types';
 import type { VehicleFilterType } from '../../types/mapFilters.types';
-import { getUnavailableReason, matchesVehicleCategory } from '../../utils/parkingPriceUtils';
+import { getTypeSpaces, getUnavailableReason } from '../../utils/parkingPriceUtils';
 import { useAuthStore } from '../../stores/authStore';
 import { Drawer } from '../Owner/ui/Layer';
 import OwnerShell from '../Owner/ui/OwnerShell';
 import { Presence } from '../Owner/ui/Presence';
 import { Empty } from '../Owner/ui/Page';
 import { Field } from '../Owner/ui/Field';
-import { fmtD, money, plural, VT } from '../../pages/Owner/owner.lib';
-import { VICON } from '../Owner/ui/vehicles';
+import { fmtD, money, plural, typeLabel, typePlural } from '../../pages/Owner/owner.lib';
+import { VICON, iconOf } from '../Owner/ui/vehicles';
 
 interface ReservationBookingDrawerProps {
   isOpen: boolean;
@@ -38,26 +38,17 @@ const normalizeTimeHHMM = (timeStr?: string): string => {
   return timeStr;
 };
 
-const normalizeVehicleType = (rawType: any): string => {
-  const typeName = String(rawType?.name || rawType || '').trim().toUpperCase();
-  if (typeName.includes('MOTO')) return 'MOTOCICLETA';
-  if (typeName.includes('CAMIONETA') || typeName.includes('VAN') || typeName.includes('UTIL')) return 'CAMIONETA';
-  return 'AUTO';
+// R-30: el vehículo usa las plazas y la tarifa de su tipo (por id); el ícono es solo visual.
+const typeOfVehicle = (v: any): { id: string; name: string } => {
+  const t = v?.vehicleType;
+  return typeof t === 'object' && t ? { id: t.id, name: t.name } : { id: String(t ?? ''), name: '' };
 };
+const vehicleUi = (v: any) => { const t = typeOfVehicle(v); return { label: typeLabel(t.name) || 'Vehículo', Icon: t.name ? iconOf(t.name) : VICON.AUTO }; };
 
 // Por qué no se reserva con ese vehículo en esta cochera (la misma regla que el listado); null si se puede.
 // Sin tarifa el backend responde 409; sin plazas libres ahora, igual que el listado, se marca no disponible.
-const blockedFor = (parking: any, v: any) => {
-  const t = normalizeVehicleType(v?.vehicleType);
-  return getUnavailableReason(parking, t === 'MOTOCICLETA' ? 'MOTO' : (t as 'AUTO' | 'CAMIONETA'));
-};
+const blockedFor = (parking: any, v: any) => getUnavailableReason(parking, typeOfVehicle(v).id);
 const BLOCKED = { NO_PRICE: 'Sin tarifa en esta cochera', NO_SPACE: 'Sin plazas libres' };
-
-const VEHICLE_UI = {
-  MOTOCICLETA: { label: 'Moto', Icon: VICON.MOTO },
-  CAMIONETA: { label: 'Camioneta', Icon: VICON.CAMIONETA },
-  AUTO: { label: 'Auto', Icon: VICON.AUTO },
-} as const;
 
 function generateAllHours(openingTime?: string, closingTime?: string): string[] {
   if (!openingTime || !closingTime) return [];
@@ -205,10 +196,7 @@ export function ReservationBookingDrawer({
             setVehicles(list);
 
             if (initialVehicleCategory && list.length > 0) {
-              const matching = list.find((v: Vehicle) => {
-                const typeName = typeof v.vehicleType === 'object' ? (v.vehicleType as any)?.name : String(v.vehicleType || '');
-                return matchesVehicleCategory(typeName, initialVehicleCategory);
-              });
+              const matching = list.find((v: Vehicle) => typeOfVehicle(v).id === initialVehicleCategory.id);
               if (matching) {
                 setSelectedVehicle(matching);
                 return;
@@ -245,7 +233,7 @@ export function ReservationBookingDrawer({
   useEffect(() => {
     if (!parking || !selectedVehicle) return;
 
-    const vType = normalizeVehicleType(selectedVehicle.vehicleType);
+    const vType = typeOfVehicle(selectedVehicle).id;
 
     Promise.all([
       getParkingServices(parking.id).catch(() => []),
@@ -354,7 +342,7 @@ export function ReservationBookingDrawer({
 
   if (!parking) return null;
 
-  const vUi = selectedVehicle ? VEHICLE_UI[normalizeVehicleType(selectedVehicle.vehicleType) as keyof typeof VEHICLE_UI] : VEHICLE_UI.AUTO;
+  const vUi = selectedVehicle ? vehicleUi(selectedVehicle) : { label: 'Vehículo', Icon: VICON.AUTO };
   const min = parking.minReservationHours || 1;
   const max = parking.maxReservationHours || 24;
   // El panel de vehículos se abre encima: al cerrarlo (X, fuera o Esc) se vuelve a esta reserva tal como estaba.
@@ -381,7 +369,7 @@ export function ReservationBookingDrawer({
       </div>
     );
 
-  const spaces = VT.map((t) => ({ Icon: VICON[t.k], label: t.pl, free: parking[t.free] ?? parking[t.cap] ?? 0, total: parking[t.cap] ?? 0 }));
+  const spaces = (parking.spaceTypes ?? []).map((t: any) => ({ Icon: iconOf(t.name), label: typePlural(t.name), free: t.available ?? t.capacity, total: t.capacity }));
 
   return (
     <Presence open={isOpen}>
@@ -403,7 +391,7 @@ export function ReservationBookingDrawer({
               <section aria-labelledby="bk-disp">
                 <h3 id="bk-disp" className="eyebrow">Disponibilidad en {parking.name}</h3>
                 <div className="acells">
-                  {spaces.map(({ Icon, label, free, total }) => (
+                  {spaces.map(({ Icon, label, free, total }: any) => (
                     <div key={label} className="acell">
                       <span className="lab"><Icon className="i sm" aria-hidden="true" />{label}</span>
                       <b>{free}</b><span className="of"> / {total}</span>
@@ -428,11 +416,10 @@ export function ReservationBookingDrawer({
                   <div className="optlist" role="radiogroup" aria-labelledby="bk-veh">
                     {[...vehicles].sort((a, b) => Number(!!blockedFor(parking, a)) - Number(!!blockedFor(parking, b))).map((v) => {
                       const isSelected = selectedVehicle?.id === v.id;
-                      const type = normalizeVehicleType(v.vehicleType) as keyof typeof VEHICLE_UI;
                       const brandName = typeof v.brand === 'object' ? v.brand?.name : v.brand || '';
                       const modelName = typeof v.model === 'object' ? v.model?.name : v.model || '';
-                      const free = type === 'MOTOCICLETA' ? spaces[1].free : type === 'CAMIONETA' ? spaces[2].free : spaces[0].free;
-                      const { Icon, label } = VEHICLE_UI[type];
+                      const free = getTypeSpaces(parking, typeOfVehicle(v).id);
+                      const { Icon, label } = vehicleUi(v);
                       const blocked = blockedFor(parking, v);
                       return (
                         <button key={v.id} type="button" role="radio" aria-checked={isSelected} className="opt" disabled={!!blocked} onClick={() => setSelectedVehicle(v)}>

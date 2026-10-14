@@ -25,6 +25,7 @@ import AdminBrands from './pages/Admin/AdminBrands';
 import AdminInsurances from './pages/Admin/AdminInsurances';
 import AdminVehicleTypes from './pages/Admin/AdminVehicleTypes';
 import AdminHolidays from './pages/Admin/AdminHolidays';
+import { ScrollLockGuard } from './components/Owner/ui/ScrollLockGuard';
 
 /**
  * Componentes de redirección para preservar compatibilidad con enlaces y marcadores previos
@@ -38,6 +39,7 @@ function RedirectToParkingSpaces() {
 export function App() {
   return (
     <BrowserRouter>
+      <ScrollLockGuard />
       <ProfileProvider><NotificationsProvider>
       <Routes>
         {/* Ruta Principal: Mapa (clientes y visitantes; los demás roles van a su panel) */}

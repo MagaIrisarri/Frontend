@@ -3,7 +3,6 @@ import { AlarmClock, Clock } from 'lucide-react';
 import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
 import { Presence } from '../../components/Owner/ui/Presence';
 import { Field, Input } from '../../components/Owner/ui/Field';
-import { vehicleKey } from '../../components/Owner/ui/vehicles';
 import { cancelReservation, changeReservationSpace, extendReservation, setReservationServices } from '../../services/reservation.service';
 import { payInvoice } from '../../services/invoice.service';
 import { getSpaceAvailability } from '../../services/parkingSpace.service';
@@ -31,12 +30,12 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   // Plazas del mismo tipo libres en el horario de la reserva (con el margen de la sucursal); la actual va primero.
   // Si se pasó de hora, sigue ocupando la plaza hasta que salga: se busca hasta ahora como mínimo.
   useEffect(() => {
-    if (!active || !r.vtype) return;
+    if (!active || !r.vtypeId) return;
     setSpaces(null);
-    getSpaceAvailability(pid, r.vtype, r.startAt, new Date(Math.max(r.endAt.getTime(), Date.now())))
+    getSpaceAvailability(pid, r.vtypeId, r.startAt, new Date(Math.max(r.endAt.getTime(), Date.now())))
       .then(x => setSpaces(list(x).filter((s: any) => s.available && s.isActive !== false && s.id !== r.spaceId)))
       .catch(() => setSpaces([]));
-  }, [active, pid, r.vtype, r.startAt, r.endAt, r.spaceId]);
+  }, [active, pid, r.vtypeId, r.startAt, r.endAt, r.spaceId]);
 
   const moveTo = (id: string) => run(() => changeReservationSpace(r.id, id), `Reserva ${r.code} movida a la plaza ${spaces?.find(s => s.id === id)?.spaceCode}.`);
   const cancel = async () => { setConfirm(false); await run(() => cancelReservation(r.id), `Reserva ${r.code} cancelada.`, 'info'); onClose(); };
@@ -66,7 +65,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   };
 
   // Importe: con factura, su detalle (R-14); antes de la salida, una estimación con la tarifa vigente y las horas extra de ahora.
-  const rate = priceOf(parking, vehicleKey(r.vtype))?.price ?? null;
+  const rate = priceOf(parking, r.vtypeId)?.price ?? null;
   const reservedH = Math.max(1, Math.ceil((r.endAt.getTime() - r.startAt.getTime()) / HOUR));
   const extraNow = overdue(r) ? extraAt(r, new Date()) : 0;
   const lines: [string, number][] = r.bill ? billLines(r.bill, r.services)

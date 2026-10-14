@@ -6,9 +6,8 @@ import type { ServicePrice } from '../../types/servicePrice.types';
 import { getParkingServices } from '../../services/servicePrice.service';
 import {
   formatSpotPrice,
-  getCategorySpaces,
+  getTypeSpaces,
   getUnavailableReason,
-  matchesVehicleCategory,
 } from '../../utils/parkingPriceUtils';
 import { Empty, ErrorBox } from '../Owner/ui/Page';
 import { Presence } from '../Owner/ui/Presence';
@@ -17,18 +16,14 @@ import { FilterBar } from '../Owner/ui/FilterBar';
 import { Field } from '../Owner/ui/Field';
 import { localityKey } from '../../utils/search';
 import { distanceKm, formatDistance } from '../../utils/distance';
-import { VICON, vehicleKey } from '../Owner/ui/vehicles';
-import { VT } from '../../pages/Owner/owner.lib';
+import { iconOf } from '../Owner/ui/vehicles';
+import { typeLabel } from '../../pages/Owner/owner.lib';
 
 const DEFAULT_PARKING_IMAGE =
   'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=600&q=80';
 
-const CATEGORY_LABEL: Record<VehicleFilterType, string> = { AUTO: 'auto', MOTO: 'moto', CAMIONETA: 'camioneta' };
-
-const vehicleMeta = (type?: string) => {
-  const k = vehicleKey(type);
-  return { label: VT.find((v) => v.k === k)!.n, Icon: VICON[k] };
-};
+// R-30: plazas y tarifas por tipo de vehículo (cualquiera del catálogo); el ícono es solo visual.
+const vehicleMeta = (type?: string) => ({ label: typeLabel(type), Icon: iconOf(type) });
 
 // Hoja inferior en móvil / panel flotante en escritorio. Es un componente aparte porque useSwipeClose lee del <Presence> si el panel se está yendo.
 function Sheet({ onClose, closing, label, expandKey, children }: { onClose: () => void; closing: boolean; label: string; expandKey?: string; children: React.ReactNode }) {
@@ -99,12 +94,12 @@ export const ListDrawer: React.FC<any> = (props: any) => {
     resetFilters();
     setSearchQuery('');
   };
-  const categoryName = category ? CATEGORY_LABEL[category] : '';
+  const categoryName = category ? typeLabel(category.name).toLowerCase() : '';
   const available = category
-    ? filteredParkings.filter((p: Parking) => getUnavailableReason(p, category) === null)
+    ? filteredParkings.filter((p: Parking) => getUnavailableReason(p, category.id) === null)
     : filteredParkings;
   const unavailable = category
-    ? filteredParkings.filter((p: Parking) => getUnavailableReason(p, category) !== null)
+    ? filteredParkings.filter((p: Parking) => getUnavailableReason(p, category.id) !== null)
     : [];
 
   const favButton = (id: string, onClick: (e: React.MouseEvent) => void) => {
@@ -124,9 +119,9 @@ export const ListDrawer: React.FC<any> = (props: any) => {
 
   const renderCard = (p: Parking) => {
     const isSelected = p.id === selectedParkingId;
-    const reason = category ? getUnavailableReason(p, category) : null;
+    const reason = category ? getUnavailableReason(p, category.id) : null;
     const imgUrl = p.imageUrl || p.image || DEFAULT_PARKING_IMAGE;
-    const counts = VT.map((t) => ({ Icon: VICON[t.k], n: p[t.free] ?? p[t.cap] ?? 0, label: t.n.toLowerCase() }));
+    const counts = (p.spaceTypes ?? []).map((t) => ({ Icon: iconOf(t.name), n: t.available ?? t.capacity, label: typeLabel(t.name).toLowerCase() }));
 
     return (
       <article
@@ -261,7 +256,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
             <section aria-labelledby="dr-disp">
               <h3 id="dr-disp" className="eyebrow">Lugares disponibles</h3>
               <div className="acells">
-                {VT.map((t) => ({ Icon: VICON[t.k], label: t.n, free: sp[t.free] ?? sp[t.cap] ?? 0, total: sp[t.cap] ?? 0 })).map(({ Icon, label, free, total }) => (
+                {(sp.spaceTypes ?? []).map((t: any) => ({ Icon: iconOf(t.name), label: typeLabel(t.name), free: t.available ?? t.capacity, total: t.capacity })).map(({ Icon, label, free, total }: any) => (
                   <div key={label} className="acell">
                     <span className="lab">
                       <Icon className="i sm" aria-hidden="true" />
@@ -280,9 +275,9 @@ export const ListDrawer: React.FC<any> = (props: any) => {
                 <ul className="list">
                   {sp.prices.map((pr: any) => {
                     const { label, Icon } = vehicleMeta(pr.vehicleType);
-                    const mine = matchesVehicleCategory(pr.vehicleType, category);
+                    const mine = !!category && pr.vehicleTypeId === category.id;
                     return (
-                      <li key={pr.id || pr.vehicleType} className={`li${mine ? ' mine' : ''}`}>
+                      <li key={pr.id || pr.vehicleTypeId} className={`li${mine ? ' mine' : ''}`}>
                         <span className="nm2">
                           <Icon className="i" aria-hidden="true" />
                           {label}
@@ -327,7 +322,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
             <button
               type="button"
               className="btn pri"
-              disabled={!!category && getCategorySpaces(sp, category) <= 0}
+              disabled={!!category && getTypeSpaces(sp, category.id) <= 0}
               onClick={() => handleOpenReservation(sp)}
             >
               Reservar en esta cochera

@@ -16,12 +16,12 @@ import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
 import ParkingDrawer from './ParkingDrawer';
 import {
-  VT, capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
-  type VehicleKey,
+  capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
+  typeLabel, typePlural, typesAcross, typesOf,
 } from './owner.lib';
 
 import { matchesQuery } from '../../utils/search';
-import { VICON } from '../../components/Owner/ui/vehicles';
+import { iconOf } from '../../components/Owner/ui/vehicles';
 type Filter = 'all' | 'ok' | 'alert' | 'paused';
 // Localidad de una sucursal, con su provincia: hay localidades con el mismo nombre en distintas provincias.
 const locOf = (p: Parking) => [p.locality, p.province].filter(Boolean).join(', ');
@@ -120,7 +120,7 @@ export default function OwnerDashboard() {
         return (
           <tr key={p.id}>
             <td className="c-name"><button type="button" className="nm" onClick={() => setDetail(p)}>{p.name}</button><div className="ad" title={`${p.address}, ${p.locality}`}>{p.address}, {p.locality}</div></td>
-            <td className="c-cap" data-label="Plazas"><div className="caps">{VT.map(v => { const I = VICON[v.k], c = capOf(p, v.k); return <span key={v.k} className={`cap ${c ? '' : 'z'}`} title={`${v.pl}: ${c}`}><I className="i" />{c}</span>; })}</div></td>
+            <td className="c-cap" data-label="Plazas"><div className="caps">{typesAcross(list).map(v => { const I = iconOf(v.name), c = capOf(p, v.id); return <span key={v.id} className={`cap ${c ? '' : 'z'}`} title={`${typePlural(v.name)}: ${c}`}><I className="i" />{c}</span>; })}</div></td>
             <td className="c-occ" data-label="Ocupación en vivo"><div className="occ2"><OccBar value={n} label={`${n}% ocupada`} /><div className="meta"><span>{o} ocupadas · {t - o} libres</span><b>{n}%</b></div></div></td>
             <td className="c-st" data-label="Estado">
               {p.isActive ? <span className="st ok"><Check className="i sm" />Operativa</span> : <span className="st mute"><Pause className="i sm" />Pausada</span>}
@@ -149,9 +149,9 @@ export default function OwnerDashboard() {
         <div className="kpis">
           <section className="panel occ" aria-label="Ocupación actual">
             <div><div className="lab">Ocupación actual{loc && ` · ${loc}`}</div><div className="big">{pc}<span>%</span></div><div className="ctx">{O} de {T} plazas ocupadas · {T - O} libres</div></div>
-            <div className="types">{T ? VT.map(t => {
-              const c = scoped.reduce((a, p) => a + svcOf(p, t.k), 0), o = scoped.reduce((a, p) => a + occOf(p, t.k), 0), I = VICON[t.k];
-              return c ? <div className="trow" key={t.k}><span className="n"><I className="i" />{t.pl}</span><OccBar value={Math.round((o / c) * 100)} label={`${t.pl}: ${o} de ${c} ocupadas`} /><span className="v">{o}/{c}</span></div> : null;
+            <div className="types">{T ? typesAcross(scoped).map(t => {
+              const c = scoped.reduce((a, p) => a + svcOf(p, t.id), 0), o = scoped.reduce((a, p) => a + occOf(p, t.id), 0), I = iconOf(t.name), pl = typePlural(t.name);
+              return c ? <div className="trow" key={t.id}><span className="n"><I className="i" />{pl}</span><OccBar value={Math.round((o / c) * 100)} label={`${pl}: ${o} de ${c} ocupadas`} /><span className="v">{o}/{c}</span></div> : null;
             }) : <span className="ctx">Todavía no hay plazas configuradas.</span>}</div>
           </section>
           <section className="panel stats" aria-label="Indicadores del día">
@@ -214,9 +214,9 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
           {p.isActive ? <span className="st ok"><Check className="i sm" />Operativa</span> : <span className="st mute"><Pause className="i sm" />Pausada</span>}</div>
           {!!alerts.length && <div className="list">{alerts.map(x => <div className="li" key={x.l}><span className="st warn"><AlertTriangle className="i sm" />{x.l}</span><span className="sd">{x.d}</span></div>)}</div>}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}><span style={{ fontSize: 34, fontWeight: 600, letterSpacing: '-.03em' }}>{n}%</span><span className="ctx">{oc(p)} ocupadas · {tot(p) - oc(p)} libres de {tot(p)}</span></div>
-          <div style={{ display: 'grid', gap: 12 }}>{VT.filter(t => capOf(p, t.k)).map(t => {
-            const c = svcOf(p, t.k), o = occOf(p, t.k), x = c ? Math.round((o / c) * 100) : 0, I = VICON[t.k];
-            return <div className="trow" key={t.k} style={{ gridTemplateColumns: '104px 1fr 64px' }}><span className="n"><I className="i" />{t.pl}</span><OccBar value={x} label={`${t.pl}: ${x}%`} /><span className="v">{o}/{c}</span></div>;
+          <div style={{ display: 'grid', gap: 12 }}>{typesOf(p).filter(t => capOf(p, t.id)).map(t => {
+            const c = svcOf(p, t.id), o = occOf(p, t.id), x = c ? Math.round((o / c) * 100) : 0, I = iconOf(t.name), pl = typePlural(t.name);
+            return <div className="trow" key={t.id} style={{ gridTemplateColumns: '104px 1fr 64px' }}><span className="n"><I className="i" />{pl}</span><OccBar value={x} label={`${pl}: ${x}%`} /><span className="v">{o}/{c}</span></div>;
           })}</div>
         </div>
         <div className="fs"><div className="fh"><h3>Datos de la sucursal</h3></div>
@@ -227,9 +227,9 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
           </dl>
         </div>
         <div className="fs"><div className="fh"><h3>Tarifas por hora</h3><button type="button" className="link" onClick={() => navigate(`/owner/tariffs?p=${p.id}`)}>Editar tarifas</button></div>
-          <div className="list">{VT.filter(t => capOf(p, t.k)).map(t => {
-            const pr = priceOf(p, t.k), I = VICON[t.k];
-            return <div className="li" key={t.k}><span className="l"><I className="i" />{t.n}</span>{pr ? <b>{money(pr.price)}<span className="ctx" style={{ fontWeight: 400 }}> /h</span></b> : <span className="st warn"><AlertTriangle className="i sm" />Sin tarifa</span>}</div>;
+          <div className="list">{typesOf(p).filter(t => capOf(p, t.id)).map(t => {
+            const pr = priceOf(p, t.id), I = iconOf(t.name);
+            return <div className="li" key={t.id}><span className="l"><I className="i" />{typeLabel(t.name)}</span>{pr ? <b>{money(pr.price)}<span className="ctx" style={{ fontWeight: 400 }}> /h</span></b> : <span className="st warn"><AlertTriangle className="i sm" />Sin tarifa</span>}</div>;
           })}</div>
         </div>
         <div className="fs"><div className="fh"><h3>Servicios adicionales</h3><button type="button" className="link" onClick={() => navigate(`/owner/services?p=${p.id}`)}>Gestionar</button></div>

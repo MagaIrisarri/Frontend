@@ -2,13 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Drawer } from '../../components/Owner/ui/Layer';
 import { Presence } from '../../components/Owner/ui/Presence';
 import { Field, Input, apiError } from '../../components/Owner/ui/Field';
-import { vehicleKey } from '../../components/Owner/ui/vehicles';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { walkInReservation } from '../../services/reservation.service';
 import { getParkingServices } from '../../services/servicePrice.service';
 import { getBrands, getModels } from '../../services/vehicle.service';
 import { cleanPlate, plateState } from '../../utils/plate';
-import { capOf, mm, money, plural, priceOf, type Svc } from '../Owner/owner.lib';
+import { capOf, mm, money, plural, priceOf, typeLabel, typePlural, type Svc } from '../Owner/owner.lib';
 import { hhmm, list, type EParking } from './employee.lib';
 
 const EMPTY = { plate: '', brandId: '', modelId: '', name: '', last_name: '', dni: '', email: '', phone: '' };
@@ -51,7 +50,9 @@ function WalkIn({ parking, onChange, onClose }: WalkInProps) {
   const endsAt = new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate(), nowD.getHours(), nowD.getMinutes() + h * 60);
 
   const model = models.find(m => m.id === v.modelId);
-  const key = model ? vehicleKey(model.vehicleType) : null;
+  // R-30: plazas y tarifa del tipo del modelo (por id).
+  const vt = model?.vehicleType ?? null;
+  const key = vt?.id ?? null;
   const rate = key ? priceOf(parking, key)?.price ?? null : null;
   const noRate = key != null && rate == null;
   const noSpaces = key != null && capOf(parking, key) === 0;
@@ -111,7 +112,7 @@ function WalkIn({ parking, onChange, onClose }: WalkInProps) {
                 <option value="">Elegir…</option>{models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>}</Field>
             </div>
             <div className={`e-vt${key && !noRate && !noSpaces ? ' ok' : noRate || noSpaces ? ' err' : ''}`}><span>Tarifa</span>
-              <b>{!key ? 'Elegí marca y modelo' : noSpaces ? `Sin plazas de ${key.toLowerCase()}` : noRate ? `Sin tarifa para ${key.toLowerCase()}` : `${key} · ${money(rate!)}/h`}</b></div>
+              <b>{!key ? 'Elegí marca y modelo' : noSpaces ? `Sin plazas de ${typePlural(vt!.name).toLowerCase()}` : noRate ? `Sin tarifa para ${typePlural(vt!.name).toLowerCase()}` : `${typeLabel(vt!.name)} · ${money(rate!)}/h`}</b></div>
           </section>
 
           <section className="fs"><div className="fh"><h3>Cliente</h3></div>

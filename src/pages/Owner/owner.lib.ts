@@ -1,5 +1,6 @@
 // Lógica pura del rol dueño del prototipo original: formatos, normalización de datos y edición del calendario de turnos.
 // Sin React ni red: se prueba con `node tests/owner.lib.test.ts`.
+import type { ParkingPriceRow, SpaceType } from '../../types/parking.types';
 
 // ---------- formatos ----------
 export const money = (n: number) => '$' + Number(n).toLocaleString('es-AR');
@@ -18,12 +19,15 @@ export const initials = (name = '', last = '') => ((name[0] ?? '') + (last[0] ??
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 // ---------- vehículos ----------
+// Ícono de un tipo (auto, moto o camioneta): solo visual. Plazas y tarifas van por el id del tipo (R-30).
 export type VehicleKey = 'AUTO' | 'MOTO' | 'CAMIONETA';
-export const VT: { k: VehicleKey; n: string; pl: string; cap: 'carCapacity' | 'motorcycleCapacity' | 'truckCapacity'; free: 'availableCarSpaces' | 'availableMotorcycleSpaces' | 'availableTruckSpaces' }[] = [
-  { k: 'AUTO', n: 'Auto', pl: 'Autos', cap: 'carCapacity', free: 'availableCarSpaces' },
-  { k: 'MOTO', n: 'Moto', pl: 'Motos', cap: 'motorcycleCapacity', free: 'availableMotorcycleSpaces' },
-  { k: 'CAMIONETA', n: 'Camioneta', pl: 'Camionetas', cap: 'truckCapacity', free: 'availableTruckSpaces' },
-];
+// Nombre para mostrar: los tipos base como siempre (Auto, Motos…); los demás, tal cual los cargó el administrador.
+const BASE_LABEL: Record<string, [string, string]> = { AUTO: ['Auto', 'Autos'], MOTO: ['Moto', 'Motos'], CAMIONETA: ['Camioneta', 'Camionetas'] };
+export const typeLabel = (name = '') => BASE_LABEL[name]?.[0] ?? name;
+export const typePlural = (name = '') => BASE_LABEL[name]?.[1] ?? name;
+// Prefijo del código de plaza, igual que spacePrefix del backend: A, M y C en los base; las tres primeras letras en los demás (UTI-01).
+export const spacePrefix = (name = '') => BASE_LABEL[name] ? name[0]
+  : name.normalize('NFD').replace(/\p{M}/gu, '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'P';
 export const lvl = (pct: number) => (pct >= 100 ? 'err' : pct >= 90 ? 'warn' : '');
 
 // ---------- tiempo ----------
@@ -163,26 +167,39 @@ export const coveredBy = (d: Day, a: number, b: number) => d.find(x => x.who !==
 // ---------- sucursales ----------
 export interface ParkingLike {
   id: string; isActive: boolean; openingTime: string; closingTime: string;
-  carCapacity?: number; motorcycleCapacity?: number; truckCapacity?: number;
-  availableCarSpaces?: number; availableMotorcycleSpaces?: number; availableTruckSpaces?: number;
-  maintenanceCarSpaces?: number; maintenanceMotorcycleSpaces?: number; maintenanceTruckSpaces?: number;
-  prices?: { id: string; vehicleType: string; price: number }[];
+  spaceTypes?: SpaceType[];
+  prices?: ParkingPriceRow[];
 }
-const MAINT = { AUTO: 'maintenanceCarSpaces', MOTO: 'maintenanceMotorcycleSpaces', CAMIONETA: 'maintenanceTruckSpaces' } as const;
-export const capOf = (p: ParkingLike, k: VehicleKey) => Number(p[VT.find(t => t.k === k)!.cap] ?? 0);
-export const maintOf = (p: ParkingLike, k: VehicleKey) => Number(p[MAINT[k]] ?? 0);
-// En servicio: capacidad menos las plazas en mantenimiento (ni libres ni ocupadas). La ocupación se mide sobre estas.
-export const svcOf = (p: ParkingLike, k: VehicleKey) => Math.max(0, capOf(p, k) - maintOf(p, k));
-export const occOf = (p: ParkingLike, k: VehicleKey) => {
-  const t = VT.find(x => x.k === k)!;
-  const free = p[t.free];
-  return free == null ? 0 : Math.max(0, svcOf(p, k) - Number(free));
+// R-30: plazas y tarifas van por tipo de vehículo (id); el backend manda capacidad, libres y mantenimiento de cada uno.
+export interface TypeRef { id: string; name: string }
+const st = (p: ParkingLike, id: string) => p.spaceTypes?.find(t => t.vehicleTypeId === id);
+// Tipos de una sucursal: los que tienen plazas (en el orden del backend) y después los que solo tienen tarifa.
+export const typesOf = (p: ParkingLike): TypeRef[] => {
+  const out = (p.spaceTypes ?? []).map(t => ({ id: t.vehicleTypeId, name: t.name }));
+  for (const pr of p.prices ?? []) if (!out.some(t => t.id === pr.vehicleTypeId)) out.push({ id: pr.vehicleTypeId, name: pr.vehicleType });
+  return out;
 };
-export const tot = (p: ParkingLike) => VT.reduce((a, t) => a + svcOf(p, t.k), 0);
-export const oc = (p: ParkingLike) => VT.reduce((a, t) => a + occOf(p, t.k), 0);
+// Los tipos de varias sucursales juntas, sin repetir (resumen y tarifas del dueño): los base primero y después por nombre.
+const baseRank = (n: string) => { const i = Object.keys(BASE_LABEL).indexOf(n); return i < 0 ? 99 : i; };
+export const typesAcross = (ps: ParkingLike[]): TypeRef[] => {
+  const out: TypeRef[] = [];
+  for (const p of ps) for (const t of typesOf(p)) if (!out.some(o => o.id === t.id)) out.push(t);
+  return out.sort((a, b) => baseRank(a.name) - baseRank(b.name) || a.name.localeCompare(b.name, 'es'));
+};
+export const capOf = (p: ParkingLike, id: string) => st(p, id)?.capacity ?? 0;
+export const maintOf = (p: ParkingLike, id: string) => st(p, id)?.maintenance ?? 0;
+// En servicio: capacidad menos las plazas en mantenimiento (ni libres ni ocupadas). La ocupación se mide sobre estas.
+export const svcOf = (p: ParkingLike, id: string) => Math.max(0, capOf(p, id) - maintOf(p, id));
+export const occOf = (p: ParkingLike, id: string) => {
+  const t = st(p, id);
+  return t ? Math.max(0, svcOf(p, id) - t.available) : 0;
+};
+export const tot = (p: ParkingLike) => (p.spaceTypes ?? []).reduce((a, t) => a + svcOf(p, t.vehicleTypeId), 0);
+export const oc = (p: ParkingLike) => (p.spaceTypes ?? []).reduce((a, t) => a + occOf(p, t.vehicleTypeId), 0);
 export const pct = (p: ParkingLike) => (tot(p) ? Math.round((oc(p) / tot(p)) * 100) : 0);
-export const priceOf = (p: ParkingLike, k: VehicleKey) => p.prices?.find(x => x.vehicleType === k);
-export const missing = (p: ParkingLike) => VT.filter(t => capOf(p, t.k) > 0 && !priceOf(p, t.k));
+export const priceOf = (p: ParkingLike, id: string) => p.prices?.find(x => x.vehicleTypeId === id);
+// Tipos con plazas y sin tarifa: sus vehículos no pueden reservar en la sucursal.
+export const missing = (p: ParkingLike): TypeRef[] => typesOf(p).filter(t => capOf(p, t.id) > 0 && !priceOf(p, t.id));
 export const span = (p: ParkingLike): [number, number] => [mm(p.openingTime), mm(p.closingTime)];
 export const hrs = (p: ParkingLike) => (mm(p.openingTime) === 0 && mm(p.closingTime) === 1440 ? 'Abierto 24 h' : `${p.openingTime.slice(0, 5)} – ${p.closingTime.slice(0, 5)} h`);
 
@@ -191,7 +208,7 @@ export function issues(p: ParkingLike, week: Day[] | undefined) {
   if (!p.isActive) return [];
   const o: { l: string; d: string }[] = [];
   const m = missing(p), n = pct(p), free = tot(p) - oc(p);
-  if (m.length) o.push({ l: 'Falta tarifa', d: 'Sin precio para ' + m.map(t => t.pl.toLowerCase()).join(' y ') });
+  if (m.length) o.push({ l: 'Falta tarifa', d: 'Sin precio para ' + m.map(t => typePlural(t.name).toLowerCase()).join(' y ') });
   if (n >= 90) o.push({ l: n >= 100 ? 'Completa' : 'Casi llena', d: `${n} % ocupada · ${plural(free, 'plaza libre', 'plazas libres')}` });
   if (week?.some(d => d.length)) {
     const c = coverage(week, ...span(p));
@@ -221,7 +238,7 @@ export const RS: Record<ResState, { l: string; c: string }> = {
 export interface Res {
   id: string; code: string; st: ResState; pid: string; pname: string; space: string;
   date: string; endDate: string; start: string; end: string; hours: number;
-  plate: string; vtype: string; client: { n: string; ph: string; em: string };
+  plate: string; vtype: string; vtypeId: string; client: { n: string; ph: string; em: string };
   eid: string | null; amount: number | null;
   bill: Bill | null; // detalle del cobro; null si no hay factura o es anterior al detalle
   services: Svc[]; // servicios pedidos con la reserva
@@ -262,6 +279,7 @@ export function normRes(r: any): Res {
     hours: (e.getTime() - s.getTime()) / 3_600_000,
     plate: r.vehicle?.plate ?? '—',
     vtype: r.vehicle?.vehicleType?.name ?? '',
+    vtypeId: typeof r.vehicle?.vehicleType === 'string' ? r.vehicle.vehicleType : r.vehicle?.vehicleType?.id ?? '', // R-30: plazas y tarifa van por este id
     client: { n: [c.name, c.last_name].filter(Boolean).join(' ') || '—', ph: c.phone ?? '', em: c.email ?? '' },
     eid: r.attendedBy?.id ?? null,
     amount: r.amount == null ? null : Number(r.amount),

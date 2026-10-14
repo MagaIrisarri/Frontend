@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, SlidersHorizontal, Check, X, Tag } from 'lucide-react';
-import { VICON } from '../Owner/ui/vehicles';
+import { iconOf } from '../Owner/ui/vehicles';
+import { useVehicleTypes } from '../../hooks/useVehicleTypes';
+import { typeLabel, typePlural } from '../../pages/Owner/owner.lib';
 import type { VehicleFilterType } from '../../types/mapFilters.types';
 
 interface VehicleOption {
@@ -9,12 +11,6 @@ interface VehicleOption {
   icon: React.ComponentType<{ className?: string }>;
   description: string;
 }
-
-const VEHICLE_OPTIONS: VehicleOption[] = [
-  { type: 'MOTO', label: 'Moto', icon: VICON.MOTO, description: 'Tarifa para motos' },
-  { type: 'AUTO', label: 'Auto', icon: VICON.AUTO, description: 'Tarifa para autos' },
-  { type: 'CAMIONETA', label: 'Camioneta', icon: VICON.CAMIONETA, description: 'Tarifa utilitarios y pickups' },
-];
 
 interface VehicleMapFilterProps {
   selectedVehicleType: VehicleFilterType | null;
@@ -29,6 +25,11 @@ export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  // R-30: un ítem por tipo del catálogo del administrador (AUTO, MOTO, CAMIONETA y los que agregue).
+  const { types } = useVehicleTypes();
+  const VEHICLE_OPTIONS: VehicleOption[] = types.map((t) => ({
+    type: { id: t.id, name: t.name }, label: typeLabel(t.name), icon: iconOf(t.name), description: `Tarifa para ${typePlural(t.name).toLowerCase()}`,
+  }));
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Cerrar dropdown al hacer click afuera o con Escape
@@ -48,7 +49,10 @@ export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
     };
   }, [isOpen]);
 
-  const activeOption = VEHICLE_OPTIONS.find((opt) => opt.type === selectedVehicleType);
+  const activeOption = selectedVehicleType
+    ? VEHICLE_OPTIONS.find((opt) => opt.type.id === selectedVehicleType.id)
+      ?? { type: selectedVehicleType, label: typeLabel(selectedVehicleType.name), icon: iconOf(selectedVehicleType.name), description: '' }
+    : undefined;
 
   const handleSelect = (type: VehicleFilterType | null) => {
     onSelectVehicleType(type);
@@ -94,7 +98,7 @@ export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
           <div className="mh">Mostrá solo las cocheras con lugar y tarifa para tu vehículo.</div>
           {item('all', selectedVehicleType === null, Tag, 'Todos los vehículos', 'Sin filtrar: precio mínimo (Desde $X/h)', null)}
           {VEHICLE_OPTIONS.map((opt) =>
-            item(opt.type, selectedVehicleType === opt.type, opt.icon, opt.label, opt.description, opt.type)
+            item(opt.type.id, selectedVehicleType?.id === opt.type.id, opt.icon, opt.label, opt.description, opt.type)
           )}
           {selectedVehicleType && (
             <>

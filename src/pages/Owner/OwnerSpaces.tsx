@@ -9,18 +9,15 @@ import { Menu } from '../../components/Owner/ui/Menu';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { createBulkParkingSpaces, getParkingSpace, removeParkingSpace, updateParkingSpace } from '../../services/parkingSpace.service';
 import { useOwner } from './OwnerContext';
-import { VT, isoD, plural, shD, type VehicleKey } from './owner.lib';
+import { useVehicleTypes } from '../../hooks/useVehicleTypes';
+import { isoD, plural, shD, typeLabel, typePlural } from './owner.lib';
 
 type State = 'LIBRE' | 'OCUPADO' | 'MANTENIMIENTO';
-interface Space { id: string; spaceCode: string; vehicleType: string; state: State }
+// R-30: la plaza admite un tipo de vehículo del catálogo del administrador.
+interface Space { id: string; spaceCode: string; vehicleType: { id: string; name: string }; state: State }
 
 const ST: Record<State, { l: string; c: string }> = {
   LIBRE: { l: 'Libre', c: 'ok' }, OCUPADO: { l: 'Ocupada', c: 'ac' }, MANTENIMIENTO: { l: 'Mantenimiento', c: 'warn' },
-};
-// Mismo criterio que categorizeVehicleType del backend (por si llega un tipo escrito de otra forma).
-const catOf = (t: string): VehicleKey => {
-  const u = t.toUpperCase();
-  return u.includes('MOTO') ? 'MOTO' : /CAMION|PICK|SUV|VAN|UTIL/.test(u) ? 'CAMIONETA' : 'AUTO';
 };
 type Action = 'MANTENIMIENTO' | 'BAJA';
 // Reserva futura de la plaza y la plaza libre que le propone el backend (null: no hay lugar en su horario).
@@ -29,8 +26,6 @@ const when = (r: Relocation) => {
   const s = new Date(r.startTime), e = new Date(r.endTime), t = (d: Date) => d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   return `${shD(isoD(s))} ${t(s)}–${t(e)}`;
 };
-// Valor que se guarda al agregar plazas (el backend arma el código A-XX, M-XX o C-XX según la categoría).
-const STORE: Record<VehicleKey, string> = { AUTO: 'AUTO', MOTO: 'MOTO', CAMIONETA: 'CAMIONETA' };
 
 // Plazas de cada sucursal: agregar, pasar a mantenimiento, volver a habilitar y dar de baja (R-18).
 export default function OwnerSpaces() {
@@ -42,10 +37,12 @@ export default function OwnerSpaces() {
   const p = parkings.find(x => x.id === pid);
   const [list, setList] = useState<Space[] | null>(null);
   const [loadErr, setLoadErr] = useState(false);
-  const [fk, setFk] = useState<'all' | VehicleKey>('all');
+  const [fk, setFk] = useState<string>('all'); // 'all' o el id del tipo
   const [fs, setFs] = useState<'all' | State>('all');
   const [q, setQ] = useState('');
-  const [addK, setAddK] = useState<VehicleKey>('AUTO');
+  const { types } = useVehicleTypes();
+  const [addK, setAddK] = useState(''); // id del tipo; vacío = el primero de la lista
+  const addType = types.find(t => t.id === addK) ?? types[0];
   const [addN, setAddN] = useState('1');
   const [addErr, setAddErr] = useState('');
   const [del, setDel] = useState<Space | null>(null);
@@ -92,18 +89,21 @@ export default function OwnerSpaces() {
     e.preventDefault();
     const n = Number(addN);
     if (!Number.isInteger(n) || n < 1 || n > 100) return setAddErr('Ingresá una cantidad entre 1 y 100.');
+    if (!addType) return setAddErr('No hay tipos de vehículo cargados.');
     try {
-      await createBulkParkingSpaces(pid!, { vehicleType: STORE[addK], count: n });
+      await createBulkParkingSpaces(pid!, { vehicleTypeId: addType.id, count: n });
       setAddN('1'); setAddErr('');
       await reload();
-      const t = VT.find(v => v.k === addK)!;
-      toast(`${plural(n, `plaza de ${t.n.toLowerCase()} agregada`, `plazas de ${t.pl.toLowerCase()} agregadas`)} a ${p!.name}.`);
+      toast(`${plural(n, `plaza de ${typeLabel(addType.name).toLowerCase()} agregada`, `plazas de ${typePlural(addType.name).toLowerCase()} agregadas`)} a ${p!.name}.`);
     } catch (x) { setAddErr(apiError(x)); }
   };
 
   const all = list ?? [];
   const term = q.trim().toUpperCase().replace(/\s/g, '');
-  const shown = all.filter(s => (fk === 'all' || catOf(s.vehicleType) === fk) && (fs === 'all' || s.state === fs) && (!term || s.spaceCode.toUpperCase().includes(term)));
+  // Tipos de las plazas de la sucursal, en el orden del catálogo (los que ya no están en el catálogo, al final).
+  const spaceTypes = [...new Map(all.map(s => [s.vehicleType.id, s.vehicleType])).values()]
+    .sort((a, b) => (types.findIndex(t => t.id === a.id) + 1 || 99) - (types.findIndex(t => t.id === b.id) + 1 || 99));
+  const shown = all.filter(s => (fk === 'all' || s.vehicleType.id === fk) && (fs === 'all' || s.state === fs) && (!term || s.spaceCode.toUpperCase().includes(term)));
   const maint = all.filter(s => s.state === 'MANTENIMIENTO').length;
 
   let detail;
@@ -129,7 +129,7 @@ export default function OwnerSpaces() {
         return (
           <tr key={s.id}>
             <td><span className="plate">{s.spaceCode}</span></td>
-            <td data-label="Tipo">{VT.find(v => v.k === catOf(s.vehicleType))!.n}</td>
+            <td data-label="Tipo">{typeLabel(s.vehicleType.name)}</td>
             <td data-label="Estado"><span className={`st ${ST[s.state].c}`}>{ST[s.state].l}</span></td>
             <td className="r"><div className="acts">{s.state === 'OCUPADO'
               ? <span className="na" title="Con un vehículo adentro no se puede pasar a mantenimiento ni dar de baja">En uso</span>
@@ -162,8 +162,8 @@ export default function OwnerSpaces() {
           <p className="sub">{list ? `${plural(all.length, 'plaza', 'plazas')}${maint ? ` · ${maint} en mantenimiento` : ''}` : 'Cargando plazas…'}</p></div></div>
         <form className="addrow" noValidate onSubmit={add}>
           <div className="field"><label htmlFor="sk">Tipo de plaza</label>
-            <select className="sel" id="sk" value={addK} onChange={e => setAddK(e.target.value as VehicleKey)}>
-              {VT.map(v => <option key={v.k} value={v.k}>{v.n}</option>)}
+            <select className="sel" id="sk" value={addType?.id ?? ''} onChange={e => setAddK(e.target.value)}>
+              {types.map(t => <option key={t.id} value={t.id}>{typeLabel(t.name)}</option>)}
             </select></div>
           <div className="field"><label htmlFor="sn">Cantidad</label>
             <input className="inp" id="sn" inputMode="numeric" autoComplete="off" aria-invalid={!!addErr} value={addN} onChange={e => { setAddN(e.target.value.replace(/\D/g, '')); setAddErr(''); }} /></div>
@@ -175,8 +175,8 @@ export default function OwnerSpaces() {
             <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar plaza (A-01)" aria-label="Buscar plaza por código" value={q} onChange={e => setQ(e.target.value)} /></div>
           </div>
           <div className="seg" role="group" aria-label="Filtrar por tipo" style={{ justifySelf: 'start' }}>
-            {([['all', 'Todas'], ...VT.map(v => [v.k, v.pl])] as ['all' | VehicleKey, string][]).map(([k, l]) => (
-              <button type="button" key={k} aria-pressed={fk === k} onClick={() => setFk(k)}>{l}<b>{all.filter(s => k === 'all' || catOf(s.vehicleType) === k).length}</b></button>
+            {([['all', 'Todas'], ...spaceTypes.map(t => [t.id, typePlural(t.name)])] as [string, string][]).map(([k, l]) => (
+              <button type="button" key={k} aria-pressed={fk === k} onClick={() => setFk(k)}>{l}<b>{all.filter(s => k === 'all' || s.vehicleType.id === k).length}</b></button>
             ))}
           </div>
           <div className="seg" role="group" aria-label="Filtrar por estado" style={{ justifySelf: 'start' }}>
@@ -195,7 +195,7 @@ export default function OwnerSpaces() {
       <PageHead title="Plazas" sub="Agregá plazas, pasalas a mantenimiento o dalas de baja. Las que tienen un vehículo adentro o reservas pendientes no se pueden sacar de servicio." />
       {body}
       <Shown when={del}>{del => <ConfirmModal title={`¿Dar de baja la plaza ${del.spaceCode}?`}
-        body={`Deja de existir en ${p?.name} y la capacidad de ${VT.find(v => v.k === catOf(del.vehicleType))!.pl.toLowerCase()} baja en 1. Si solo está fuera de servicio por un tiempo, pasala a mantenimiento.`}
+        body={`Deja de existir en ${p?.name} y la capacidad de ${typePlural(del.vehicleType.name).toLowerCase()} baja en 1. Si solo está fuera de servicio por un tiempo, pasala a mantenimiento.`}
         ok="Dar de baja" back="Volver" danger onConfirm={remove} onClose={() => setDel(null)} />}</Shown>
       <Shown when={reloc}>{reloc => <RelocateModal {...reloc} onConfirm={() => takeOut(reloc.space, reloc.action, true)} onClose={() => setReloc(null)} />}</Shown>
     </>

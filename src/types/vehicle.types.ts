@@ -13,8 +13,8 @@ export interface VehicleType {
   id: string;
   name: string;
   isActive?: boolean;
-  category?: 'AUTO' | 'MOTO' | 'CAMIONETA'; // con la que se cobra y estaciona (la calcula el backend)
   isBase?: boolean; // AUTO, MOTO y CAMIONETA: no se renombran ni se dan de baja
+  parkings?: number; // en cuántas cocheras tiene plazas activas; sin ninguna, sus vehículos no pueden reservar (R-30)
 }
 
 export interface Client {

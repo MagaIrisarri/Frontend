@@ -7,14 +7,16 @@ import { useToast } from '../../components/Owner/ui/Toasts';
 import { createParkingPrice, deleteParkingPrice } from '../../services/parking.service';
 import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
-import { VICON } from '../../components/Owner/ui/vehicles';
-import { VT, capOf, missing, money, priceOf, type VehicleKey } from './owner.lib';
+import { iconOf } from '../../components/Owner/ui/vehicles';
+import { capOf, missing, money, priceOf, typeLabel, typePlural, typesAcross, type TypeRef } from './owner.lib';
 
 export default function OwnerTariffs() {
   const { parkings, status, refresh } = useOwner();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const hl = params.get('p');
+  // R-30: una columna por cada tipo con plazas o tarifa en alguna sucursal (AUTO, MOTO, CAMIONETA y los que agregue el administrador).
+  const types = typesAcross(parkings);
 
   let body;
   if (status === 'error') body = <ErrorBox what="las tarifas" onRetry={refresh} />;
@@ -26,12 +28,12 @@ export default function OwnerTariffs() {
     </Empty>);
   else body = (
     <div className="panel tw"><table className="tbl tf">
-      <colgroup><col style={{ width: '25%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '15%' }} /></colgroup>
-      <thead><tr><th>Sucursal</th>{VT.map(t => { const I = VICON[t.k]; return <th key={t.k}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><I className="i sm" />{t.n} · por hora</span></th>; })}<th>Estado</th></tr></thead>
+      <colgroup><col style={{ width: '25%' }} />{types.map(t => <col key={t.id} style={{ width: `${60 / types.length}%` }} />)}<col style={{ width: '15%' }} /></colgroup>
+      <thead><tr><th>Sucursal</th>{types.map(t => { const I = iconOf(t.name); return <th key={t.id}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><I className="i sm" />{typeLabel(t.name)} · por hora</span></th>; })}<th>Estado</th></tr></thead>
       <tbody>{parkings.map(p => (
         <tr key={p.id} className={hl === p.id ? 'hl' : ''}>
           <td><span className="nm">{p.name}</span><div className="ad">{p.address}</div></td>
-          {VT.map(t => <TariffCell key={t.k} p={p} k={t.k} />)}
+          {types.map(t => <TariffCell key={t.id} p={p} t={t} />)}
           <td data-label="Estado">{!p.isActive ? <span className="st mute"><Pause className="i sm" />Pausada</span>
             : missing(p).length ? <span className="st warn"><AlertTriangle className="i sm" />Falta tarifa</span>
               : <span className="st ok"><Check className="i sm" />Operativa</span>}</td>
@@ -44,30 +46,30 @@ export default function OwnerTariffs() {
     <>
       <PageHead title="Tarifas" sub="Valor por hora por tipo de vehículo." />
       {body}
-      <p className="ctx">Los tipos sin plazas en la sucursal no admiten tarifa.</p>
+      <p className="ctx">Los tipos sin plazas en la sucursal no admiten tarifa. Para otro tipo de vehículo, agregá plazas de ese tipo en Plazas.</p>
     </>
   );
 }
 
 // Celda editable en línea: "+ Asignar", precio con lápiz implícito, o input con guardar/cancelar.
-function TariffCell({ p, k }: { p: Parking; k: VehicleKey }) {
+function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
   const { refresh } = useOwner();
   const toast = useToast();
-  const t = VT.find(x => x.k === k)!;
-  const price = priceOf(p, k);
+  const t = { n: typeLabel(type.name), pl: typePlural(type.name) };
+  const price = priceOf(p, type.id);
   const [edit, setEdit] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
   const aria = `${t.n} en ${p.name}`;
 
-  if (!capOf(p, k)) return <td data-label={t.n}><span className="na" title={`La sucursal no tiene plazas de ${t.pl.toLowerCase()}`}>—<span className="sr"> Sin plazas de este tipo</span></span></td>;
+  if (!capOf(p, type.id)) return <td data-label={t.n}><span className="na" title={`La sucursal no tiene plazas de ${t.pl.toLowerCase()}`}>—<span className="sr"> Sin plazas de este tipo</span></span></td>;
 
   const save = async () => {
     const n = Number(String(edit).replace(/\D/g, ''));
     if (!n || n <= 0) return setErr('Ingresá un valor mayor a 0.');
     setSaving(true);
     try {
-      await createParkingPrice(p.id, { vehicleType: k, price: n }); // versiona: expira la tarifa anterior
+      await createParkingPrice(p.id, { vehicleTypeId: type.id, price: n }); // versiona: expira la tarifa anterior
       await refresh();
       setEdit(null);
       toast(`Tarifa de ${t.pl.toLowerCase()} en ${p.name}: ${money(n)}/h.`);
