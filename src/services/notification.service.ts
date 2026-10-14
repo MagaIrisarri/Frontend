@@ -1,7 +1,7 @@
 import { api } from './api';
 
 export type NotificationType =
-  | 'RESERVA_NUEVA' | 'RESERVA_CONFIRMADA' | 'RESERVA_CANCELADA' | 'RESERVA_VENCIDA'
+  | 'RESERVA_NUEVA' | 'RESERVA_CANCELADA' | 'RESERVA_VENCIDA'
   | 'RESERVA_EXTENDIDA' | 'PLAZA_CAMBIADA' | 'SALIDA' | 'RECORDATORIO';
 
 export interface AppNotification {

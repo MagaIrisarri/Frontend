@@ -84,7 +84,7 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 |---|---|---|---|
 | El detalle de un listado pide datos al backend y muestra al menos 2 clases de negocio, o lleva al CRUD | Parcial | Estacionamientos: [ParkingSpaceMap.tsx](../src/pages/ParkingSpace/ParkingSpaceMap.tsx) pide la cochera, las plazas y la disponibilidad. Reservas por fecha: el panel de [OwnerReservations.tsx](../src/pages/Owner/OwnerReservations.tsx) muestra lo que ya trajo el listado y no hace un pedido propio | Que el detalle de la reserva pida `GET /api/reservations/:id`, que ya existe |
 | Los CRUD mínimos se usan desde la app (front y back) | Cumple (sin commit) | TipoVehículo, CRUD simple de regularidad, tiene pantalla en el panel del administrador: [AdminVehicleTypes.tsx](../src/pages/Admin/AdminVehicleTypes.tsx) (`/admin/vehicle-types`, RA-11 en [admin-permisos-notas.md](admin/admin-permisos-notas.md)) | — |
-| Al menos 2 CUU relacionados | Cumple | Reservar → confirmar → registrar el uso de servicios → facturar: cada uno usa lo que registró el anterior | — |
+| Al menos 2 CUU relacionados | Cumple | Reservar → registrar el ingreso (check-in) → registrar el uso de servicios → facturar: cada uno usa lo que registró el anterior | — |
 
 ## Entregas y documentación (3.3, 3.4 y docs.md)
 

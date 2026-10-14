@@ -164,7 +164,7 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
           : <dl className="dl">
               <dt>Finalizadas</dt><dd><b>{m.reservations?.FINALIZADA ?? 0}</b></dd>
               <dt>En curso</dt><dd>{m.reservations?.['EN CURSO'] ?? 0}</dd>
-              <dt>Pendientes y confirmadas</dt><dd>{(m.reservations?.PENDIENTE ?? 0) + (m.reservations?.CONFIRMADA ?? 0)}</dd>
+              <dt>Pendientes</dt><dd>{m.reservations?.PENDIENTE ?? 0}</dd>
               <dt>Canceladas</dt><dd>{m.reservations?.CANCELADA ?? 0}</dd>
               <dt>Facturado</dt><dd>{money(m.totalRevenue ?? 0)}</dd>
             </dl>}

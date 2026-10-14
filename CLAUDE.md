@@ -50,7 +50,7 @@ Regla de trabajo: una pantalla migrada se agrega a `scripts/standard.json` **en 
 - Colores solo con tokens (`var(--ac)`, `--surface`, `--raised`, `--hover`, `--line`, `--soft`, `--tx`, `--tx2`, `--tx3`, `--ok`, `--warn`, `--err`, `--info`; `--on-ac` para el texto sobre el acento; `--focus` para foco, cursor y bordes de lo elegido; `--edge` y `--div` para bordes de contenedores y separadores). Nada de hex sueltos. La paleta es de alto contraste (bordes de campo y de contenedor visibles) porque el mostrador se usa a pleno sol. Radios `--r-sm/md/lg`.
 - **Alto de los controles** (`--ctl`, una sola regla, en `base.scss`): **44 px por defecto** (teléfono, o táctil a cualquier ancho); **34 px** con mouse o trackpad en MD y LG (`@media(min-width:$sm + 1) and (pointer:fine)`). `.btn.lg` mide 44 px y 48 px en táctil.
 - Fuente Geist, 14 px, números tabulares; patentes y códigos en `--mono` (Geist Mono, `.plate`, `.inp.plate`). Íconos de `lucide-react` con la clase `i` (16 px) o `i sm` (14 px). Estado en color + ícono + texto, nunca solo color.
-- Estados: píldora `.st` con tinte y un punto (o el ícono, si lo trae): `st ok` (verde), `st warn` (ámbar), `st err` (rojo), `st mute` (gris), `st ac` (violeta, `--info`: confirmada). El botón `danger` es de contorno rojo. Barras de ocupación `bar-t` con `warn` desde 90 % y `err` al 100 %.
+- Estados: píldora `.st` con tinte y un punto (o el ícono, si lo trae): `st ok` (verde), `st warn` (ámbar), `st err` (rojo), `st mute` (gris), `st ac` (violeta, `--info`: en curso). El botón `danger` es de contorno rojo. Barras de ocupación `bar-t` con `warn` desde 90 % y `err` al 100 %.
 - Responsive: tablas pasan a tarjetas con `data-label`; el cajón ocupa todo el ancho en móvil.
 
 ## Patrones de pantalla

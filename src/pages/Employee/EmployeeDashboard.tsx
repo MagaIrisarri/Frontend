@@ -15,10 +15,10 @@ import WalkInDrawer from './WalkInDrawer';
 import { hhmm, list, normERes, overdue, person, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes, type Status } from './employee.lib';
 
 const POLL_MS = 30_000;
-const SEGS: ['all' | Status, string][] = [['all', 'Todas'], ['PENDIENTE', 'Pendientes'], ['CONFIRMADA', 'Confirmadas'], ['EN CURSO', 'En curso'], ['FINALIZADA', 'Finalizadas'], ['CANCELADA', 'Canceladas']];
+const SEGS: ['all' | Status, string][] = [['all', 'Todas'], ['PENDIENTE', 'Pendientes'], ['EN CURSO', 'En curso'], ['FINALIZADA', 'Finalizadas'], ['CANCELADA', 'Canceladas']];
 interface Shift { d: number; t: string } // d: 0 = lunes (como DOW), t: "08:00–16:00"
 
-// Terminal del empleado: reservas de su sucursal, ingreso de mostrador, cambio de plaza, confirmación, ingreso, salida y cobro.
+// Terminal del empleado: reservas de su sucursal, ingreso de mostrador, cambio de plaza, ingreso, salida y cobro.
 export default function EmployeeDashboard() {
   const user = useAuthStore(s => s.user);
   const userId: string = user?.id || user?._id || '';
@@ -100,7 +100,6 @@ function Terminal({ reservations, parking, shifts, me, onChange }: { reservation
     ['Por cobrar', shown.filter(r => r.status === 'FINALIZADA' && toPay(r)).sort(byStart)],
     ['En curso', shown.filter(r => r.status === 'EN CURSO').sort((a, b) => Number(overdue(b)) - Number(overdue(a)) || byStart(a, b))], // los pasados de hora primero
     ['Pendientes', shown.filter(r => r.status === 'PENDIENTE').sort(byStart)],
-    ['Confirmadas', shown.filter(r => r.status === 'CONFIRMADA').sort(byStart)],
     ['Finalizadas', shown.filter(r => r.status === 'FINALIZADA' && !toPay(r)).sort(byStart)],
     ['Canceladas', shown.filter(r => r.status === 'CANCELADA').sort(byStart)],
   ];

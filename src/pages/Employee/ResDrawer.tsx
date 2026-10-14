@@ -82,7 +82,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   const pay = () => run(() => payInvoice(r.invoice!.id, method, cash ? (recv != null ? { amountReceived: recv } : {}) : receipt.trim() ? { receiptNumber: receipt.trim() } : {}),
     `Estadía de ${r.code} cobrada: ${money(total ?? 0)}${change ? `. Vuelto ${money(change)}` : ''}.`);
 
-  const primaryLabel = p?.key === 'confirm' ? 'Confirmar reserva' : p?.key === 'in' && early ? `Ingreso desde ${hhmm(r.startAt)}` : p?.key === 'pay' ? 'Registrar pago' : p?.label;
+  const primaryLabel = p?.key === 'in' && early ? `Ingreso desde ${hhmm(r.startAt)}` : p?.key === 'pay' ? 'Registrar pago' : p?.label;
   const primary = p && (
     <button type="button" className="btn pri" disabled={busy || p.disabled || (p.key === 'pay' && lacking > 0)}
       onClick={() => p.key === 'pay' ? pay() : run(p.call!, p.ok!)}>{primaryLabel}</button>
@@ -92,7 +92,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
     <>
       <Drawer title={<><span className="e-code">{r.code}</span><span className="e-pl e-big">{r.plate}</span></>} sub={<span className={`st ${st.c}`}>{st.l}</span>} onClose={onClose} focusSel=".dfoot .btn:last-child"
         footer={<div className="dfoot">
-          {(r.status === 'PENDIENTE' || r.status === 'CONFIRMADA') && <button type="button" className="btn danger" disabled={busy} onClick={() => setConfirm(true)}>Cancelar reserva</button>}
+          {r.status === 'PENDIENTE' && <button type="button" className="btn danger" disabled={busy} onClick={() => setConfirm(true)}>Cancelar reserva</button>}
           <button type="button" className="btn" onClick={onClose}>Cerrar</button>
           {primary}
         </div>}>
@@ -100,7 +100,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
           <section className="fs"><div className="fh"><h3>Cliente</h3></div>
             <div className="li" style={{ padding: 0 }}><span className="l"><span className="av lg">{initials(...(r.client.n.split(' ') as [string, string]))}</span>
               <span><div className="nm">{r.client.n}</div><div className="ad">{[r.client.ph, r.client.em].filter(Boolean).join(' · ')}</div></span></span></div>
-            <div className="e-note"><Clock className="i" aria-hidden="true" /><span>Los avisos de esta reserva le llegan a las notificaciones de la app: confirmación, cambio de plaza, extensión, salida y cancelación.</span></div>
+            <div className="e-note"><Clock className="i" aria-hidden="true" /><span>Los avisos de esta reserva le llegan a las notificaciones de la app: cambio de plaza, extensión, salida y cancelación.</span></div>
           </section>
 
           <section className="fs"><div className="fh"><h3>Reserva</h3></div>
@@ -131,7 +131,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
               ? `Si registrás la salida ahora (${hhmm(new Date())}) se cobran ${plural(extraNow, 'hora extra', 'horas extra')}.`
               : `Si registrás la salida ahora (${hhmm(new Date())}) no se cobran horas extra: hay ${GRACE_MIN} min de gracia.`}</span></div>}
             {active && spaces?.length === 0 && <p className="dim" style={{ margin: 0 }}>No hay otra plaza libre para este vehículo en ese horario.</p>}
-            {r.status === 'CONFIRMADA' && early && <p className="dim" style={{ margin: 0 }}>El ingreso se registra desde las {r.start} del {shD(r.date)}.</p>}
+            {r.status === 'PENDIENTE' && early && <p className="dim" style={{ margin: 0 }}>El ingreso se registra desde las {r.start} del {shD(r.date)}.</p>}
           </section>
 
           {options.length > 0 && <section className="fs"><div className="fh"><h3>Servicios</h3></div>

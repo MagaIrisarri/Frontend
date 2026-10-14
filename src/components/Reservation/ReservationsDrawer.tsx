@@ -29,14 +29,13 @@ interface ReservationsDrawerProps {
 // Estado en color + ícono + texto (nunca solo color).
 const STATUS: Record<string, { l: string; c: string; Icon: LucideIcon }> = {
   PENDIENTE: { l: 'Pendiente', c: 'warn', Icon: Clock },
-  CONFIRMADA: { l: 'Confirmada', c: 'ok', Icon: CheckCircle2 },
   'EN CURSO': { l: 'En curso', c: 'ac', Icon: CircleDot },
   FINALIZADA: { l: 'Finalizada', c: 'mute', Icon: CheckCircle2 },
   CANCELADA: { l: 'Cancelada', c: 'mute', Icon: XCircle },
 };
 
 const STATUS_FILTERS = {
-  active: [['all', 'Todas'], ['PENDIENTE', 'Pendientes'], ['CONFIRMADA', 'Confirmadas'], ['EN CURSO', 'En curso']],
+  active: [['all', 'Todas'], ['PENDIENTE', 'Pendientes'], ['EN CURSO', 'En curso']],
   history: [['all', 'Todas'], ['FINALIZADA', 'Finalizadas'], ['CANCELADA', 'Canceladas']],
 } as const;
 
@@ -68,7 +67,7 @@ const names = (r: any) => {
 const isCancellable = (r: Reservation) => {
   const start = r.startTime ? new Date(r.startTime) : null;
   const future = !start || isNaN(start.getTime()) || start > new Date();
-  return (r.status === 'PENDIENTE' || r.status === 'CONFIRMADA') && future;
+  return r.status === 'PENDIENTE' && future;
 };
 
 // Panel lateral con el formato del rol dueño (.owner); reemplaza al modal Tailwind.
@@ -103,7 +102,7 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
   if (confirming) shown.current = confirming;
 
   const active = useMemo(
-    () => (reservations || []).filter((r) => r.status === 'PENDIENTE' || r.status === 'CONFIRMADA' || r.status === 'EN CURSO'),
+    () => (reservations || []).filter((r) => r.status === 'PENDIENTE' || r.status === 'EN CURSO'),
     [reservations]
   );
   const history = useMemo(

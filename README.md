@@ -56,7 +56,7 @@ Los carga el backend al arrancar. Todos con contraseña `password123`:
 |---|---|---|
 | Cliente | `cliente1@cocheras.com` | Buscar cocheras, reservar, gestionar vehículos y reservas |
 | Dueño | `dueno1@cocheras.com` | Sucursales, plazas, tarifas, servicios, empleados y turnos, reservas y resumen |
-| Empleado | `empleado1@cocheras.com` | Mostrador: confirmar, ingreso, salida y cobro |
+| Empleado | `empleado1@cocheras.com` | Mostrador: ingreso, salida y cobro |
 | Administrador | `admin@cocheras.com` | Usuarios, cocheras, catálogo de servicios y vehículos |
 
 ## Estructura

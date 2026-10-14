@@ -5,7 +5,7 @@ import { ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page
 import { getStatsSummary, type Locality, type StatsSummary } from '../../services/stats.service';
 import { money, plural } from '../Owner/owner.lib';
 
-const RES_ST: [string, string][] = [['FINALIZADA', 'Finalizadas'], ['EN CURSO', 'En curso'], ['CONFIRMADA', 'Confirmadas'], ['PENDIENTE', 'Pendientes'], ['CANCELADA', 'Canceladas']];
+const RES_ST: [string, string][] = [['FINALIZADA', 'Finalizadas'], ['EN CURSO', 'En curso'], ['PENDIENTE', 'Pendientes'], ['CANCELADA', 'Canceladas']];
 // Los administradores no se muestran: son quienes miran el panel.
 const ROLES: [string, string][] = [['CLIENTE', 'Clientes'], ['DUEÑO', 'Dueños'], ['EMPLEADO', 'Empleados']];
 

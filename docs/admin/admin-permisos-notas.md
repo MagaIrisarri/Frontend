@@ -30,7 +30,7 @@ Las valida el servidor; el frontend solo las anticipa.
 | --- | --- |
 | RA-01 | Un empleado depende de un dueño y está vinculado a una sucursal de ese dueño (`ownerId`, `parkingId`). Al crearlo, el dueño tiene que estar activo y la sucursal tiene que ser suya (400 si no). En el formulario, la sucursal queda deshabilitada hasta elegir dueño y solo lista las de ese dueño. |
 | RA-02 | Un empleado no cambia de dueño. Sí puede cambiar de sucursal, solo entre las de su dueño. |
-| RA-03 | No se da de baja a un cliente con reservas pendientes, confirmadas o en curso (409). |
+| RA-03 | No se da de baja a un cliente con reservas pendientes o en curso (409). |
 | RA-04 | No se da de baja a un dueño con sucursales activas (409): primero se pausan. |
 | RA-05 | No se da de baja a un empleado con turnos cargados o reservas activas asignadas (409): primero se lo saca de los turnos y se reasignan sus reservas. |
 | RA-06 | El administrador no se da de baja a sí mismo: su fila no tiene menú de acciones. |

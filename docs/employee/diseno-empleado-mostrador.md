@@ -3,7 +3,7 @@
 Base: ramas prueba-valen-fr (1ed8c11) y prueba-valen-bk (59cd593). Prototipo: artifact "Mostrador ServicioCocheras" (v38). Este documento es la referencia para implementar la maqueta.
 
 ## Lo que ya hace el empleado (código)
-Confirmar, registrar ingreso/salida, cobrar (solo medio de pago), cambiar plaza (R-15), extender de a horas (R-23), agregar/quitar servicios (R-24), cancelar. Todo en `EmployeeDashboard.tsx`.
+Registrar ingreso/salida, cobrar (solo medio de pago), cambiar plaza (R-15), extender de a horas (R-23), agregar/quitar servicios (R-24), cancelar. Todo en `EmployeeDashboard.tsx`.
 - La pantalla se actualiza solo con el botón de refrescar y después de cada acción. No hay polling (el de notificaciones sí: 30 s, `NotificationsContext`). El prototipo se actualiza sola cada 30 s y el botón es solo un icono.
 - La lista es por día (selector de fecha); "Hoy" suma los vehículos de días anteriores que siguen adentro.
 - Cerrar sesión existe en `PanelBar`. No hay cierre de caja ni arqueo.
@@ -30,7 +30,7 @@ Confirmar, registrar ingreso/salida, cobrar (solo medio de pago), cambiar plaza 
 
 ## Paleta y textos (v28–v33)
 - Contraste revisado en ambos modos (texto 4,5:1, bordes de controles 3:1). Oscuro: bordes de campos y texto secundario más claros; botón principal más oscuro al pasar el mouse. El enlace "Deshacer" del aviso usa el tono inverso del tema.
-- Estados: "Se pasó de hora" en rojo, "Por cobrar" y "Pendiente" en ámbar, "Confirmada" en verde, "En curso" en violeta (desde v31; el azul queda para acciones y selección); cada etiqueta con fondo tenue del mismo color. Falta revisar daltonismo (se dejó fuera a pedido).
+- Estados: "Se pasó de hora" en rojo, "Por cobrar" y "Pendiente" en ámbar, "En curso" en violeta (desde v31; el azul queda para acciones y selección); cada etiqueta con fondo tenue del mismo color. Falta revisar daltonismo (se dejó fuera a pedido).
 - Fila: "Ingresó X · Salió Y" (solo lo ya registrado) o "Sin ingreso registrado". Efectivo insuficiente: "Faltan $ N para cubrir $ M". Salir sin arqueo: "Antes de salir, contá el efectivo en Cierre de caja".
 - Comprobación visual completa en escritorio y celular, claro y oscuro. En celular, servicios en una columna y tabla del Resumen con columnas reducidas.
 
@@ -53,7 +53,7 @@ Tokens nuevos (`--edge` borde de contenedor, `--div` divisor interno, `--btn-rin
 | Sombra `--card-sh` | 0 1px 3px rgba(17,21,28,.08) | ninguna |
 
 Aplicación: contadores de ocupación, lista, estados vacíos, control segmentado y botones secundarios con borde de 1 px; resumen, notas y cajas de valor con divisor; encabezado y pie del panel lateral con `--edge`, y borde izquierdo del panel.
-Roles de color (sin cambios): neutros con leve tinte azul; azul solo para acciones y selección; violeta para "En curso" (#5a2bc0 en claro, #c4b0ff en oscuro); ámbar "Por cobrar"/"Pendiente"; rojo "Se pasó de hora"; verde "Confirmada"/tarifa/vuelto. Los estados siempre llevan texto y punto, nunca solo color. Foco: 6,2:1 en claro, 8,3:1 en oscuro.
+Roles de color (sin cambios): neutros con leve tinte azul; azul solo para acciones y selección; violeta para "En curso" (#5a2bc0 en claro, #c4b0ff en oscuro); ámbar "Por cobrar"/"Pendiente"; rojo "Se pasó de hora"; verde tarifa/vuelto. Los estados siempre llevan texto y punto, nunca solo color. Foco: 6,2:1 en claro, 8,3:1 en oscuro.
 No verificado: el contraste de `--edge` (#aeb8c8) sobre blanco es de unos 2,1:1; sirve como borde de contenedor pero queda por debajo de 3:1 (WCAG 1.4.11). Si se quiere cumplirlo, oscurecer a unos #8a96aa.
 
 ## Botón de actualizar (v36–v37)
@@ -103,7 +103,7 @@ Backend (implementado, ver la última sección):
 
 ## Validación de la patente ingresada a mano
 Backend actual (`createReservation` y `extend`, `findConflictingVehicleReservation` y `validateVehicleOverlap`):
-- Busca otra reserva del mismo vehículo con estado PENDIENTE, CONFIRMADA o EN CURSO que se solape con el horario pedido (`inicio < fin pedido` y `fin > inicio pedido`). No filtra por sucursal. Responde 400: "Este vehículo ya posee una reserva activa en «sucursal» en ese horario (HH:MM a HH:MM hs)".
+- Busca otra reserva del mismo vehículo con estado PENDIENTE o EN CURSO que se solape con el horario pedido (`inicio < fin pedido` y `fin > inicio pedido`). No filtra por sucursal. Responde 400: "Este vehículo ya posee una reserva activa en «sucursal» en ese horario (HH:MM a HH:MM hs)".
 - El ingreso sin cuenta resuelve la patente a un vehículo, así que recibe esta validación sin cambios.
 
 Hueco:
@@ -166,7 +166,7 @@ Sigue pendiente: cierre de caja (el nombre `ShiftClosure` ya lo usa el cierre de
 ## Terminal del empleado (implementado, 12/10/2026)
 `EmployeeDashboard.tsx` (con `ResDrawer`, `WalkInDrawer`, `SummaryDrawer` y `CalendarDrawer`, y la lógica compartida en `employee.lib.ts`) usa el backend de arriba y la maqueta v38:
 - **Aspecto:** paleta y tokens de la v38 (`--edge`, `--div`, `--btn-ring`, `--card-sh`, `--info`, `--focus`) en `styles/employee.scss`, con alcance `.owner.emp` (se activa con `<OwnerShell theme="emp">`): el dueño, el administrador y el cliente no cambian. Clases nuevas con prefijo `e-` para no chocar con las del dueño.
-- **Pantalla:** fichas de ocupación con barra por tipo, "Tu turno hoy", Resumen y Nuevo ingreso (N), día con calendario (puntos en los días que trabaja, 60 atrás y 14 adelante), búsqueda (/), filtro por estado y cola agrupada (Por cobrar, En curso, Pendientes, Confirmadas, Finalizadas, Canceladas) con la acción de cada reserva en la fila. Se actualiza sola cada 30 s.
+- **Pantalla:** fichas de ocupación con barra por tipo, "Tu turno hoy", Resumen y Nuevo ingreso (N), día con calendario (puntos en los días que trabaja, 60 atrás y 14 adelante), búsqueda (/), filtro por estado y cola agrupada (Por cobrar, En curso, Pendientes, Finalizadas, Canceladas) con la acción de cada reserva en la fila. Se actualiza sola cada 30 s.
 - **Nuevo ingreso:** `walk-in`, tarifa y total estimado por marca y modelo, horas con − / + hasta el cierre.
 - **Detalle:** Ingreso y Egreso con quién los registró, horario reservado, salida real y horas extra, aviso de horas extra si sale ahora (misma cuenta que `checkOut`, con la gracia), cobro con efectivo recibido y vuelto o comprobante.
 - **Resumen:** tabla por período (Hoy / Semana / Mes) con datos reales, copiable a una hoja de cálculo.

@@ -18,7 +18,7 @@ interface NotificationsDrawerProps {
 }
 
 const ICON: Record<NotificationType, typeof Bell> = {
-  RESERVA_NUEVA: Calendar, RESERVA_CONFIRMADA: Check, RESERVA_CANCELADA: XCircle, RESERVA_VENCIDA: XCircle,
+  RESERVA_NUEVA: Calendar, RESERVA_CANCELADA: XCircle, RESERVA_VENCIDA: XCircle,
   RESERVA_EXTENDIDA: Clock, PLAZA_CAMBIADA: ArrowRightLeft, SALIDA: FileText, RECORDATORIO: Bell,
 };
 

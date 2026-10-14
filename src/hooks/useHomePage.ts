@@ -158,7 +158,7 @@ export function useHomePage() {
 
   // Mismos estados que ACTIVE_RESERVATION_STATUSES del backend
   const activeReservationsCount = clientReservations.filter((r) =>
-    ['PENDIENTE', 'CONFIRMADA', 'EN CURSO'].includes(r.status)
+    ['PENDIENTE', 'EN CURSO'].includes(r.status)
   ).length;
 
   // Cocheras filtradas por buscador y precio, y ordenadas por precio (las sin tarifa quedan al final)

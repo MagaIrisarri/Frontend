@@ -31,10 +31,6 @@ export const cancelReservation = (reservationId: string) =>
 export const changeReservationSpace = (reservationId: string, parkingSpaceId: string) =>
   api.patch(`/api/reservations/${reservationId}/space`, { parkingSpaceId }).then(res => res.data);
 
-// Solo confirma el personal de la sucursal (empleado o dueño), identificado por el token.
-export const confirmReservation = (reservationId: string) =>
-  api.patch(`/api/reservations/${reservationId}/confirm`, {}).then(res => res.data);
-
 // El backend toma el empleado del token y lo guarda como quien registró el ingreso.
 export const checkInReservation = (reservationId: string) =>
   api.post(`/api/reservations/${reservationId}/check-in`, {}).then(res => res.data);

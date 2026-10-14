@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
-import { checkInReservation, checkOutReservation, confirmReservation } from '../../services/reservation.service';
+import { checkInReservation, checkOutReservation } from '../../services/reservation.service';
 import { normRes, type ParkingLike, type Res } from '../Owner/owner.lib';
 
 export const list = (x: any) => (Array.isArray(x) ? x : x?.data ?? []);
 
-// El empleado distingue pendiente de confirmada (el dueño las ve juntas como "Reservada").
-export type Status = 'PENDIENTE' | 'CONFIRMADA' | 'EN CURSO' | 'FINALIZADA' | 'CANCELADA';
+export type Status = 'PENDIENTE' | 'EN CURSO' | 'FINALIZADA' | 'CANCELADA';
 export const ST: Record<Status, { l: string; c: string }> = {
-  PENDIENTE: { l: 'Pendiente', c: 'warn' }, CONFIRMADA: { l: 'Confirmada', c: 'ok' }, 'EN CURSO': { l: 'En curso', c: 'ac' },
+  PENDIENTE: { l: 'Pendiente', c: 'warn' }, 'EN CURSO': { l: 'En curso', c: 'ac' },
   FINALIZADA: { l: 'Finalizada', c: 'mute' }, CANCELADA: { l: 'Cancelada', c: 'mute' },
 };
-export const ACTIVE: Status[] = ['PENDIENTE', 'CONFIRMADA', 'EN CURSO'];
+export const ACTIVE: Status[] = ['PENDIENTE', 'EN CURSO'];
 // Tienen que coincidir con PaymentMethodSchema del backend (Invoice.Schema.ts).
 export const METHODS: [string, string][] = [['EFECTIVO', 'Efectivo'], ['TARJETA_DEBITO', 'Débito'], ['TARJETA_CREDITO', 'Crédito'], ['MERCADO_PAGO', 'Mercado Pago'], ['TRANSFERENCIA', 'Transferencia']];
 
@@ -55,10 +54,9 @@ export const stateOf = (r: ERes): { l: string; c: string } =>
   overdue(r) ? { l: 'Se pasó de hora', c: 'err' } : r.status === 'FINALIZADA' && toPay(r) ? { l: 'Por cobrar', c: 'warn' } : ST[r.status];
 
 // Acción principal de una reserva según su estado; la usan la fila y el detalle. El cobro no tiene llamada: pide el medio en el detalle.
-export interface Action { key: 'confirm' | 'in' | 'out' | 'pay'; label: string; disabled?: boolean; call?: () => Promise<any>; ok?: string | ((res: any) => string) }
+export interface Action { key: 'in' | 'out' | 'pay'; label: string; disabled?: boolean; call?: () => Promise<any>; ok?: string | ((res: any) => string) }
 export function primaryOf(r: ERes): Action | null {
-  if (r.status === 'PENDIENTE') return { key: 'confirm', label: 'Confirmar', call: () => confirmReservation(r.id), ok: `Reserva ${r.code} confirmada.` };
-  if (r.status === 'CONFIRMADA') {
+  if (r.status === 'PENDIENTE') {
     const early = r.startAt.getTime() > Date.now(); // R-16: el ingreso se registra desde el inicio reservado
     // R-21: si su plaza seguía ocupada por alguien que se pasó de hora, el backend la pasó a otra libre.
     const ok = (res: any) => {
