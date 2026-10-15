@@ -50,13 +50,13 @@ Otros scripts:
 
 ## Usuarios de prueba
 
-Los carga el backend al arrancar. Todos con contraseña `password123`:
+Salen de la demo del backend (`pnpm demo:load --yes`; el administrador está siempre). Todos con contraseña `password123`:
 
 | Rol | Email | Qué puede hacer |
 |---|---|---|
-| Cliente | `cliente1@cocheras.com` | Buscar cocheras, reservar, gestionar vehículos y reservas |
-| Dueño | `dueno1@cocheras.com` | Sucursales, plazas, tarifas, servicios, empleados y turnos, reservas y resumen |
-| Empleado | `empleado1@cocheras.com` | Mostrador: ingreso, salida y cobro |
+| Cliente | `cliente@cocheras.com` | Buscar cocheras, reservar, gestionar vehículos y reservas |
+| Dueño | `dueno@cocheras.com` | Sucursales, plazas, tarifas, servicios, empleados y turnos, reservas y resumen |
+| Empleado | `empleado@cocheras.com` | Mostrador: ingreso, salida y cobro |
 | Administrador | `admin@cocheras.com` | Usuarios, cocheras, catálogo de servicios y vehículos |
 
 ## Estructura
