@@ -18,6 +18,7 @@ import { localityKey } from '../../utils/search';
 import { distanceKm, formatDistance } from '../../utils/distance';
 import { iconOf } from '../Owner/ui/vehicles';
 import { typeLabel } from '../../pages/Owner/owner.lib';
+import { ARRIVAL_MIN } from '../../pages/Employee/employee.lib';
 
 const DEFAULT_PARKING_IMAGE =
   'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=600&q=80';
@@ -313,7 +314,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
                 <dt>Duración máxima</dt>
                 <dd>{sp.maxReservationHours} hs</dd>
                 <dt>Tolerancia de llegada</dt>
-                <dd>{sp.reservationMargin} min</dd>
+                <dd>±{ARRIVAL_MIN} min</dd>
               </dl>
             </section>
           </div>

@@ -34,7 +34,7 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
     lat: parking.latitude, lng: parking.longitude,
   } : {
     name: '', image: '', address: '', province: 'Santa Fe', locality: 'Rosario', neighborhood: '', postalCode: '',
-    is24: false, open: '08:00', close: '22:00', min: '1', max: '24', margin: '1', lat: DEFAULT_MAP_CENTER[1], lng: DEFAULT_MAP_CENTER[0],
+    is24: false, open: '08:00', close: '22:00', min: '1', max: '24', margin: '30', lat: DEFAULT_MAP_CENTER[1], lng: DEFAULT_MAP_CENTER[0],
   });
   const [err, setErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -67,7 +67,7 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
     if (!v.is24 && !(v.open && v.close && v.open < v.close)) e.close = 'El cierre debe ser posterior a la apertura.';
     if (!(num('min') >= 1)) e.min = 'Mínimo 1 h.';
     if (!(num('max') >= num('min'))) e.max = 'Debe ser ≥ al mínimo.';
-    if (!(num('margin') >= 0)) e.margin = 'Número inválido.';
+    if (!(Number.isInteger(num('margin')) && num('margin') >= 0 && num('margin') <= 240)) e.margin = 'De 0 a 240 min.';
     return e;
   };
 
@@ -138,7 +138,7 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
           <div className="g3">
             <Input label="Mínimo (h)" type="number" min={1} value={v.min} onChange={set('min')} error={err.min} />
             <Input label="Máximo (h)" type="number" min={1} value={v.max} onChange={set('max')} error={err.max} />
-            <Input label="Tolerancia (h)" type="number" min={0} value={v.margin} onChange={set('margin')} error={err.margin} />
+            <Input label="Margen entre reservas (min)" type="number" min={0} max={240} value={v.margin} onChange={set('margin')} error={err.margin} />
           </div>
         </section>
       </form>

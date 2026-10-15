@@ -111,7 +111,7 @@ function Terminal({ reservations, parking, shifts, me, onChange }: { reservation
   else queue = groups.filter(g => g[1].length).map(([title, rows]) => (
     <section className="e-grp" key={title}>
       <h2>{title} <b>{rows.length}</b></h2>
-      <div className="e-list" role="table" aria-label={title}>{rows.map(r => <Row key={r.id} r={r} busy={busy} run={run} onOpen={() => setOpenId(r.id)} />)}</div>
+      <div className="e-list" role="table" aria-label={title}>{rows.map(r => <Row key={r.id} r={r} margin={parking.reservationMargin} busy={busy} run={run} onOpen={() => setOpenId(r.id)} />)}</div>
     </section>
   ));
 
@@ -154,8 +154,8 @@ function Terminal({ reservations, parking, shifts, me, onChange }: { reservation
 }
 
 // Una reserva en la cola: patente, plaza y horario con quién ingresó y salió, estado y la acción que toca.
-function Row({ r, busy, run, onOpen }: { r: ERes; busy: boolean; run: ReturnType<typeof useRun>['run']; onOpen: () => void }) {
-  const p = primaryOf(r);
+function Row({ r, margin, busy, run, onOpen }: { r: ERes; margin: number; busy: boolean; run: ReturnType<typeof useRun>['run']; onOpen: () => void }) {
+  const p = primaryOf(r, margin);
   const st = stateOf(r);
   const io = r.status === 'EN CURSO' || r.status === 'FINALIZADA'
     ? [r.inBy && `Ingresó ${r.inBy}`, r.outBy && `Salió ${r.outBy}`].filter(Boolean).join(' · ') || 'Sin ingreso registrado' : r.services.map(s => s.name).join(', ');

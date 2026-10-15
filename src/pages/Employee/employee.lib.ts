@@ -17,6 +17,9 @@ export const METHODS: [string, string][] = [['EFECTIVO', 'Efectivo'], ['TARJETA_
 
 // Tiene que coincidir con CHECKOUT_GRACE_MINUTES del backend (R-14): minutos después del fin reservado sin cobrar hora extra.
 export const GRACE_MIN = 10;
+// Tiene que coincidir con ARRIVAL_TOLERANCE_MINUTES del backend (R-16/R-17): el ingreso se registra desde esos minutos antes del inicio
+// (sin pasar el margen de la sucursal) y hasta esos minutos después; si no llegó, la reserva se cancela.
+export const ARRIVAL_MIN = 15;
 export const HOUR = 3_600_000;
 export const person = (u: any) => [u?.name, u?.last_name].filter(Boolean).join(' ');
 export const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -36,7 +39,12 @@ export const normERes = (r: any): ERes => ({
   invoice: r.invoice ? { id: r.invoice.id, status: r.invoice.status, method: r.invoice.paymentMethod ?? '', received: r.invoice.amountReceived ?? null, receipt: r.invoice.receiptNumber ?? null } : null,
 });
 
-export interface EParking extends ParkingLike { name: string; minReservationHours: number; maxReservationHours: number }
+export interface EParking extends ParkingLike { name: string; minReservationHours: number; maxReservationHours: number; reservationMargin: number } // margen en minutos
+
+// Desde cuándo se registra el ingreso: misma cuenta que checkIn del backend.
+export const checkInFrom = (r: ERes, marginMin: number) => new Date(r.startAt.getTime() - Math.min(ARRIVAL_MIN, marginMin) * 60_000);
+// Pendiente que pasó la tolerancia de llegada: el backend la cancela en la próxima vuelta (R-17).
+export const noShow = (r: ERes) => r.status === 'PENDIENTE' && r.startAt.getTime() + ARRIVAL_MIN * 60_000 <= Date.now();
 
 // Sigue adentro después del fin reservado: la salida cobra las horas extra (R-14) y la plaza no se libera (R-21).
 export const overdue = (r: ERes) => r.status === 'EN CURSO' && r.endAt.getTime() < Date.now();
@@ -51,19 +59,21 @@ export const extraAt = (r: ERes, at: Date) => {
 };
 // Etiqueta y color del estado, igual en la fila y en el detalle.
 export const stateOf = (r: ERes): { l: string; c: string } =>
-  overdue(r) ? { l: 'Se pasó de hora', c: 'err' } : r.status === 'FINALIZADA' && toPay(r) ? { l: 'Por cobrar', c: 'warn' } : ST[r.status];
+  overdue(r) ? { l: 'Se pasó de hora', c: 'err' } : noShow(r) ? { l: 'No se presentó', c: 'err' } : r.status === 'FINALIZADA' && toPay(r) ? { l: 'Por cobrar', c: 'warn' } : ST[r.status];
 
 // Acción principal de una reserva según su estado; la usan la fila y el detalle. El cobro no tiene llamada: pide el medio en el detalle.
 export interface Action { key: 'in' | 'out' | 'pay'; label: string; disabled?: boolean; call?: () => Promise<any>; ok?: string | ((res: any) => string) }
-export function primaryOf(r: ERes): Action | null {
+export function primaryOf(r: ERes, marginMin: number): Action | null {
   if (r.status === 'PENDIENTE') {
-    const early = r.startAt.getTime() > Date.now(); // R-16: el ingreso se registra desde el inicio reservado
+    if (noShow(r)) return { key: 'in', label: 'Vencida', disabled: true };
+    const from = checkInFrom(r, marginMin);
+    const early = from.getTime() > Date.now();
     // R-21: si su plaza seguía ocupada por alguien que se pasó de hora, el backend la pasó a otra libre.
     const ok = (res: any) => {
       const code = res?.data?.parkingSpace?.spaceCode ?? r.space;
       return `Ingreso de ${r.plate} registrado en la plaza ${code}${code !== r.space ? `: la ${r.space} seguía ocupada` : ''}.`;
     };
-    return { key: 'in', label: early ? `Desde ${hhmm(r.startAt)}` : 'Registrar ingreso', disabled: early, call: () => checkInReservation(r.id), ok };
+    return { key: 'in', label: early ? `Desde ${hhmm(from)}` : 'Registrar ingreso', disabled: early, call: () => checkInReservation(r.id), ok };
   }
   if (r.status === 'EN CURSO') return { key: 'out', label: 'Registrar salida', call: () => checkOutReservation(r.id), ok: `Salida de ${r.plate} registrada. Falta cobrar la estadía.` };
   if (r.status === 'FINALIZADA' && toPay(r)) return { key: 'pay', label: 'Cobrar' };

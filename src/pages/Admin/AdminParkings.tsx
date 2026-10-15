@@ -132,7 +132,7 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
       <div className="fs"><div className="fh"><h3>Atención</h3></div>
         <dl className="dl">
           <dt>Horario</dt><dd>{hrs(p)}</dd>
-          <dt>Reserva</dt><dd>{p.minReservationHours} a {p.maxReservationHours} h · tolerancia {p.reservationMargin} h</dd>
+          <dt>Reserva</dt><dd>{p.minReservationHours} a {p.maxReservationHours} h · margen entre reservas {p.reservationMargin} min</dd>
           <dt>Personal</dt><dd>{team.status === 'error' ? '—' : team.status === 'loading' ? 'Cargando…' : crew.length ? crew.map(u => `${u.name} ${u.last_name}`).join(', ') : 'Sin empleados asignados'}</dd>
         </dl>
       </div>
