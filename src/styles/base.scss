@@ -177,7 +177,7 @@ h2{font-size:15px;font-weight:600;letter-spacing:-.005em}
 button.nm:hover{color:var(--ac-tx)}
 td button.nm[data-act=res-open]{color:var(--ac-tx);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--ac-tx) 40%,transparent);text-underline-offset:3px;cursor:pointer;width:max-content}td button.nm[data-act=res-open]:hover{text-decoration-color:currentColor}
 .ad{font-size:12.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.caps{display:flex;gap:12px;color:var(--tx)}
+.caps{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--tx)}
 .cap{display:inline-flex;align-items:center;gap:6px;font-weight:500;min-width:48px;font-variant-numeric:tabular-nums}
 .cap .i{color:var(--tx3)}
 .cap.z{color:var(--tx3);font-weight:400}
