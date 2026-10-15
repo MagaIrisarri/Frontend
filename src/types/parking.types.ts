@@ -13,7 +13,7 @@ export interface Parking {
   closingTime: string;
   minReservationHours: number;
   maxReservationHours: number;
-  reservationMargin: number;
+  reservationMargin: number; // minutos libres entre reservas de la misma plaza
   isActive: boolean;
   state?: string;
   name: string;

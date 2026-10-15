@@ -1,4 +1,4 @@
-// Lógica pura del rol dueño portada de owner-design/owner.html: formatos, normalización de datos y edición del calendario de turnos.
+// Lógica pura del rol dueño del prototipo original: formatos, normalización de datos y edición del calendario de turnos.
 // Sin React ni red: se prueba con `node tests/owner.lib.test.ts`.
 import type { ParkingPriceRow, SpaceType } from '../../types/parking.types';
 

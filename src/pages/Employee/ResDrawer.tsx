@@ -8,7 +8,7 @@ import { payInvoice } from '../../services/invoice.service';
 import { getSpaceAvailability } from '../../services/parkingSpace.service';
 import { getParkingServices } from '../../services/servicePrice.service';
 import { billLines, initials, isoD, money, plural, priceOf, shD, type Svc } from '../Owner/owner.lib';
-import { ACTIVE, GRACE_MIN, HOUR, METHODS, extraAt, hhmm, list, overdue, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes } from './employee.lib';
+import { ACTIVE, ARRIVAL_MIN, GRACE_MIN, checkInFrom, noShow, HOUR, METHODS, extraAt, hhmm, list, overdue, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes } from './employee.lib';
 
 const CARD_HINT = 'Se cobra en el posnet. El sistema guarda solo el medio y el comprobante, nunca los datos de la tarjeta.';
 
@@ -24,8 +24,9 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   const active = ACTIVE.includes(r.status);
   const due = toPay(r);
   const st = stateOf(r);
-  const early = r.startAt.getTime() > Date.now(); // R-16: el ingreso se registra desde el inicio reservado
-  const p = primaryOf(r);
+  const from = checkInFrom(r, parking.reservationMargin);
+  const early = from.getTime() > Date.now(); // R-16: el ingreso se registra desde la tolerancia de llegada
+  const p = primaryOf(r, parking.reservationMargin);
 
   // Plazas del mismo tipo libres en el horario de la reserva (con el margen de la sucursal); la actual va primero.
   // Si se pasó de hora, sigue ocupando la plaza hasta que salga: se busca hasta ahora como mínimo.
@@ -81,7 +82,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   const pay = () => run(() => payInvoice(r.invoice!.id, method, cash ? (recv != null ? { amountReceived: recv } : {}) : receipt.trim() ? { receiptNumber: receipt.trim() } : {}),
     `Estadía de ${r.code} cobrada: ${money(total ?? 0)}${change ? `. Vuelto ${money(change)}` : ''}.`);
 
-  const primaryLabel = p?.key === 'in' && early ? `Ingreso desde ${hhmm(r.startAt)}` : p?.key === 'pay' ? 'Registrar pago' : p?.label;
+  const primaryLabel = p?.key === 'in' && early ? `Ingreso desde ${hhmm(from)}` : p?.key === 'pay' ? 'Registrar pago' : p?.label;
   const primary = p && (
     <button type="button" className="btn pri" disabled={busy || p.disabled || (p.key === 'pay' && lacking > 0)}
       onClick={() => p.key === 'pay' ? pay() : run(p.call!, p.ok!)}>{primaryLabel}</button>
@@ -130,7 +131,8 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
               ? `Si registrás la salida ahora (${hhmm(new Date())}) se cobran ${plural(extraNow, 'hora extra', 'horas extra')}.`
               : `Si registrás la salida ahora (${hhmm(new Date())}) no se cobran horas extra: hay ${GRACE_MIN} min de gracia.`}</span></div>}
             {active && spaces?.length === 0 && <p className="dim" style={{ margin: 0 }}>No hay otra plaza libre para este vehículo en ese horario.</p>}
-            {r.status === 'PENDIENTE' && early && <p className="dim" style={{ margin: 0 }}>El ingreso se registra desde las {r.start} del {shD(r.date)}.</p>}
+            {r.status === 'PENDIENTE' && early && <p className="dim" style={{ margin: 0 }}>El ingreso se registra desde las {hhmm(from)} del {shD(isoD(from))}.</p>}
+            {noShow(r) && <p className="dim" style={{ margin: 0 }}>No se registró el ingreso hasta {ARRIVAL_MIN} min después del inicio: la reserva se cancela sola.</p>}
           </section>
 
           {options.length > 0 && <section className="fs"><div className="fh"><h3>Servicios</h3></div>

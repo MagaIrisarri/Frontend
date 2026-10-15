@@ -223,7 +223,7 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
           <dl className="dl" style={{ margin: 0 }}>
             <dt>Dirección</dt><dd>{[p.address, p.neighborhood, p.locality].filter(Boolean).join(', ')} ({p.postalCode})</dd>
             <dt>Horario</dt><dd>{hrs(p)}</dd>
-            <dt>Reserva</dt><dd>{p.minReservationHours} a {p.maxReservationHours} h · tolerancia {p.reservationMargin} h</dd>
+            <dt>Reserva</dt><dd>{p.minReservationHours} a {p.maxReservationHours} h · margen entre reservas {p.reservationMargin} min</dd>
           </dl>
         </div>
         <div className="fs"><div className="fh"><h3>Tarifas por hora</h3><button type="button" className="link" onClick={() => navigate(`/owner/tariffs?p=${p.id}`)}>Editar tarifas</button></div>

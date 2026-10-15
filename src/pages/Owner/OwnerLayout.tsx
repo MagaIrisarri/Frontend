@@ -13,7 +13,7 @@ function AppBar() {
   return <PanelBar home="/owner" role="Dueño" views={VIEWS} onRefresh={refresh} />;
 }
 
-// Raíz de todas las vistas del dueño (owner-design/owner.html).
+// Raíz de todas las vistas del dueño.
 export default function OwnerLayout() {
   return (
     <OwnerShell>

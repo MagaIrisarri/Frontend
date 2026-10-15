@@ -4,9 +4,9 @@ Oct 11, 2026
 
 ## Alcance
 
-Este documento acompaña al prototipo `prototipo-admin.html` (HTML único, datos de ejemplo en memoria; nada se guarda al recargar). Define qué puede hacer el administrador en cada vista, las reglas que el código real debe respetar y qué hay que cambiar en el frontend y el backend actuales. Los códigos siguen la convención de las notas del dueño, con sufijo A para no chocar con ellas: **RA-** reglas de negocio, **LA-** limitaciones, **DA-** decisiones abiertas.
+Este documento salió de un prototipo HTML del panel, que se retiró del repo. Define qué puede hacer el administrador en cada vista, las reglas que el código real debe respetar y qué hay que cambiar en el frontend y el backend actuales. Los códigos siguen la convención de las notas del dueño, con sufijo A para no chocar con ellas: **RA-** reglas de negocio, **LA-** limitaciones, **DA-** decisiones abiertas.
 
-El prototipo usa las clases del sistema de interfaz (`.panel`, `.tbl`, `.seg`, `.st`, `.drawer`, `.dbody`, `.dfoot`, `.fs`, `.fh`, `.btn`, `.icon-btn`, `.inp`, `.sel`, `.field`) y los tokens de `owner.html`. Lo único nuevo es la lista + detalle de Marcas (`.split`, `.side`, `.main`, `.bi`, `.gh`, `.mr`).
+Las pantallas usan las clases del sistema de interfaz (`.panel`, `.tbl`, `.seg`, `.st`, `.drawer`, `.dbody`, `.dfoot`, `.fs`, `.fh`, `.btn`, `.icon-btn`, `.inp`, `.sel`, `.field`) y los tokens de `base.scss`. Lo único nuevo es la lista + detalle de Marcas (`.split`, `.side`, `.main`, `.bi`, `.gh`, `.mr`).
 
 ## Qué puede hacer el administrador
 
@@ -17,10 +17,10 @@ El prototipo usa las clases del sistema de interfaz (`.panel`, `.tbl`, `.seg`, `
 | Cocheras | Sí | No | No | No | No existe (solo "Ver cocheras" dentro de cada dueño) | Vista nueva: lista + detalle con filtros |
 | Vehículos | Sí | No | No | No | Igual | Ninguno |
 | Marcas y modelos | Sí | Solo con el CSV del DNRPA (agrega las que faltan) | No | No | Marcas solo lectura, sin modelos | Lista + detalle de modelos agrupados por tipo, con filtro; pestaña "Actualizar con CSV" |
-| Tipos de vehículo | Sí | Sí | Sí, salvo los tipos base | Sí, salvo los base y los que están en uso | `AdminVehicleTypes.tsx` sobre `AdminCatalog` (RA-11, 2026-10-13, sin commit) | Era la vista que se había quitado: vuelve porque TipoVehículo es un CRUD simple de regularidad y la cátedra lo pide en front y back |
+| Tipos de vehículo | Sí | Sí | Sí, salvo los tipos base | Sí, salvo los base y los que están en uso | `AdminVehicleTypes.tsx` sobre `AdminCatalog` (RA-11, 2026-10-13, Frontend `82162df`) | Era la vista que se había quitado: vuelve porque TipoVehículo es un CRUD simple de regularidad y la cátedra lo pide en front y back |
 | Seguros | Sí | Sí | No | No | Igual | Ninguno |
 | Servicios | Sí | Sí | Sí | Sí | Igual | Ninguno |
-| Feriados | Sí (los nacionales) | Sí, nacionales (D-09) | No | Sí (abre las sucursales que cerraban) | Vista nueva `AdminHolidays` (sin commit) | Lista del año, alta y baja. No ve los propios de cada dueño, ni elige qué sucursales cierran: eso es del dueño |
+| Feriados | Sí (los nacionales) | Sí, nacionales (D-09) | No | Sí (abre las sucursales que cerraban) | Vista nueva `AdminHolidays` (Frontend `82162df`) | Lista del año, alta y baja. No ve los propios de cada dueño, ni elige qué sucursales cierran: eso es del dueño |
 
 ## Reglas de negocio a replicar
 
@@ -51,8 +51,8 @@ Las valida el servidor; el frontend solo las anticipa.
 | RA-18 | Un empleado con turnos o reservas activas no cambia de sucursal (409), igual que la baja (RA-05). |
 | RA-22 | Usuarios y Cocheras se cargan por páginas de 25 (hasta 100) y las resuelve el servidor: búsqueda sin tildes ni mayúsculas (todas las palabras), filtros, conteos que rotulan cada filtro y, en cocheras, la lista de localidades. Sin `page`, los endpoints devuelven todo, como antes. Al cambiar un filtro la lista vuelve a la página 1. Si una baja vacía la última página, se vuelve a la anterior. |
 | RA-23 | Usuarios es lista + detalle: el detalle muestra los datos y, según el rol, vehículos y reservas del cliente, cocheras y empleados del dueño, o sucursal y dueño del empleado, con enlaces a Cocheras y a Usuarios. Editar y dar de baja o reactivar están en el detalle; el administrador no tiene acciones sobre su propio usuario (RA-06). |
-| RA-26 | Cada modelo guarda su descripción del DNRPA ("PICK-UP CABINA DOBLE") y una tabla dice a qué tipo va cada descripción; se compara sin mayúsculas, tildes, guiones ni espacios ("PICK-UP" y "PICK UP" son la misma). Se configura una vez: la vista previa del CSV solo pregunta por las descripciones nuevas, con el tipo sugerido elegido (el tipo creado cuyo nombre aparece en la descripción; si no, el base). Una descripción que ya tiene modelos conserva el tipo que tienen. Desde Tipos de vehículo, "Descripciones del DNRPA" asigna descripciones a un tipo (al crearlo se abre solo, con las sugeridas tildadas): se reasignan sus modelos y sus vehículos, y las que se destildan vuelven a la sugerencia. Con reservas activas de esos vehículos no se puede (409, D-12). Al dar de baja un tipo, sus descripciones vuelven a la sugerencia. Backend y Frontend, rama `tipoVehiculo`, sin commit. |
-| RA-25 | La API tampoco escribe marcas ni modelos: `/api/brands` y `/api/models` son solo `GET` (Backend, rama `tipoVehiculo`, sin commit). El único camino de escritura es el CSV (RA-14). Así un modelo no cambia de tipo ni de marca, y el tipo que copia cada vehículo de su modelo no se desincroniza. |
+| RA-26 | Cada modelo guarda su descripción del DNRPA ("PICK-UP CABINA DOBLE") y una tabla dice a qué tipo va cada descripción; se compara sin mayúsculas, tildes, guiones ni espacios ("PICK-UP" y "PICK UP" son la misma). Se configura una vez: la vista previa del CSV solo pregunta por las descripciones nuevas, con el tipo sugerido elegido (el tipo creado cuyo nombre aparece en la descripción; si no, el base). Una descripción que ya tiene modelos conserva el tipo que tienen. Desde Tipos de vehículo, "Descripciones del DNRPA" asigna descripciones a un tipo (al crearlo se abre solo, con las sugeridas tildadas): se reasignan sus modelos y sus vehículos, y las que se destildan vuelven a la sugerencia. Con reservas activas de esos vehículos no se puede (409, D-12). Al dar de baja un tipo, sus descripciones vuelven a la sugerencia. Backend `5513158`, Frontend `39773a6`. |
+| RA-25 | La API tampoco escribe marcas ni modelos: `/api/brands` y `/api/models` son solo `GET` (Backend `5513158`). El único camino de escritura es el CSV (RA-14). Así un modelo no cambia de tipo ni de marca, y el tipo que copia cada vehículo de su modelo no se desincroniza. |
 | RA-24 | Marcas y modelos no se pagina: `GET /api/models?brandId=` trae todos los modelos de la marca (hay marcas con cientos). El detalle los muestra en una lista con scroll, con buscador y filtro por tipo. |
 
 ## Limitaciones y decisiones abiertas
@@ -65,7 +65,7 @@ Las valida el servidor; el frontend solo las anticipa.
 | LA-04 | Cambiar la sucursal de un empleado que tiene turnos o reservas en la actual dejaba turnos huérfanos: el servidor solo validaba que la sucursal fuera del dueño. | Resuelta por RA-18. |
 | LA-05 | El listado de usuarios trae solo `ownerId` y `parkingId`. El nombre del dueño sale de la misma lista; el de la sucursal hay que pedirlo (`getParkingsByOwner`). | Abierta (DA-03). |
 | LA-06 | `getModels(brandId)` devuelve todos los modelos de la marca, sin paginar, con `brand` y `vehicleType`. Verificado en `Model.Repository.ts`. | Cerrada. |
-| LA-07 | No había autenticación: las rutas de usuarios las podía llamar cualquiera y la identidad viajaba en `x-user-id`, que se podía falsificar. | Cerrada (sin commit): el login devuelve un JWT y las rutas del panel exigen `auth(ADMINISTRADOR)`. Cada recurso se controla además contra su dueño (L-37, notas del dueño). |
+| LA-07 | No había autenticación: las rutas de usuarios las podía llamar cualquiera y la identidad viajaba en `x-user-id`, que se podía falsificar. | Cerrada (Backend `a183668`, Frontend `82162df`): el login devuelve un JWT y las rutas del panel exigen `auth(ADMINISTRADOR)`. Cada recurso se controla además contra su dueño (L-37, notas del dueño). |
 | DA-01 | Mover un empleado a otro dueño: el servidor no lo permite y el prototipo tampoco. | Sin decidir. |
 | DA-02 | ¿Restablecer contraseña del usuario desde el admin? | Sin decidir. |
 | DA-03 | Nombre de la sucursal en el listado: ¿lo trae el endpoint o se pide aparte? | Sin decidir. |
@@ -85,7 +85,7 @@ Las valida el servidor; el frontend solo las anticipa.
 | `pages/Admin/AdminUsers.tsx` | "Nuevo dueño" pasa a "Nuevo usuario". `OwnerDrawer` pasa a un formulario con rol; con empleado, selects de dueño y sucursal dependientes. Agregar el panel de edición. Mostrar sucursal y dueño en la fila del empleado. |
 | `services/user.service.ts` y `services/vehicle.service.ts` | Agregar `createUser(type, datos)` para cliente y dueño (hoy `createOwner` fija `DUEÑO`), `createEmployee(ownerId, datos)`, `updateEmployee(ownerId, id, datos)` e `importCatalog(items, dryRun)`. `updateUser`, `removeUser` y `reactivateUser` ya existen y sirven también para empleados. |
 | `styles/ui.scss` | Agregar las clases de lista + detalle con nombres genéricos. No crear un `.scss` por pantalla. |
-| `scripts/standard.json` y `e2e/` | Agregar las pantallas nuevas o migradas y su prueba e2e. Cerrar con `pnpm verify`. |
+| `scripts/standard.json` y `tests/e2e/` | Agregar las pantallas nuevas o migradas y su prueba e2e. Cerrar con `pnpm verify`. |
 
 Reglas del estándar que el prototipo simplifica:
 - Todo `Drawer` y `ConfirmModal` va dentro de `Presence` o `Shown`: el prototipo los monta y desmonta sin animar.
@@ -118,7 +118,3 @@ Reglas del estándar que el prototipo simplifica:
 ## Accesibilidad
 
 Botones de solo ícono con `aria-label`; campos con etiqueta, `aria-invalid` y error en `role="alert"` ligado por `aria-describedby`; foco inicial al abrir una capa, Escape que cierra y foco devuelto al abridor; estado en texto además de color; controles de 44 px bajo 720 px. El prototipo no atrapa el foco dentro de las capas: el código real lo resuelve con `Layer.tsx`.
-
-## Datos de ejemplo
-
-Nombres, DNI, emails, teléfonos, patentes, cocheras, marcas, modelos, aseguradoras, servicios y todas las cifras del panel son inventados para la maqueta. Las marcas y los modelos no son los precargados reales.
