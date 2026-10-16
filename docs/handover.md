@@ -21,8 +21,6 @@ Antes de la demo, en cada base: `pnpm build && pnpm db:drop-legacy --yes` (colum
 
 | Código | Problema | Propuesta |
 |---|---|---|
-| L-42 | `DELETE /api/parkings/:id` desactiva una sucursal con reservas pendientes o en curso, sin avisar (`Parking.Service.ts`) | 409 con `details.reservations`, como las otras bajas (R-24) |
-| L-43 | La salida cobra la tarifa vigente al salir: si el dueño cambia el precio, una reserva pendiente paga el nuevo sin aviso (`ParkingPrice.Repository.ts`) | Decidir con el equipo: tarifa al reservar, o avisar a los clientes afectados |
 | L-36 | La cuenta creada en el mostrador tiene el DNI como contraseña inicial y el email sin verificar (`Reservation.Repository.ts`) | Contraseña temporal al azar mostrada al empleado; verificar por mail cuando haya envío |
 | L-02 | Las horas trabajadas son las programadas, no la asistencia (D-07) | Fichaje o ajuste manual auditado. Se dejó para después de la entrega |
 | L-16 | No hay auditoría de quién cambió turnos | Usuario, fecha, antes y después |
@@ -43,7 +41,7 @@ Estado: completas para la entrega. El mapa de quién recibe cada aviso está en 
 
 - Lo último (L-41, Backend `3e31955`, notas en `8f1b75c`): sacar una plaza de servicio con reubicación confirmada (R-19) avisa `PLAZA_CAMBIADA` al cliente y al empleado asignado de cada reserva movida; el cambio de plaza a mano también avisa al empleado; el cambio de empleado a mano (`assignEmployee`, R-07) avisa `RESERVA_TRANSFERIDA` al que la recibe y al que la deja. Nadie recibe el aviso de su propia acción.
 - `assignEmployee` solo se usa por la API (`PUT /api/reservations/:id`): desde R-07 la interfaz del dueño no cambia el empleado a mano.
-- Lo que falta en avisos son L-42 y L-43 (sección 2) y L-31 (sección 3).
+- L-42 y L-43 quedaron cerradas (Backend `b379cb8`): pausar una sucursal con reservas avisa al dueño cuántas siguen, y la salida cobra la tarifa vigente al reservar, así que no hace falta avisar al cliente. En avisos falta L-31 (sección 3).
 - Descartados por decisión de producto: aviso de la reserva de mostrador al resto del personal, cambios de servicios de una reserva (`setServices`), eventos de cuenta (reset de contraseña, baja, alta en el mostrador: sin sesión no se ven) y calificación (`rate`).
 
 ## 6. Avisos para quien siga

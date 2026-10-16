@@ -73,8 +73,9 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
     run(() => setReservationServices(r.id, ids), on ? `${s.name} quitado de ${r.code}.` : `${s.name} agregado a ${r.code}: se cobra en la salida.`);
   };
 
-  // Importe: con factura, su detalle (R-14); antes de la salida, una estimación con la tarifa vigente y las horas extra de ahora.
-  const rate = priceOf(parking, r.vtypeId)?.price ?? null;
+  // Importe: con factura, su detalle (R-14); antes de la salida, una estimación con la tarifa de la reserva (L-43; la vigente
+  // si es anterior a guardarla) y las horas extra de ahora.
+  const rate = r.rate ?? priceOf(parking, r.vtypeId)?.price ?? null;
   const VIcon = iconOf(r.vtype);
   const reservedH = Math.max(1, Math.ceil((r.endAt.getTime() - r.startAt.getTime()) / HOUR));
   const extraNow = overdue(r) ? extraAt(r, new Date()) : 0;

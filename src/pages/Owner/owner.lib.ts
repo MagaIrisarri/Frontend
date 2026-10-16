@@ -251,6 +251,7 @@ export interface Res {
   eid: string | null; // R-07: empleado asignado, lo deciden los turnos
   cin: string | null; // quien registró el ingreso
   amount: number | null;
+  rate: number | null; // L-43: precio por hora vigente al reservar, el que cobra la salida; null en las reservas anteriores
   bill: Bill | null; // detalle del cobro; null si no hay factura o es anterior al detalle
   services: Svc[]; // servicios pedidos con la reserva
   rating: number | null; // R-27: valoración del cliente (1 a 5), opcional
@@ -295,6 +296,7 @@ export function normRes(r: any): Res {
     eid: r.attendedBy?.id ?? null,
     cin: r.checkedInBy?.id ?? null,
     amount: r.amount == null ? null : Number(r.amount),
+    rate: r.hourlyRate == null ? null : Number(r.hourlyRate),
     bill: toBill(r.invoice),
     services: servicesOf(r),
     rating: r.rating ?? null,

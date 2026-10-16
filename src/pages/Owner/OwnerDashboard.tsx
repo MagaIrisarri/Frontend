@@ -76,7 +76,11 @@ export default function OwnerDashboard() {
 
   const toggle = async (p: Parking) => {
     try {
-      if (p.isActive) { await deleteParking(p.id); toast(`“${p.name}” pausada. Ya no aparece en las búsquedas.`, 'info'); }
+      if (p.isActive) {
+        // L-42: pausar corta las reservas nuevas; las que ya tenía siguen en pie.
+        const n: number = (await deleteParking(p.id))?.data?.activeReservations ?? 0;
+        toast(`“${p.name}” pausada. Ya no aparece en las búsquedas.${n ? ` ${plural(n, 'reserva pendiente o en curso sigue', 'reservas pendientes o en curso siguen')} en pie: atendelas o cancelalas desde Reservas.` : ''}`, 'info');
+      }
       else { await reactivateParking(p.id); toast(`“${p.name}” habilitada y visible al público.`); }
       setDetail(null);
       await refresh();
