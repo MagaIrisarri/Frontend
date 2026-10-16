@@ -97,11 +97,12 @@ interface ConfirmProps {
   back?: string;
   danger?: boolean;
   busy?: boolean; // mientras la acción corre, evita el doble envío
+  children?: ReactNode; // un campo que pide la acción (motivo, contraseña); con data-first toma el foco
   onConfirm: () => void;
   onClose: () => void;
 }
 
-export function ConfirmModal({ title, body, ok, back = 'Cancelar', danger, busy, onConfirm, onClose }: ConfirmProps) {
+export function ConfirmModal({ title, body, ok, back = 'Cancelar', danger, busy, children, onConfirm, onClose }: ConfirmProps) {
   const ref = useLayer(onClose, '[data-first]');
   const id = useId();
   const closing = useClosing();
@@ -111,6 +112,7 @@ export function ConfirmModal({ title, body, ok, back = 'Cancelar', danger, busy,
       <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby={`${id}t`} aria-describedby={`${id}b`}>
         <h2 id={`${id}t`}>{title}</h2>
         <p id={`${id}b`}>{body}</p>
+        {children}
         <div className="row">
           <button type="button" className="btn" onClick={onClose}>{back}</button>
           <button type="button" className={`btn ${danger ? 'danger' : 'pri'}`} data-first disabled={busy} aria-busy={busy || undefined} onClick={onConfirm}>{ok}</button>

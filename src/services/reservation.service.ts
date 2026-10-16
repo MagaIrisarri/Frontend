@@ -24,8 +24,9 @@ export const assignReservationEmployee = (reservationId: string, employeeId: str
 
 export const getReservationsByOwner =(ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
 export const getReservationsByParking = (parkingId: string) => api.get('/api/reservations/parking/' + parkingId).then(res => res.data);
-export const cancelReservation = (reservationId: string) =>
-  api.delete(`/api/reservations/${reservationId}`).then(res => res.data);
+// El personal manda el motivo (el backend lo exige y se lo avisa al cliente); el cliente cancela sin motivo.
+export const cancelReservation = (reservationId: string, reason?: string) =>
+  api.delete(`/api/reservations/${reservationId}`, { data: reason ? { reason } : undefined }).then(res => res.data);
 
 // El backend verifica que quien cambia la plaza sea personal de esa sucursal (el usuario del token).
 export const changeReservationSpace = (reservationId: string, parkingSpaceId: string) =>

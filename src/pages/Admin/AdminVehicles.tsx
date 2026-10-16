@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Car, Search } from 'lucide-react';
+import { createElement, useCallback, useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 import { Drawer } from '../../components/Owner/ui/Layer';
 import { Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
+import { FilterBar } from '../../components/Owner/ui/FilterBar';
+import { VICON, iconOf } from '../../components/Owner/ui/vehicles';
 import { getVehicles } from '../../services/vehicle.service';
-import { initials, plural } from '../Owner/owner.lib';
+import { matchesQuery } from '../../utils/search';
+import { initials, plural, typeLabel, typePlural } from '../Owner/owner.lib';
 
 interface Client { id: string; name: string; last_name: string; dni?: string; email?: string; phone?: string }
 interface V {
@@ -13,6 +16,8 @@ interface V {
   client?: Client;
 }
 const fullName = (c?: Client) => (c ? `${c.name} ${c.last_name}` : '—');
+const Car = VICON.AUTO;
+const TypeCell = ({ name }: { name: string }) => <span className="cap">{createElement(iconOf(name), { className: 'i', 'aria-hidden': true })}{typeLabel(name)}</span>;
 
 // Listado de vehículos registrados (alcance adicional del proposal): por tipo, con patente, marca, modelo y seguro → detalle del cliente.
 export default function AdminVehicles() {
@@ -32,10 +37,11 @@ export default function AdminVehicles() {
   useEffect(() => { load(); }, [load]);
 
   const types = [...new Set(list.map(v => v.vehicleType?.name).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, 'es'));
-  const term = q.trim().toLowerCase().replace(/\s/g, '');
+  // La patente se busca también sin espacios ("AB 123 CD"); el resto, con matchesQuery (sin tildes ni mayúsculas, todas las palabras).
+  const plateQ = q.trim().toUpperCase().replace(/\s/g, '');
   const shown = list
     .filter(v => (ft === 'all' || v.vehicleType?.name === ft)
-      && (!term || `${v.plate}${v.brand?.name}${v.model?.name}${fullName(v.client)}`.toLowerCase().replace(/\s/g, '').includes(term)))
+      && (!q.trim() || v.plate.toUpperCase().includes(plateQ) || matchesQuery(q, `${v.brand?.name ?? ''} ${v.model?.name ?? ''} ${fullName(v.client)}`)))
     .sort((a, b) => a.plate.localeCompare(b.plate));
 
   let body;
@@ -55,7 +61,7 @@ export default function AdminVehicles() {
         <tr key={v.id}>
           <td><span className="plate">{v.plate}</span>{v.year && <div className="ad">{v.year}{v.color ? ` · ${v.color}` : ''}</div>}</td>
           <td data-label="Marca y modelo"><span className="nm">{v.brand?.name ?? '—'}</span><div className="ad">{v.model?.name ?? ''}</div></td>
-          <td data-label="Tipo">{v.vehicleType?.name ?? '—'}</td>
+          <td data-label="Tipo">{v.vehicleType ? <TypeCell name={v.vehicleType.name} /> : '—'}</td>
           <td data-label="Seguro">{v.insurance?.name ?? <span className="na">Sin seguro</span>}</td>
           <td data-label="Cliente">{v.client
             ? <button type="button" className="link" aria-label={`Ver datos de ${fullName(v.client)}`} onClick={() => setClient(v.client!)}>{fullName(v.client)}</button>
@@ -68,16 +74,18 @@ export default function AdminVehicles() {
   return (
     <>
       <PageHead title="Vehículos" sub={status === 'ready' ? `${plural(list.length, 'vehículo registrado', 'vehículos registrados')} por los clientes.` : 'Vehículos registrados por los clientes.'} />
-      {status === 'ready' && list.length > 0 && <>
-        <div className="toolbar">
-          <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar por patente, marca, modelo o cliente" aria-label="Buscar por patente, marca, modelo o cliente" value={q} onChange={e => setQ(e.target.value)} /></div>
-        </div>
-        <div className="seg" role="group" aria-label="Filtrar por tipo de vehículo" style={{ justifySelf: 'start' }}>
-          {[['all', 'Todos'], ...types.map(t => [t, t])].map(([k, l]) => (
-            <button type="button" key={k} aria-pressed={ft === k} onClick={() => setFt(k)}>{l}<b>{list.filter(v => k === 'all' || v.vehicleType?.name === k).length}</b></button>
-          ))}
-        </div>
-      </>}
+      {status === 'ready' && list.length > 0 && (
+        <FilterBar search={{ value: q, onChange: setQ, label: 'Buscar vehículo', placeholder: 'Buscar por patente, marca, modelo o cliente' }}
+          active={!!q || ft !== 'all'} onClear={() => { setQ(''); setFt('all'); }}>
+          {types.length > 1 && (
+            <div className="seg" role="group" aria-label="Filtrar por tipo de vehículo">
+              {[['all', 'Todos'], ...types.map(t => [t, typePlural(t)])].map(([k, l]) => (
+                <button type="button" key={k} aria-pressed={ft === k} onClick={() => setFt(k)}>{l}<b>{list.filter(v => k === 'all' || v.vehicleType?.name === k).length}</b></button>
+              ))}
+            </div>
+          )}
+        </FilterBar>
+      )}
       {body}
       <Shown when={client}>{client => (
         <Drawer title={fullName(client)} sub="Cliente" onClose={() => setClient(null)} footer={<div className="dfoot"><button type="button" className="btn" onClick={() => setClient(null)}>Cerrar</button></div>}>

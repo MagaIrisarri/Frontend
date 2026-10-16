@@ -13,14 +13,14 @@ const TSX_RULES = [
   [new RegExp(`\\b(?:bg|text|border|ring|from|to|via|fill|stroke|divide|shadow|outline|accent|placeholder)-(?:${COLORS})\\b`), 'color de Tailwind: usá tokens var(--…) de las clases del sistema'],
   [/\bdark:/, 'variante dark: el tema ya sale de los tokens'],
   [/['"`]#[0-9a-fA-F]{3,8}['"`]|#[0-9a-fA-F]{6}\b/, 'hex suelto: usá un token'],
-  [/import\s*\{[^}]*\b(?:Car|Bike|Truck)\b[^}]*\}\s*from\s*'lucide-react'/, 'íconos de vehículo: usá VICON (components/Owner/ui/vehicles.ts), los mismos que el panel del dueño'],
   [/\bfixed inset-0\b/, 'modal hecho a mano: usá Drawer o ConfirmModal (components/Owner/ui/Layer.tsx)'],
   [/\b(?:window\.)?(?:alert|confirm|prompt)\(/, 'alert/confirm/prompt del navegador: usá useToast o ConfirmModal'],
   [/\b(?:animate-in|zoom-in|slide-in-from|fade-in)\b/, 'clases de animación sin plugin instalado'],
   [/\brounded(?:-[a-z0-9]+)?\b|\bshadow(?:-[a-z0-9/]+)?\b/, 'radio o sombra de Tailwind: usá --r-sm/md/lg y --shadow'],
   [/\bfont-(?:medium|semibold|bold|extrabold|black)\b|\btracking-[a-z]+\b|(?<=[\s"'`])uppercase(?=\s)|\btext-(?:xs|sm|base|lg|xl|\dxl|\[)/, 'tipografía de Tailwind: el sistema fija 14 px / pesos 500-600'],
 ];
-const MOBILE_FIRST = [/@media[^{]*max-width/, 'media query max-width: el CSS es mobile-first (requisito de la cátedra), la base es el teléfono y se agranda con min-width:$sm + 1 o $md + 1'];
+const VEHICLE_ICONS = /import\s*\{[^}]*\b(?:Car|Bike|Truck)\b[^}]*\}\s*from\s*'lucide-react'/;
+const MOBILE_FIRST =[/@media[^{]*max-width/, 'media query max-width: el CSS es mobile-first (requisito de la cátedra), la base es el teléfono y se agranda con min-width:$sm + 1 o $md + 1'];
 const SCSS_RULES = [
   [/#[0-9a-fA-F]{3,8}\b(?<!#fff)(?<!#FFF)(?<!#ffffff)/, 'hex suelto en SCSS: solo #fff sobre fondos de acento; el resto son tokens'],
   MOBILE_FIRST,
@@ -31,7 +31,10 @@ for (const rel of manifest.files) {
   const file = resolve(root, rel);
   if (!existsSync(file)) { errors.push(`${rel}: está en scripts/standard.json pero no existe (actualizá el manifiesto)`); continue; }
   const rules = rel.endsWith('.scss') ? SCSS_RULES : TSX_RULES;
-  readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+  const src = readFileSync(file, 'utf8');
+  // Sobre el archivo entero: el import de lucide puede ocupar varias líneas.
+  if (!rel.endsWith('.scss') && VEHICLE_ICONS.test(src)) errors.push(`${rel}: íconos de vehículo: usá VICON (components/Owner/ui/vehicles.ts), los mismos que el panel del dueño`);
+  src.split('\n').forEach((line, i) => {
     const code = rel.endsWith('.scss') ? line.replace(/\/\*.*?\*\//g, '') : line.replace(/\/\/.*$/, '');
     if (rel.endsWith('.scss') && /^\s*(--[a-z0-9-]+:|\.light\b.*--)/.test(code) && rel.endsWith('base.scss')) return;
     for (const [re, why] of rules) if (re.test(code)) errors.push(`${rel}:${i + 1}: ${why}\n    ${line.trim().slice(0, 140)}`);

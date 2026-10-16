@@ -38,14 +38,14 @@ export default function AdminHolidays() {
   else if (status === 'loading') body = <SkeletonRows n={4} cols={2} />;
   else if (!items.length) body = <Empty icon={<CalendarDays className="i" />} title={`No hay feriados nacionales en ${year}`} action={newBtn}>Los que cargues los ven todos los dueños.</Empty>;
   else body = (
-    <div className="panel tw"><table className="tbl">
+    <div className="panel tw"><table className="tbl ev">
       <colgroup><col style={{ width: 260 }} /><col /><col style={{ width: 64 }} /></colgroup>
       <thead><tr><th>Fecha</th><th>Nombre</th><th><span className="sr">Acciones</span></th></tr></thead>
       <tbody>{items.map(h => (
         <tr key={h.id}>
-          <td><span className="nm">{cap(fmtD(h.date))}</span></td>
-          <td>{h.name}{h.origin === 'oficial' && <div className="ad">Calendario oficial</div>}</td>
-          <td className="r"><div className="acts">
+          <td className="c-dt"><span className="nm">{cap(fmtD(h.date))}</span></td>
+          <td className="c-nm">{h.name}{h.origin === 'oficial' && <div className="ad">Calendario oficial</div>}</td>
+          <td className="r c-ac"><div className="acts">
             <button type="button" className="icon-btn" data-tip="Quitar feriado" aria-label={`Quitar ${h.name}`} onClick={() => setDel(h)}><Trash2 className="i" /></button>
           </div></td>
         </tr>

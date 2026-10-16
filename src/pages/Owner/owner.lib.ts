@@ -6,15 +6,17 @@ import type { ParkingPriceRow, SpaceType } from '../../types/parking.types';
 export const money = (n: number) => '$' + Number(n).toLocaleString('es-AR');
 const pad = (n: number) => String(n).padStart(2, '0');
 export const isoD = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-// shortcut: L-04, "hoy" sale del reloj del navegador, tomarlo del servidor con la zona de la sucursal
-export const today = () => isoD(new Date());
+// L-04: "hoy" en la zona de las sucursales (la misma TZ del backend), no en la del navegador. 'en-CA' da AAAA-MM-DD.
+// shortcut: L-04, las horas se siguen mostrando en la zona del navegador y el reloj es el de la PC, pasar todo a la zona de la sucursal si hay sucursales fuera de Argentina
+export const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+// L-03: minutos del día de ahora, en la misma zona que today().
+export const nowMin = () => mm(new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
 export const addD = (iso: string, n: number) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return isoD(d); };
 export const cap = (t: string) => t ? t[0]!.toUpperCase() + t.slice(1) : t;
 export const fmtD = (iso: string) => new Date(iso + 'T12:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
 export const shD = (iso: string) => iso.slice(8) + '/' + iso.slice(5, 7);
 export const fmtH = (h: number) => String(Math.round(h * 10) / 10).replace('.', ',') + ' h';
-// shortcut: L-17, neto = importe / 1,21 (IVA 21 % supuesto), tomar neto e IVA de la facturación real
-export const net = (amount: number | null) => (amount == null ? null : Math.round(amount / 1.21));
+
 export const initials = (name = '', last = '') => ((name[0] ?? '') + (last[0] ?? '')).toUpperCase();
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -77,6 +79,12 @@ export function merge(d: Day): Day {
     else out.push({ ...x });
   }
   return out;
+}
+
+// L-03: dos versiones del día coinciden antes de `now` (lo que ya pasó hoy no se cambia; el backend valida lo mismo).
+export function samePast(x: Day, y: Day, now: number): boolean {
+  const cut = (d: Day) => JSON.stringify(merge(d.filter(b => b.a < now).map(b => ({ ...b, b: Math.min(b.b, now) }))));
+  return cut(x) === cut(y);
 }
 
 // R-02: el bloque colocado se queda con el horario; lo que queda debajo se recorta, se divide o desaparece.

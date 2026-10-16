@@ -19,6 +19,10 @@
 
 Están en la documentación del backend: [docs/README.md](https://github.com/MagaIrisarri/Backend/blob/main/docs/README.md#minutas-de-reunión-y-avance).
 
+## Pruebas
+
+Las de los dos repos, cómo se corren y la salida de consola: [docs/tests.md del backend](https://github.com/MagaIrisarri/Backend/blob/main/docs/tests.md).
+
 ## Alcance
 
 - [revision-alcance.md](revision-alcance.md): cada requisito de la propuesta y el código que lo cumple.

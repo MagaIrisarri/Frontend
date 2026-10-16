@@ -1,5 +1,6 @@
 import { Star, MapPin, Clock, ChevronRight } from 'lucide-react';
-import { VICON } from '../Owner/ui/vehicles';
+import { iconOf } from '../Owner/ui/vehicles';
+import { typeLabel } from '../../pages/Owner/owner.lib';
 import type { Parking } from '../../types/parking.types';
 import { Drawer } from '../Owner/ui/Layer';
 import OwnerShell from '../Owner/ui/OwnerShell';
@@ -75,12 +76,16 @@ export function FavoritesDrawer({
                       <Clock className="i sm" aria-hidden="true" />
                       {p.openingTime} - {p.closingTime} hs
                     </span>
-                    {!!p.totalCapacity && (
-                      <span className="tag mute">
-                        <VICON.AUTO className="i sm" aria-hidden="true" />
-                        {p.totalCapacity} plazas
-                      </span>
-                    )}
+                    {(p.spaceTypes ?? []).map((t) => {
+                      const Icon = iconOf(t.name);
+                      return (
+                        <span key={t.vehicleTypeId} className="tag mute">
+                          <Icon className="i sm" aria-hidden="true" />
+                          {t.available ?? t.capacity}
+                          <span className="sr"> lugares para {typeLabel(t.name).toLowerCase()}</span>
+                        </span>
+                      );
+                    })}
                   </div>
 
                   <div className="acts">

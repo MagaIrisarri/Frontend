@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { createElement, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Building2 } from 'lucide-react';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
@@ -9,6 +9,7 @@ import { getEmployeesByOwner } from '../../services/employee.service';
 import { usePagedList } from '../../hooks/usePagedList';
 import { useAsync, useDebounced } from '../../hooks/useAsync';
 import { revealOnMobile } from '../../utils/layout';
+import { iconOf } from '../../components/Owner/ui/vehicles';
 import { capOf, hrs, maintOf, money, occOf, pct, priceOf, svcOf, missing, typePlural, typesOf, type ParkingLike } from '../Owner/owner.lib';
 
 interface Parking extends ParkingLike {
@@ -19,6 +20,7 @@ interface Parking extends ParkingLike {
 interface Meta { page: number; limit: number; total: number; counts: { on: number; off: number }; localities: { province: string; locality: string }[] }
 interface Metrics { reservations: Record<string, number>; totalRevenue: number }
 
+const MOVES: [string, string][] = [['FINALIZADA', 'Finalizadas'], ['EN CURSO', 'En curso'], ['PENDIENTE', 'Pendientes'], ['CANCELADA', 'Canceladas']];
 const ownerName = (p: Parking) => [p.owner?.name, p.owner?.last_name].filter(Boolean).join(' ') || 'Sin dueño';
 const place = (p: { locality: string; province?: string | null }) => `${p.locality}${p.province ? `, ${p.province}` : ''}`;
 const locKey = (l: { province?: string | null; locality: string }) => `${l.province ?? ''}|${l.locality}`;
@@ -145,7 +147,7 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
               const pr = priceOf(p, t.id);
               return (
                 <tr key={t.id}>
-                  <td className="nm" data-label="Tipo">{typePlural(t.name)}</td>
+                  <td className="nm" data-label="Tipo"><span className="cap">{createElement(iconOf(t.name), { className: 'i', 'aria-hidden': true })}{typePlural(t.name)}</span></td>
                   <td className="r" data-label="En servicio">{svcOf(p, t.id)}</td>
                   <td className="r" data-label="Ocupadas">{occOf(p, t.id)}</td>
                   <td className="r" data-label="Mantenimiento">{maintOf(p, t.id)}</td>
@@ -161,13 +163,17 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
       <div className="fs"><div className="fh"><h3>Movimiento</h3></div>
         {metrics.status === 'error' ? <ErrorBox what="las métricas de la cochera" onRetry={metrics.reload} />
           : !m ? <span className="sk" style={{ height: 72 }} />
-          : <dl className="dl">
-              <dt>Finalizadas</dt><dd><b>{m.reservations?.FINALIZADA ?? 0}</b></dd>
-              <dt>En curso</dt><dd>{m.reservations?.['EN CURSO'] ?? 0}</dd>
-              <dt>Pendientes</dt><dd>{m.reservations?.PENDIENTE ?? 0}</dd>
-              <dt>Canceladas</dt><dd>{m.reservations?.CANCELADA ?? 0}</dd>
-              <dt>Facturado</dt><dd>{money(m.totalRevenue ?? 0)}</dd>
-            </dl>}
+          : <>
+              <div className="srow" style={{ paddingTop: 0 }}><span className="lab">Facturado</span><span className="val">{money(m.totalRevenue ?? 0)}</span></div>
+              <div className="types">{MOVES.map(([k, l]) => {
+                const n = m.reservations?.[k] ?? 0, total = MOVES.reduce((a, [kk]) => a + (m.reservations?.[kk] ?? 0), 0);
+                return (
+                  <div className="trow" key={k}><span className="n">{l}</span>
+                    <div className="bar-t" role="img" aria-label={`${l}: ${n}`}><i style={{ width: `${total ? Math.round((n / total) * 100) : 0}%` }} /></div>
+                    <span className="v">{n}</span></div>
+                );
+              })}</div>
+            </>}
       </div>
     </>
   );

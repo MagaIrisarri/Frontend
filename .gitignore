@@ -9,8 +9,6 @@ prompt.md
 .eslintcache
 .stylelintcache
 
-# .env se versiona a propósito (proyecto privado de la facultad): solo trae la URL de la API y la clave pública del mapa,
-# que igual queda en el JavaScript del navegador. Restringir la clave de MapTiler a localhost. Los .env.local sí se ignoran.
 .env.local
 .env.*.local
 !.env.example
@@ -43,8 +41,8 @@ Thumbs.db
 tsconfig.tsbuildinfo
 package-lock.json
 
-tests/e2e/
-playwright.config.ts
+# Pruebas de desarrollo, locales. Las de la cátedra viven en tests-catedra/ y se versionan.
+tests/
 blob-report/
 playwright/.cache/
 

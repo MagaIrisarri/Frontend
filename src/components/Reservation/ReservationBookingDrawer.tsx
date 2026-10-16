@@ -15,7 +15,7 @@ import OwnerShell from '../Owner/ui/OwnerShell';
 import { Presence } from '../Owner/ui/Presence';
 import { Empty } from '../Owner/ui/Page';
 import { Field } from '../Owner/ui/Field';
-import { fmtD, money, plural, typeLabel, typePlural } from '../../pages/Owner/owner.lib';
+import { addD, fmtD, money, plural, today, typeLabel, typePlural } from '../../pages/Owner/owner.lib';
 import { VICON, iconOf } from '../Owner/ui/vehicles';
 
 interface ReservationBookingDrawerProps {
@@ -81,12 +81,9 @@ export function ReservationBookingDrawer({
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
   // Fechas base
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const tomorrowStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
-  }, []);
+  // L-04: con toISOString el día salía en UTC (después de las 21 h daba mañana).
+  const todayStr = useMemo(() => today(), []);
+  const tomorrowStr = useMemo(() => addD(todayStr, 1), [todayStr]);
 
   const [date, setDate] = useState<string>(todayStr);
   const [entryTime, setEntryTime] = useState<string>('');

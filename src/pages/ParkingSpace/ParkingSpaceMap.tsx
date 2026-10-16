@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils.js';
 import type { ServicePrice } from '@/types/servicePrice.types';
 import { getParkingServices } from '@/services/servicePrice.service';
 import { createReservation } from '../../services/reservation.service';
+import { today } from '../Owner/owner.lib';
 
 interface ReservarState {
   vehicleId: string;
@@ -151,7 +152,7 @@ export function ParkingSpaceMap() {
               <label className="block text-xs text-muted-foreground mb-1">Fecha de Ingreso</label>
               <input
                 type="date"
-                min={new Date().toISOString().split('T')[0]}
+                min={today()}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none"

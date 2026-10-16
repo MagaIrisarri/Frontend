@@ -61,14 +61,14 @@ Las valida el servidor; el frontend solo las anticipa.
 | --- | --- | --- |
 | LA-01 | El backend no permite crear administradores y no se agrega: el administrador sale de la siembra (`userSeeder`) y el alta de la interfaz ofrece solo cliente, dueño y empleado. | Cerrada por decisión. |
 | LA-02 | Hay dos rutas de alta: `POST /api/users` (cliente y dueño) y `POST /api/users/:ownerId/employee` (empleado, con `parkingId`). El formulario elige la ruta según el rol. | Resuelta en el diseño. |
-| LA-03 | No hay restablecer contraseña desde el admin: `PUT /api/users/:id` no acepta `password` y `PATCH /api/users/:id/password` pide la contraseña actual. | Abierta (DA-02). |
+| LA-03 | No hay restablecer contraseña desde el admin: `PUT /api/users/:id` no acepta `password` y `PATCH /api/users/:id/password` pide la contraseña actual. | Resuelta (pendiente de commit): `POST /api/users/:id/reset-password` (solo el administrador, y no para otro administrador) pone una contraseña temporal y `mustChangePassword`; botón "Contraseña" en el detalle del usuario. |
 | LA-04 | Cambiar la sucursal de un empleado que tiene turnos o reservas en la actual dejaba turnos huérfanos: el servidor solo validaba que la sucursal fuera del dueño. | Resuelta por RA-18. |
-| LA-05 | El listado de usuarios trae solo `ownerId` y `parkingId`. El nombre del dueño sale de la misma lista; el de la sucursal hay que pedirlo (`getParkingsByOwner`). | Abierta (DA-03). |
+| LA-05 | El listado de usuarios trae solo `ownerId` y `parkingId`. El nombre del dueño sale de la misma lista; el de la sucursal hay que pedirlo (`getParkingsByOwner`). | Resuelta (pendiente de commit): la página de `GET /api/users` trae `parkingName` y el listado lo muestra junto al rol. |
 | LA-06 | `getModels(brandId)` devuelve todos los modelos de la marca, sin paginar, con `brand` y `vehicleType`. Verificado en `Model.Repository.ts`. | Cerrada. |
 | LA-07 | No había autenticación: las rutas de usuarios las podía llamar cualquiera y la identidad viajaba en `x-user-id`, que se podía falsificar. | Cerrada (Backend `a183668`, Frontend `82162df`): el login devuelve un JWT y las rutas del panel exigen `auth(ADMINISTRADOR)`. Cada recurso se controla además contra su dueño (L-37, notas del dueño). |
-| DA-01 | Mover un empleado a otro dueño: el servidor no lo permite y el prototipo tampoco. | Sin decidir. |
-| DA-02 | ¿Restablecer contraseña del usuario desde el admin? | Sin decidir. |
-| DA-03 | Nombre de la sucursal en el listado: ¿lo trae el endpoint o se pide aparte? | Sin decidir. |
+| DA-01 | Mover un empleado a otro dueño: el servidor no lo permite y el prototipo tampoco. | Decidido el 16/10/2026: no se mueve a otro dueño, porque su historial (turnos y reservas atendidas) es del dueño anterior. Se da de baja y el dueño nuevo le crea otra cuenta. Dentro del mismo dueño cambia de sucursal (L-25). |
+| DA-02 | ¿Restablecer contraseña del usuario desde el admin? | Decidido el 16/10/2026: sí, con una contraseña temporal que el usuario cambia al entrar (LA-03). El alta, la edición y la baja de clientes, dueños y empleados ya estaban. |
+| DA-03 | Nombre de la sucursal en el listado: ¿lo trae el endpoint o se pide aparte? | Decidido el 16/10/2026: lo trae el endpoint (LA-05). |
 | DA-04 | Marcas y modelos: el backend ya expone alta, edición y baja. Se decidió solo lectura salvo la ampliación con el CSV del DNRPA; si cambia, hay que diseñar esos formularios. | Decidido. |
 | LA-09 | (L-35 en las notas del dueño) El selector de dueños del alta de empleado trae hasta 100 dueños activos. | Abierta: pasar a un buscador si hay más. |
 | LA-08 | (L-33 en las notas del dueño) La importación omite los tipos que no son de pasajeros con una lista fija de palabras (acoplado, tractor, chasis…). `vehiculos.json` ya trajo algunos de esos como AUTO y no se limpian. | Abierta: limpiar el catálogo sembrado. |

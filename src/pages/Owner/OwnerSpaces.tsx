@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { createElement, useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LayoutGrid, MoreVertical, Plus, Search, Trash2, Wrench, Check } from 'lucide-react';
 import { ConfirmModal } from '../../components/Owner/ui/Layer';
@@ -10,6 +10,7 @@ import { useToast } from '../../components/Owner/ui/Toasts';
 import { createBulkParkingSpaces, getParkingSpace, removeParkingSpace, updateParkingSpace } from '../../services/parkingSpace.service';
 import { useOwner } from './OwnerContext';
 import { useVehicleTypes } from '../../hooks/useVehicleTypes';
+import { iconOf } from '../../components/Owner/ui/vehicles';
 import { isoD, plural, shD, typeLabel, typePlural } from './owner.lib';
 
 type State = 'LIBRE' | 'OCUPADO' | 'MANTENIMIENTO';
@@ -129,7 +130,7 @@ export default function OwnerSpaces() {
         return (
           <tr key={s.id}>
             <td><span className="plate">{s.spaceCode}</span></td>
-            <td data-label="Tipo">{typeLabel(s.vehicleType.name)}</td>
+            <td data-label="Tipo"><span className="cap">{createElement(iconOf(s.vehicleType.name), { className: 'i', 'aria-hidden': true })}{typeLabel(s.vehicleType.name)}</span></td>
             <td data-label="Estado"><span className={`st ${ST[s.state].c}`}>{ST[s.state].l}</span></td>
             <td className="r"><div className="acts">{s.state === 'OCUPADO'
               ? <span className="na" title="Con un vehículo adentro no se puede pasar a mantenimiento ni dar de baja">En uso</span>

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { createElement, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronRight, Pencil, Plus, RotateCcw, Trash2, Users } from 'lucide-react';
+import { ChevronRight, KeyRound, Pencil, Plus, RotateCcw, Trash2, Users } from 'lucide-react';
 import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
 import { Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
@@ -8,7 +8,7 @@ import { FilterBar } from '../../components/Owner/ui/FilterBar';
 import { Pager } from '../../components/Owner/ui/Pager';
 import { Field, Input, Password, apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
-import { createEmployee, createUser, getUser, getUsersPage, reactivateUser, removeUser, updateEmployee, updateUser, type UserData } from '../../services/user.service';
+import { createEmployee, createUser, getUser, getUsersPage, reactivateUser, removeUser, resetUserPassword, updateEmployee, updateUser, type UserData } from '../../services/user.service';
 import { getEmployeesByOwner } from '../../services/employee.service';
 import { getParkingsByOwner } from '../../services/parking.service';
 import { getUserVehicle } from '../../services/vehicle.service';
@@ -17,10 +17,11 @@ import { useAuthStore } from '../../stores/authStore';
 import { usePagedList } from '../../hooks/usePagedList';
 import { useAsync, useDebounced } from '../../hooks/useAsync';
 import { revealOnMobile } from '../../utils/layout';
-import { RS, initials, normRes, pct, plural } from '../Owner/owner.lib';
+import { iconOf } from '../../components/Owner/ui/vehicles';
+import { RS, initials, normRes, pct, plural, typeLabel } from '../Owner/owner.lib';
 
 type Role = 'CLIENTE' | 'DUEÑO' | 'EMPLEADO' | 'ADMINISTRADOR';
-interface U { id: string; dni: string; name: string; last_name: string; email: string; phone?: string; date_of_birth?: string; type: Role; status: 'ACTIVO' | 'BAJA'; ownerId?: string; parkingId?: string }
+interface U { id: string; dni: string; name: string; last_name: string; email: string; phone?: string; date_of_birth?: string; type: Role; status: 'ACTIVO' | 'BAJA'; ownerId?: string; parkingId?: string; parkingName?: string | null }
 interface Meta { page: number; limit: number; total: number; counts: { role: Record<Role, number>; status: Record<'ACTIVO' | 'BAJA', number> } }
 
 const ROLE: Record<Role, { l: string; pl: string }> = {
@@ -50,6 +51,9 @@ export default function AdminUsers() {
   const [fs, setFs] = useState<'ACTIVO' | 'BAJA' | 'all'>('ACTIVO');
   const [sel, setSel] = useState<U | null>(null);
   const [del, setDel] = useState<U | null>(null);
+  const [reset, setReset] = useState<U | null>(null);
+  const [pw, setPw] = useState('');
+  const [pwErr, setPwErr] = useState('');
   const [form, setForm] = useState<U | 'new' | null>(null);
   const detail = useRef<HTMLElement>(null);
 
@@ -67,6 +71,13 @@ export default function AdminUsers() {
     setDel(null);
     try { await removeUser(u.id); await refresh(u.id); toast(`${fullName(u)} dado de baja. Ya no puede iniciar sesión.`, 'info'); }
     catch (x) { toast(apiError(x, 'No se pudo dar de baja. Intentá de nuevo.'), 'err'); }
+  };
+  // DA-02 / LA-03: contraseña temporal; al iniciar sesión el usuario tiene que cambiarla.
+  const resetPassword = async () => {
+    if (pw.trim().length < 6) { setPwErr('Mínimo 6 caracteres.'); return; }
+    const u = reset!;
+    try { await resetUserPassword(u.id, pw.trim()); setReset(null); toast(`Contraseña de ${fullName(u)} restablecida. Pasásela: la cambia al entrar.`); }
+    catch (x) { setPwErr(apiError(x, 'No se pudo restablecer. Intentá de nuevo.')); }
   };
   const reactivate = async (u: U) => {
     try { await reactivateUser(u.id); await refresh(u.id); toast(`${fullName(u)} reactivado.`); }
@@ -86,7 +97,7 @@ export default function AdminUsers() {
         {list.items.length ? list.items.map(u => (
           <button type="button" key={u.id} className="bi" aria-current={sel?.id === u.id} onClick={() => pick(u)}>
             <span className="who"><span className="av">{initials(u.name, u.last_name)}</span>
-              <span className="t"><span className="nm t">{fullName(u)}{u.id === myId && <span className="ad"> (vos)</span>}</span><span className="ad t">{ROLE[u.type].l} · {u.email}</span></span></span>
+              <span className="t"><span className="nm t">{fullName(u)}{u.id === myId && <span className="ad"> (vos)</span>}</span><span className="ad t">{ROLE[u.type].l}{u.parkingName ? ` · ${u.parkingName}` : ''} · {u.email}</span></span></span>
             {u.status === 'BAJA' && <span className="st mute">De baja</span>}
           </button>
         )) : <p className="ad" style={{ padding: '8px 12px' }}>Ningún usuario coincide con los filtros.</p>}
@@ -117,7 +128,7 @@ export default function AdminUsers() {
       <div className="split">
         <section className="panel side" aria-label="Usuarios">{side}</section>
         <section className="panel main" aria-label="Detalle del usuario" aria-live="polite" ref={detail}>
-          {sel ? <UserDetail key={sel.id} u={sel} self={sel.id === myId} onEdit={() => setForm(sel)} onDeactivate={() => setDel(sel)} onReactivate={() => reactivate(sel)}
+          {sel ? <UserDetail key={sel.id} u={sel} self={sel.id === myId} onEdit={() => setForm(sel)} onDeactivate={() => setDel(sel)} onReactivate={() => reactivate(sel)} onResetPassword={() => { setPw(''); setPwErr(''); setReset(sel); }}
             onUser={id => navigate(`/admin/users?u=${id}`)} onParking={id => navigate(`/admin/parkings?p=${id}`)} />
             : <Empty icon={<Users className="i" />} title="Elegí un usuario">Mirá sus datos y lo que hace en el sistema: vehículos y reservas, cocheras o sucursal.</Empty>}
         </section>
@@ -125,14 +136,18 @@ export default function AdminUsers() {
       <Shown when={del}>{del => <ConfirmModal title={`¿Dar de baja a ${fullName(del)}?`}
         body={`No va a poder iniciar sesión hasta que lo reactives. ${del.type === 'CLIENTE' ? 'Si tiene reservas activas, no se puede.' : del.type === 'DUEÑO' ? 'Si tiene sucursales activas, primero tiene que pausarlas.' : del.type === 'EMPLEADO' ? 'Si tiene turnos o reservas asignadas, primero hay que sacarlo de los turnos y reasignarlas.' : ''}`}
         ok="Dar de baja" back="Volver" danger onConfirm={deactivate} onClose={() => setDel(null)} />}</Shown>
+      <Shown when={reset}>{u => <ConfirmModal title={`Restablecer la contraseña de ${fullName(u)}`}
+        body="Elegí una contraseña temporal y pasásela. Al iniciar sesión se le pide una nueva." ok="Restablecer" back="Volver" onConfirm={resetPassword} onClose={() => setReset(null)}>
+        <Password label="Contraseña temporal" data-first autoComplete="new-password" value={pw} error={pwErr} onChange={e => { setPw(e.target.value); setPwErr(''); }} />
+      </ConfirmModal>}</Shown>
       <Shown when={form}>{form => <UserDrawer edit={form === 'new' ? null : form} onClose={() => setForm(null)}
         onSaved={async (msg, id) => { setForm(null); if (id) await refresh(id); else list.reload(); toast(msg); }} />}</Shown>
     </>
   );
 }
 
-function UserDetail({ u, self, onEdit, onDeactivate, onReactivate, onUser, onParking }: {
-  u: U; self: boolean; onEdit: () => void; onDeactivate: () => void; onReactivate: () => void; onUser: (id: string) => void; onParking: (id: string) => void;
+function UserDetail({ u, self, onEdit, onDeactivate, onReactivate, onResetPassword, onUser, onParking }: {
+  u: U; self: boolean; onEdit: () => void; onDeactivate: () => void; onReactivate: () => void; onResetPassword: () => void; onUser: (id: string) => void; onParking: (id: string) => void;
 }) {
   const active = u.status === 'ACTIVO';
   return (
@@ -145,6 +160,7 @@ function UserDetail({ u, self, onEdit, onDeactivate, onReactivate, onUser, onPar
           <div className="macts">
             {active ? <>
               <button type="button" className="btn" onClick={onEdit}><Pencil className="i sm" />Editar</button>
+              {u.type !== 'ADMINISTRADOR' && <button type="button" className="btn" onClick={onResetPassword}><KeyRound className="i sm" />Contraseña</button>}
               <button type="button" className="btn errtx" onClick={onDeactivate}><Trash2 className="i sm" />Dar de baja</button>
             </> : <button type="button" className="btn" onClick={onReactivate}><RotateCcw className="i sm" />Reactivar</button>}
           </div>
@@ -188,7 +204,7 @@ function ClientBlocks({ u }: { u: U }) {
           <thead><tr><th>Patente</th><th>Vehículo</th><th>Seguro</th></tr></thead>
           <tbody>{(veh.data ?? []).map(v => (
             <tr key={v.id}><td data-label="Patente"><span className="plate">{v.plate}</span></td>
-              <td data-label="Vehículo"><span className="nm">{[v.brand?.name, v.model?.name].filter(Boolean).join(' ') || '—'}</span><div className="ad">{v.vehicleType?.name ?? ''}</div></td>
+              <td data-label="Vehículo"><span className="nm">{[v.brand?.name, v.model?.name].filter(Boolean).join(' ') || '—'}</span>{v.vehicleType?.name && <div className="ad cap">{createElement(iconOf(v.vehicleType.name), { className: 'i sm', 'aria-hidden': true })}{typeLabel(v.vehicleType.name)}</div>}</td>
               <td data-label="Seguro">{v.insurance?.name ?? <span className="ad">Sin seguro</span>}</td></tr>
           ))}</tbody>
         </table></div>

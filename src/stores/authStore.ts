@@ -11,7 +11,7 @@ export interface CurrentUser {
   email?: string;
   phone?: string;
   dni?: string;
-  mustChangePassword?: boolean; // R-29: cuenta creada en el mostrador, con el DNI como contraseña
+  mustChangePassword?: boolean; // contraseña temporal: el DNI (cuenta del mostrador, R-29) o la que puso el administrador (DA-02)
   date_of_birth?: string;
   [key: string]: any;
 }

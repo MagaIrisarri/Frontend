@@ -4,14 +4,14 @@ import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Download, Search 
 import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
 import { Presence, Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
-import { apiError } from '../../components/Owner/ui/Field';
+import { Input, apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { assignReservationEmployee, cancelReservation } from '../../services/reservation.service';
 import { getRange } from '../../services/shift.service';
 import { Stars } from '../../components/Owner/ui/Stars';
 import { useOwner, type Emp } from './OwnerContext';
 import {
-  RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, net, plural, shD, today, type Res, type ResState,
+  RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, plural, shD, today, type Res, type ResState,
 } from './owner.lib';
 
 type StFilter = 'all' | ResState;
@@ -118,7 +118,7 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
 
   // D-07: horas programadas (semana tipo + fechas especiales) hasta hoy, no asistencia real.
   // shortcut: L-02, son horas programadas, agregar fichaje o ajuste manual auditado antes de liquidar
-  // shortcut: L-01, los meses anteriores usan la semana tipo de hoy, versionar la plantilla con vigencia
+  // L-01: cada fecha se resuelve en el servidor con la semana tipo que regía ese día.
   useEffect(() => {
     const from = `${rm}-01`, last = `${rm}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`, to = last < now ? last : now;
     setHours(null);
@@ -137,14 +137,14 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
 
   const KEY: Record<SortKey, (r: Res) => string | number> = {
     code: r => r.code, desde: r => r.date + r.start, hasta: r => r.endDate + r.end, horas: r => r.hours,
-    emp: r => empName(emp(r.eid)), monto: r => net(r.amount) ?? -1,
+    emp: r => empName(emp(r.eid)), monto: r => r.amount ?? -1,
   };
   const M = reservations.filter(r => r.date.slice(0, 7) === rm);
   const list = M.filter(r => ms === 'all' || r.st === ms).sort((a, b) => {
     const x = KEY[sort.k](a), z = KEY[sort.k](b);
     return (x < z ? -1 : x > z ? 1 : 0) * sort.d || (a.date + a.start).localeCompare(b.date + b.start);
   });
-  const sum = list.reduce((a, r) => a + (net(r.amount) ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
+  const sum = list.reduce((a, r) => a + (r.amount ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
   // R-27: valoración promedio del mes por sucursal, con las reservas que la tienen.
   const rated = new Map<string, number[]>();
   M.forEach(r => { if (r.rating != null) rated.set(r.pname, [...(rated.get(r.pname) ?? []), r.rating]); });
@@ -161,8 +161,8 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
     );
   };
   const csv = () => downloadCsv(`reservas-${rm}.csv`, [
-    ['Código', 'Desde', 'Hasta', 'Horas', 'Empleado', 'Importe', 'Monto neto'],
-    ...list.map(r => [r.code, `${r.date} ${r.start}`, `${r.endDate} ${r.end}`, fmtH(r.hours), empName(emp(r.eid)), r.amount, net(r.amount)]),
+    ['Código', 'Desde', 'Hasta', 'Horas', 'Empleado', 'Importe'],
+    ...list.map(r => [r.code, `${r.date} ${r.start}`, `${r.endDate} ${r.end}`, fmtH(r.hours), empName(emp(r.eid)), r.amount]),
   ]);
   const staff = employees.filter(e => e.parkingId);
 
@@ -187,7 +187,7 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
         <>
           <div className="panel tw"><table className="tbl rm">
             <colgroup><col style={{ width: '14%' }} /><col style={{ width: '15%' }} /><col style={{ width: '15%' }} /><col style={{ width: '10%' }} /><col /><col style={{ width: 120 }} /></colgroup>
-            <thead><tr>{th('code', 'Código')}{th('desde', 'Desde')}{th('hasta', 'Hasta')}{th('horas', 'Horas')}{th('emp', 'Empleado')}{th('monto', 'Monto neto', 'r')}</tr></thead>
+            <thead><tr>{th('code', 'Código')}{th('desde', 'Desde')}{th('hasta', 'Hasta')}{th('horas', 'Horas')}{th('emp', 'Empleado')}{th('monto', 'Importe', 'r')}</tr></thead>
             <tbody>{list.map(r => {
               const e = emp(r.eid);
               return (
@@ -196,13 +196,13 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
                   <td data-label="Desde">{shD(r.date)} {r.start}</td><td data-label="Hasta">{shD(r.endDate)} {r.end}</td>
                   <td data-label="Horas">{fmtH(r.hours)}</td>
                   <td data-label="Empleado">{e ? empName(e) : <span className="na">Sin asignar</span>}</td>
-                  <td className="r" data-label="Monto neto">{r.amount != null ? money(net(r.amount)!) : <span className="na">—</span>}</td>
+                  <td className="r" data-label="Importe">{r.amount != null ? money(r.amount) : <span className="na">—</span>}</td>
                 </tr>
               );
             })}</tbody>
             <tfoot><tr className="tot"><td colSpan={3}>{plural(list.length, 'reserva', 'reservas')}</td><td>{fmtH(hs)}</td><td /><td className="r">{money(sum)}</td></tr></tfoot>
           </table></div>
-          <p className="ctx">{ms === 'all' ? 'Todas las reservas del mes' : `Solo reservas en estado ${RS[ms].l.toLowerCase()}`}. Monto neto: importe sin IVA (21 %); las reservas sin factura no suman. Tocá un encabezado para ordenar.</p>
+          <p className="ctx">{ms === 'all' ? 'Todas las reservas del mes' : `Solo reservas en estado ${RS[ms].l.toLowerCase()}`}. Importe: total de la factura; las reservas sin factura no suman. Tocá un encabezado para ordenar.</p>
         </>
       )}
       {ratings.length > 0 && <p className="ctx">Valoración promedio del mes · {ratings.join(' · ')}</p>}
@@ -230,6 +230,8 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
   const { employees, refresh } = useOwner();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonErr, setReasonErr] = useState('');
   const staff = employees.filter(e => e.parkingId === r.pid);
   const e = employees.find(x => x.id === r.eid);
   const editable = r.st === 'curso' || r.st === 'reservada';
@@ -241,10 +243,11 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
       toast(`Reserva ${r.code} asignada a ${empName(employees.find(x => x.id === id))}.`);
     } catch (x) { toast(apiError(x), 'err'); }
   };
-  // shortcut: proposal, falta pedir motivo de cancelación y definir la regla de reembolso
+  // El motivo le llega al cliente. No hay reembolso: se cobra en la salida, así que cancelar una pendiente no mueve dinero.
   const cancel = async () => {
+    if (!reason.trim()) { setReasonErr('Escribí el motivo: se lo avisamos al cliente.'); return; }
     try {
-      await cancelReservation(r.id);
+      await cancelReservation(r.id, reason.trim());
       setConfirm(false);
       onClose();
       await refresh();
@@ -276,13 +279,15 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
           <div className="fs"><div className="fh"><h3>Importe</h3></div>
             <dl className="dl" style={{ margin: 0 }}>
               {r.bill && billLines(r.bill, r.services).map(([l, v]) => <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{money(v)}</dd></div>)}
-              <dt>Importe</dt><dd>{r.amount != null ? money(r.amount) : '—'}</dd><dt>Monto neto</dt><dd>{r.amount != null ? money(net(r.amount)!) : '—'}</dd>
+              <dt>Importe</dt><dd>{r.amount != null ? money(r.amount) : '—'}</dd>
               {r.st === 'finalizada' && <><dt>Valoración</dt><dd>{r.rating != null ? <><Stars value={r.rating} /> {r.rating} de 5</> : <span className="na">Sin valorar</span>}</dd></>}
             </dl>
           </div>
         </div>
       </Drawer>
-      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado." ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)} /></Presence>
+      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado y recibe un aviso con el motivo." ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)}>
+        <Input label="Motivo" data-first maxLength={300} value={reason} error={reasonErr} onChange={e => { setReason(e.target.value); setReasonErr(''); }} />
+      </ConfirmModal></Presence>
     </>
   );
 }

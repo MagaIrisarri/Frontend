@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Car, FileText, Trash2 } from 'lucide-react';
+import { ArrowRight, Calendar, FileText, Trash2 } from 'lucide-react';
 import { ConfirmModal, Drawer } from '../Owner/ui/Layer';
 import { Presence } from '../Owner/ui/Presence';
+import { VICON } from '../Owner/ui/vehicles';
 import { Field, Input, Password, apiError } from '../Owner/ui/Field';
 import { useToast } from '../Owner/ui/Toasts';
 import { changePassword, removeUser, updateUser } from '../../services/user.service';
@@ -91,7 +92,7 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const links: [string, string, typeof Car][] = [['/reservations', 'Mis reservas', Calendar], ['/invoices', 'Facturación y pagos', FileText], ['/vehicles', 'Mis vehículos', Car]];
+  const links: [string, string, typeof Calendar][] = [['/reservations', 'Mis reservas', Calendar], ['/invoices', 'Facturación y pagos', FileText], ['/vehicles', 'Mis vehículos', VICON.AUTO]];
 
   return (
     <>
@@ -132,7 +133,7 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
           )}
           <section className="fs"><div className="fh"><h3>Seguridad</h3></div>
             {me.mustChangePassword
-              ? <p className="ctx" role="alert" style={{ marginTop: -6 }}>Tu contraseña actual es tu DNI. Cambiala para registrar vehículos y reservar.</p>
+              ? <p className="ctx" role="alert" style={{ marginTop: -6 }}>Tu contraseña actual es temporal (tu DNI, si la cuenta se creó en el mostrador). Cambiala para registrar vehículos y reservar.</p>
               : <p className="ctx" style={{ marginTop: -6 }}>Completá solo si querés cambiar la contraseña.</p>}
             <Password label="Contraseña actual" value={v.pw0} onChange={set('pw0')} error={err.pw0} autoComplete="current-password" />
             <div className="g2">

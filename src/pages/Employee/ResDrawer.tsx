@@ -5,9 +5,10 @@ import { Presence } from '../../components/Owner/ui/Presence';
 import { Field, Input } from '../../components/Owner/ui/Field';
 import { cancelReservation, changeReservationSpace, extendReservation, setReservationServices } from '../../services/reservation.service';
 import { payInvoice } from '../../services/invoice.service';
+import { iconOf } from '../../components/Owner/ui/vehicles';
 import { getSpaceAvailability } from '../../services/parkingSpace.service';
 import { getParkingServices } from '../../services/servicePrice.service';
-import { billLines, initials, isoD, money, plural, priceOf, shD, type Svc } from '../Owner/owner.lib';
+import { billLines, initials, isoD, money, plural, priceOf, shD, typeLabel, type Svc } from '../Owner/owner.lib';
 import { ACTIVE, ARRIVAL_MIN, GRACE_MIN, checkInFrom, noShow, HOUR, METHODS, extraAt, hhmm, list, overdue, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes } from './employee.lib';
 
 const CARD_HINT = 'Se cobra en el posnet. El sistema guarda solo el medio y el comprobante, nunca los datos de la tarjeta.';
@@ -17,6 +18,8 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   const pid = parking.id;
   const { run, busy } = useRun(onChange);
   const [confirm, setConfirm] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonErr, setReasonErr] = useState('');
   const [spaces, setSpaces] = useState<{ id: string; spaceCode: string }[] | null>(null);
   const [method, setMethod] = useState('EFECTIVO');
   const [received, setReceived] = useState(''); // efectivo entregado; vacío = pagó justo
@@ -39,7 +42,11 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   }, [active, pid, r.vtypeId, r.startAt, r.endAt, r.spaceId]);
 
   const moveTo = (id: string) => run(() => changeReservationSpace(r.id, id), `Reserva ${r.code} movida a la plaza ${spaces?.find(s => s.id === id)?.spaceCode}.`);
-  const cancel = async () => { setConfirm(false); await run(() => cancelReservation(r.id), `Reserva ${r.code} cancelada.`, 'info'); onClose(); };
+  // El motivo le llega al cliente (el backend lo exige cuando cancela el personal).
+  const cancel = async () => {
+    if (!reason.trim()) { setReasonErr('Escribí el motivo: se lo avisamos al cliente.'); return; }
+    setConfirm(false); await run(() => cancelReservation(r.id, reason.trim()), `Reserva ${r.code} cancelada.`, 'info'); onClose();
+  };
 
   // R-23: extender de a horas enteras: una hora más desde el fin o, si ya se pasó, la próxima hora entera. El backend valida máximo y cierre.
   const first = new Date(Math.max(r.endAt.getTime() + HOUR, Date.now()));
@@ -67,6 +74,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
 
   // Importe: con factura, su detalle (R-14); antes de la salida, una estimación con la tarifa vigente y las horas extra de ahora.
   const rate = priceOf(parking, r.vtypeId)?.price ?? null;
+  const VIcon = iconOf(r.vtype);
   const reservedH = Math.max(1, Math.ceil((r.endAt.getTime() - r.startAt.getTime()) / HOUR));
   const extraNow = overdue(r) ? extraAt(r, new Date()) : 0;
   const lines: [string, number][] = r.bill ? billLines(r.bill, r.services)
@@ -105,7 +113,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
 
           <section className="fs"><div className="fh"><h3>Reserva</h3></div>
             <dl className="dl" style={{ margin: 0 }}>
-              <dt>Vehículo</dt><dd>{[r.bm, r.vtype].filter(Boolean).join(' · ') || '—'}</dd>
+              <dt>Vehículo</dt><dd>{r.vtype && <span className="cap"><VIcon className="i sm" aria-hidden="true" />{typeLabel(r.vtype)}</span>}{r.vtype && r.bm ? ' · ' : ''}{r.bm || (!r.vtype && '—')}</dd>
               <dt>Plaza</dt><dd>{r.space}</dd>
               {(r.status === 'EN CURSO' || r.status === 'FINALIZADA') && <>
                 <dt>Ingreso</dt><dd>{r.inBy ? `Registrado por ${r.inBy}` : 'Sin registrar'}</dd>
@@ -183,7 +191,9 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
           </section>}
         </div>
       </Drawer>
-      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body={`${r.client.n} pierde la plaza ${r.space} reservada.`} ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)} /></Presence>
+      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body={`${r.client.n} pierde la plaza ${r.space} reservada y recibe un aviso con el motivo.`} ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)}>
+        <Input label="Motivo" data-first maxLength={300} value={reason} error={reasonErr} onChange={e => { setReason(e.target.value); setReasonErr(''); }} />
+      </ConfirmModal></Presence>
     </>
   );
 }

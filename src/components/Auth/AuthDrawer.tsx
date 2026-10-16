@@ -93,7 +93,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
     useAuthStore.getState().setUser(user, data.token);
     onSuccess?.(user);
     onClose();
-    if (user?.mustChangePassword) openProfile(); // R-29: entró con el DNI; el perfil le pide la contraseña nueva
+    if (user?.mustChangePassword) openProfile(); // R-29 y DA-02: entró con una contraseña temporal; el perfil le pide la nueva
   };
 
   const submitLogin = async (e: React.FormEvent) => {

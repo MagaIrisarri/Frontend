@@ -12,7 +12,7 @@ import type { Holiday, ResolvedDay, ScheduleConflict, Transfer } from '../../typ
 import { useOwner, type Emp } from './OwnerContext';
 import {
   CLOSED, DAYS, DAYS_LONG, DOW, SLOT, addD, cap, coverage, coveredBy, dropOn, fmtD, fmtH, fromServer, gapGroups, gaps, hhmm, hoursOf,
-  initials, mm, monday, place, plural, span, tm, toServer, today, wdOf, workWarnings, type Block, type Day,
+  initials, mm, monday, nowMin, place, plural, samePast, span, tm, toServer, today, wdOf, workWarnings, type Block, type Day,
 } from './owner.lib';
 
 const ROW = 20; // px por franja de 30 min
@@ -73,6 +73,10 @@ export default function OwnerShifts() {
   const commit = async (d: number, day: Day, msg: string, transfers: Transfer[] = [], undoable = true): Promise<boolean> => {
     if (!week) return false;
     const prev = week[d]!;
+    if (mode === 'date' && dateOf(d) === today() && !samePast(prev, day, nowMin())) {
+      toast(`No se pueden cambiar los turnos de hoy anteriores a las ${hhmm(nowMin())}.`, 'err');
+      return false;
+    }
     setWeek(w => w && w.map((x, i) => (i === d ? day : x)));
     const body = { ...toServer(day), transfers };
     try {

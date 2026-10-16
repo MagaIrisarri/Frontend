@@ -4,7 +4,6 @@ import {
   Building2,
   ChevronRight,
   Calendar,
-  Car,
   Layers,
   Star,
   Store,
@@ -13,6 +12,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { Drawer } from '../Owner/ui/Layer';
+import { VICON } from '../Owner/ui/vehicles';
 import { Presence } from '../Owner/ui/Presence';
 import { useToast } from '../Owner/ui/Toasts';
 
@@ -121,7 +121,7 @@ export const Sidebar: React.FC<any> = (props: any) => {
             )}
           </button>
           <button type="button" className="btn ghost sitem" onClick={handleOpenVehiclesList}>
-            <Car className="i" />
+            <VICON.AUTO className="i" />
             <span className="grow">Vehículos</span>
             <ChevronRight className="i" aria-hidden="true" />
           </button>

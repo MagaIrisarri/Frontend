@@ -9,6 +9,7 @@
     "src/components/Parking/FavoritesDrawer.tsx",
     "src/components/Reservation/ReservationsDrawer.tsx",
     "src/components/Vehicle/VehiclesDrawer.tsx",
+    "src/components/Profile/ProfileDrawer.tsx",
     "src/components/Invoice/InvoicesDrawer.tsx",
     "src/components/Shared/ConfirmDialog/ConfirmDialog.tsx",
     "src/components/Shared/NotificationsDrawer.tsx",
@@ -29,7 +30,18 @@
     "src/pages/Employee/CalendarDrawer.tsx",
     "src/styles/base.scss",
     "src/pages/Admin/AdminCatalog.tsx",
-    "src/pages/Admin/AdminVehicleTypes.tsx"
+    "src/pages/Admin/AdminVehicleTypes.tsx",
+    "src/pages/Admin/AdminPanel.tsx",
+    "src/pages/Admin/AdminDashboard.tsx",
+    "src/pages/Admin/AdminUsers.tsx",
+    "src/pages/Admin/AdminParkings.tsx",
+    "src/pages/Admin/AdminBrands.tsx",
+    "src/pages/Admin/AdminVehicles.tsx",
+    "src/pages/Admin/AdminHolidays.tsx",
+    "src/pages/Admin/AdminInsurances.tsx",
+    "src/pages/Admin/AdminService.tsx",
+    "src/components/Admin/CatalogImport.tsx",
+    "src/components/Owner/ui/Pager.tsx"
   ],
   "forbiddenRoutes": [
     "/profile"

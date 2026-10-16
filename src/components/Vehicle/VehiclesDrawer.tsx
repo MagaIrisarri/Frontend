@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Pencil, Plus, Shield, Trash2 } from 'lucide-react';
-import { VICON } from '../Owner/ui/vehicles';
+import { VICON, iconOf } from '../Owner/ui/vehicles';
 import {
   getUserVehicle,
   createVehicle,
@@ -18,7 +18,7 @@ import { Empty, ErrorBox } from '../Owner/ui/Page';
 import { Field, Input, apiError } from '../Owner/ui/Field';
 import { cleanPlate, plateState, vehicleYears } from '../../utils/plate';
 import { useToast } from '../Owner/ui/Toasts';
-import { plural } from '../../pages/Owner/owner.lib';
+import { plural, typeLabel } from '../../pages/Owner/owner.lib';
 
 interface VehiclesDrawerProps {
   isOpen: boolean;
@@ -278,6 +278,7 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
                     const brandName = v.brand?.name || v.brand || 'Marca';
                     const modelName = v.model?.name || v.model || 'Modelo';
                     const insuranceName = v.insurance?.name || v.insurance || null;
+                    const TypeIcon = iconOf(v.vehicleType);
                     return (
                       <li key={idOf(v)} className="li vrow">
                         <div className="l">
@@ -285,6 +286,7 @@ function Content({ onClose, initialTab = 'list' }: VehiclesDrawerProps) {
                           <div>
                             <div>{brandName} {modelName}</div>
                             <div className="sd">
+                              {v.vehicleType?.name && <span className="cap"><TypeIcon className="i sm" aria-hidden="true" />{typeLabel(v.vehicleType.name)}</span>}
                               {v.year && <span>Año {v.year}</span>}
                               {insuranceName && <span className="tag"><Shield className="i sm" aria-hidden="true" /> {insuranceName}</span>}
                             </div>

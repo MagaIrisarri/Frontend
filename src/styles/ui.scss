@@ -4,8 +4,9 @@
 @use 'breakpoints' as *;
 .owner{
 
-/* Barra de desplazamiento fina y con tokens en el cuerpo de los paneles */
-.dbody{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+/* Barras de desplazamiento: finas y con tokens en todo lo que se desplaza por dentro; el desplazamiento no se contagia a la página */
+:is(.dbody,.bl,.calwrap,.e-tw,.tw){scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+:is(.dbody,.bl){overscroll-behavior:contain}
 
 /* ───── Barra de filtros (FilterBar) ───── */
 .ftool{display:grid;gap:8px}
@@ -183,17 +184,21 @@
 .icon-btn.has-badge{position:relative}
 .nbadge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--err);color:var(--on-ac);font-size:11px;font-weight:600;line-height:18px;text-align:center}
 
-/* ───── Lista + detalle (Marcas y modelos, Cocheras, Usuarios): lista paginada a la izquierda, detalle del elegido a la derecha ───── */
+/* ───── Lista + detalle (Marcas y modelos, Cocheras, Usuarios): lista paginada a la izquierda, detalle del elegido a la derecha ─────
+   Teléfono: la lista es un selector corto con su propio scroll y el detalle va debajo, a todo el ancho.
+   Escritorio (ver el final): la lista queda fija a la vista y ocupa el alto de la ventana; el detalle se desplaza con la página. */
 .split{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
 .split .side{flex:1 1 100%;min-width:0;padding:12px;display:grid;gap:8px}
-.split .main{flex:1 1 480px;min-width:0;padding:16px;display:grid;gap:0;align-content:start}
+.split .main{flex:1 1 100%;min-width:0;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-content:start;scroll-margin-top:calc(var(--bar-h) + 12px)}
+.split .main>*{animation:fadein .18s ease-out} /* el detalle de otro elemento entra con un fundido, no salta */
 .split .main>p{margin:0 0 12px}
+.split .main>p.st{white-space:normal;justify-self:start;padding-block:4px} /* un aviso largo se corta en líneas: con nowrap ensanchaba el detalle más allá de la pantalla */
 .split .main>.fs{border-top:1px solid var(--soft)}.split .main>.fs:last-child{padding-bottom:0}
 .split .main .dl{margin:0;grid-template-columns:1fr}
-.split .bl{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;max-height:260px;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:opacity .12s}
+.split .bl{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;gap:2px;max-height:280px;overflow:auto;transition:opacity .12s}
 .bi{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:6px 12px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--tx);text-align:left}
-.bi:hover{background:var(--hover)}.bi[aria-current=true]{background:var(--ac-soft);color:var(--ac-tx);font-weight:500}
-.bi[aria-current=true] .ad{color:var(--ac-tx)}
+.bi:hover{background:var(--hover)}.bi[aria-current=true]{background:var(--ac-soft);color:var(--ac-tx);font-weight:500;box-shadow:inset 3px 0 0 var(--focus)}
+.bi[aria-current=true] .nm{color:var(--ac-tx)}.bi[aria-current=true] .ad{color:var(--tx2)} /* lo elegido se marca con el tinte y el borde; el texto secundario sigue legible */
 .bi .st{flex:none}
 .t{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .who{display:flex;align-items:center;gap:10px;min-width:0}
@@ -208,14 +213,34 @@
 .split .main .tbl tr{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px 0}.split .main .tbl .nm{white-space:normal}
 .mtools{display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;padding-bottom:12px}
 .mtools .search{flex:1 1 220px;max-width:none}
-.mscroll{max-height:62vh;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
-.mscroll .gh{position:sticky;top:0;z-index:1;margin-top:0}
+/* listas largas dentro del detalle: se desplazan con la página (un solo scroll) y el título de cada grupo queda pegado bajo la barra */
+.mscroll .gh{position:sticky;top:var(--bar-h);z-index:1;box-shadow:0 -8px 0 var(--surface)}
 .nav button{white-space:nowrap;flex:none}
 .lk{font-size:inherit;text-align:left}
 .gh{display:flex;justify-content:space-between;padding:8px 12px;background:var(--raised);border:1px solid var(--soft);border-radius:var(--r-sm);font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
 .mr{padding:11px 12px;border-bottom:1px solid var(--soft);font-weight:500}
+.mscroll>div:last-child .mr:last-child{border-bottom:0}
 .pager{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 4px 0;border-top:1px solid var(--soft)}
 .pgbtns{display:flex;gap:4px}
+
+/* ───── Tarjetas de tabla en el teléfono (desde MD vuelven a ser filas, ver base.scss) ───── */
+/* ranking: posición, nombre con su detalle debajo y el importe a la derecha */
+.tbl.rank tr{grid-template-columns:24px minmax(0,1fr) auto;grid-template-areas:"n nm tt" "n ct tt";gap:2px 12px;align-items:center}
+.tbl.rank .c-n{grid-area:n;color:var(--tx3)}.tbl.rank .c-nm{grid-area:nm}.tbl.rank .c-ct{grid-area:ct;font-size:12.5px;color:var(--tx3)}.tbl.rank .c-tt{grid-area:tt;font-weight:600}
+.tbl.rank td[data-label]::before{content:none}
+.tbl.rank .c-ct::after{content:" facturas"}
+/* fecha y nombre a la izquierda, la acción a la derecha */
+.tbl.ev tr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"dt ac" "nm ac";gap:2px 12px;align-items:center}
+.tbl.ev .c-dt{grid-area:dt}.tbl.ev .c-nm{grid-area:nm;color:var(--tx2)}.tbl.ev .c-ac{grid-area:ac}
+
+/* Panel: una cifra con su desglose y una barra de lo cobrado */
+.occ:has(>.kfig){align-items:stretch}
+.kfig{display:grid;gap:20px;align-content:space-between}
+.kfig .occ2 .meta{flex-wrap:wrap}
+.kpis>.panel{min-width:0}
+.trend{font-weight:600}.trend.up{color:var(--ok)}.trend.down{color:var(--err)}
+.phead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px}
+.bars{padding:20px 24px}
 
 /* ───── Terminal del empleado (pages/Employee) ─────
    Disposición propia de la terminal de mostrador; prefijo e- para no chocar con las clases del dueño (.occ, .tag, .bar, .sum). */
@@ -313,11 +338,16 @@
   .drawer.mid{width:min(680px,100%)}.drawer.wide{width:min(1080px,100%)}
   .drawer:not(.left)::before{content:none}
   .drawer:not(.left) .dhead{padding-top:16px}
-  .split .side{flex:0 0 320px}.split .main{padding:20px 24px}.split .main .dl{grid-template-columns:176px 1fr}.split .bl{max-height:60vh}.bi{min-height:40px}
+  .split .side{flex:0 0 320px}.split .main{flex-basis:480px;padding:20px 24px}.split .main .dl{grid-template-columns:176px 1fr}.split .bl{max-height:60vh}.bi{min-height:40px}
   .e-opts{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(min-width:$md + 1){
   .split .main .tbl .nm{white-space:nowrap}
+  /* lista + detalle: la lista queda a la vista mientras se lee el detalle y llena el alto de la ventana (sin un tope arbitrario) */
+  .split .side{position:sticky;top:calc(var(--bar-h) + 16px);display:flex;flex-direction:column;max-height:calc(100dvh - var(--bar-h) - 32px)}
+  .split .side>.bl{flex:1 1 auto;min-height:0;max-height:none}
+  .split .side>.pager{flex:none}
+  .tbl.rank .c-ct::after{content:none}
   /* terminal del empleado: cabecera en dos columnas y cada reserva en una sola fila */
   .e-hd{grid-template-columns:minmax(0,1fr) auto}
   .e-who{grid-area:1/1}.e-occ{grid-area:2/1}.e-tb{grid-area:1/2;order:0;justify-self:end}

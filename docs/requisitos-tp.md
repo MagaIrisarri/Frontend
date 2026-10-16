@@ -9,7 +9,7 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 ## Resumen
 
 - **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), con un riesgo de la FAQ: el detalle de reservas no pide datos al backend. Para la entrega faltan las minutas, los links a los PR y el merge a `main` y `master`.
-- **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, Backend `a183668`, Frontend `82162df`). Faltan los tests versionados con su evidencia (4 del backend más uno de integración; uno de componente y uno e2e del frontend), la documentación de la API, el deploy y el video.
+- **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, Backend `a183668`, Frontend `82162df`). Los tests de la cátedra están en `tests-catedra/` de cada repo (listo para commitear): 5 unitarias y 1 de integración del backend, 1 de componente y 1 e2e del frontend. La evidencia está en `Backend/docs/tests.md`. Faltan la documentación de la API, el deploy y el video.
 
 ## Fuentes
 
@@ -49,9 +49,9 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Reg. | Persistencia con ORM | Cumple | MikroORM 7 (`*.Entity.ts`) | — |
 | Reg. | Capas | Cumple | Route → Controller → Service → Repository en cada módulo | — |
 | Reg. | Validar entradas e informar errores por la API | Cumple | zod con `validateSchema`; `AppError` y `errorHandler` (409 por datos únicos, 500 sin stack en producción) | — |
-| Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple, con matiz | `package.json` y `pnpm-lock.yaml`; `tsx` corre las pruebas | Falta un script `test` |
-| Apr. | 1 test automatizado por integrante (4) | No cumple en el repo | 13 pruebas en `Backend/tests/**`, locales y sin versionar por convención (`CLAUDE.md`) | La cátedra no las ve ni puede atribuirlas. Versionarlas con un script `test`, y que cada integrante escriba al menos una |
-| Apr. | 1 test de integración | No cumple en el repo | Las `*.db.test.ts` corren contra MySQL (p. ej. `Reservation.db.test.ts`) | Versionar al menos una |
+| Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple | `package.json` y `pnpm-lock.yaml`; `tsx` corre las pruebas | `pnpm test` (unitarias) y `pnpm test:integration` (con `DB_NAME=<base>_test`) |
+| Apr. | 1 test automatizado por integrante (4) | Cumple al commitear (listo para commitear) | 5 unitarias sin base en `Backend/tests-catedra/unit/`: `Schedule.test.ts` (turnos), `billing.test.ts` (cobro de la salida: mínimo 1 h, gracia de 10 min y horas extra, R-14), `vehicleTypes.test.ts` (tipo base y prefijo de plaza), `plate.test.ts` (patente y año) y `search.test.ts` (nombres y búsqueda). `pnpm test` | Repartir la autoría: un integrante por archivo |
+| Apr. | 1 test de integración | Cumple al commitear (listo para commitear) | `Backend/tests-catedra/integration/Reservation.db.test.ts`: reserva, ingreso, extender, servicios y salida con factura contra MySQL. `DB_NAME=<base>_test pnpm test:integration` | |
 | Apr. | Login con autenticación propia o de terceros, con 2 niveles de acceso o más | Cumple (Backend `a183668`, Frontend `82162df`) | `POST /api/users/login` verifica la contraseña (argon2) y devuelve un JWT firmado con `JWT_SECRET`, vigente 8 h (`signToken` en `src/Shared/middlewares/auth.ts`). 4 roles. El frontend lo manda en `Authorization: Bearer` desde una sola instancia de axios (`src/services/api.ts`) | — |
 | Apr. | Proteger las rutas según el nivel de acceso | Cumple (Backend `a183668`, Frontend `82162df`) | `auth(...roles)` en cada ruta protegida: 401 sin token o con uno inválido o de un usuario dado de baja, 403 con otro rol. `self(campo)` exige que el id del propio usuario en la ruta o el body sea el del token, salvo el administrador. Pertenencia (L-37): `ownParking`, `ownVehicle`, `ownReservation` y `staffOfInvoice` exigen que la cochera, el vehículo, la reserva o la factura sean del usuario. Públicas: registro, login y las lecturas del mapa. Lo prueban `src/Shared/middlewares/auth.db.test.ts` (token vencido, adulterado y de un usuario dado de baja) y `e2e/audit.api.spec.ts` (test 26), las dos locales | — |
 | Apr. | Ambientes (environment del framework o `.env`) | Cumple, con matiz | Variables de entorno con valores por defecto y `NODE_ENV`, documentadas en el README de `main` | No hay `.env.example` ni se carga un `.env` (Node 22 lo trae con `--env-file`) |
@@ -70,9 +70,9 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Reg. | Al menos un servicio | Cumple | `src/services/*.service.ts` | — |
 | Reg. | Modelos con clases, interfaces o tipos propios | Cumple | `src/types/*.types.ts` | — |
 | Reg. | Patrón de diseño OO, si es posible | Sin relevar | — | Es opcional |
-| Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple, con matiz | `package.json` | Playwright está instalado pero no figura en `package.json`: un clon nuevo no puede correr las e2e |
-| Apr. | 1 test unitario de un componente | No cumple | Solo está `tests/unit/owner.lib.test.ts`, que prueba lógica, no un componente, y no está versionado | Un test de componente versionado, con su dependencia en `package.json` |
-| Apr. | 1 test end-to-end | No cumple en el repo | 17 specs de Playwright en `tests/e2e/` (por tema) (más `mockApi.ts`), excluidas por `.gitignore` | Versionar al menos una, con `playwright.config.ts` |
+| Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple | `package.json`: `@playwright/test`, `vitest`, `@testing-library/react`, `@testing-library/dom` y `jsdom` | |
+| Apr. | 1 test unitario de un componente | Cumple al commitear (listo para commitear) | `tests-catedra/unit/Pager.test.tsx` (Vitest y Testing Library): rango visible, anterior y siguiente, bordes, estado ocupado y sin paginador con una sola página. `pnpm test` | |
+| Apr. | 1 test end-to-end | Cumple al commitear (listo para commitear) | `tests-catedra/e2e/search.spec.ts` con `playwright.config.ts`: abre la app en el navegador, busca por ciudad o barrio, filtra el listado y encuadra el mapa, con la API simulada dentro de la spec. `pnpm test:e2e` | Las 16 specs de `tests/e2e/` siguen locales |
 | Apr. | Login y acceso según el nivel de usuario | Cumple | `ProtectedRoute allowedRoles` en [App.tsx](../src/App.tsx): CLIENTE, DUEÑO, EMPLEADO y ADMINISTRADOR | Protege la navegación; el backend controla lo mismo en cada ruta (ver la tabla anterior) |
 | Apr. | Ambientes | Cumple, con matiz | `.env` con `VITE_API_URL` y `VITE_MAPTILER_API_KEY` | El `.env` está versionado (en `master` y en esta rama) aunque `.gitignore` lo excluye, y no hay `.env.example`. La key de MapTiler es de navegador: conviene restringirla por dominio |
 
@@ -102,7 +102,7 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 | Minutas de reunión y avance | X | X | **Vacío**: la tabla del `docs/README.md` del Backend solo tiene el encabezado | Cargar las minutas |
 | Seguimiento de features, bugs e issues | X | X | Cumple: tablero de Notion enlazado en el `docs/README.md` del Backend | — |
 | Documentación de la API | | X | No hay (ni OpenAPI ni un listado de endpoints) | Documentar los endpoints |
-| Evidencia de los tests automáticos | | X | No hay | Guardar en `docs/` la salida de una corrida |
+| Evidencia de los tests automáticos | | X | [Backend `docs/tests.md`](https://github.com/MagaIrisarri/Backend/blob/main/docs/tests.md): tabla con autor, comandos y la salida de las 4 corridas (16/10/2026) | Commitear `docs/tests.md` y `tests-catedra/` |
 | Video de demostración | TBD | X | No hay | Grabarlo |
 | Deploy, con links y credenciales | TBD | X | No hay configuración de deploy | Deploy con un MySQL hospedado. Las credenciales pueden ser las de la siembra (`password123`) |
 | Contacto para coordinar la defensa | | X | — | Va en el form |
@@ -136,7 +136,7 @@ Donde el proyecto se aparta de Airbnb, manda su convención:
 
 ## Reglas para el arnés
 
-1. **Una regla del arnés choca con la cátedra:** las pruebas sin versionar (los dos `CLAUDE.md`), contra los tests de aprobación y su evidencia (3.1.1, 3.1.2 y 3.3). Sigue vigente y no se cambia sin acuerdo del equipo, pero ninguna tarea la da por cumplida. Ya se resolvieron mobile-first (el CSS se escribe con `min-width`) y la pantalla de TipoVehículo.
+1. **Pruebas de la cátedra:** se versionan en `tests-catedra/` de cada repo (decidido el 16/10/2026); `tests/` sigue local, en `.gitignore`. Ya se resolvieron mobile-first (el CSS se escribe con `min-width`) y la pantalla de TipoVehículo.
 2. **Antes de dar algo por cumplido**, se verifica en el código y en la sección citada. Al cerrar una fila, se actualiza con el hash.
 3. **Documentación nueva:** en markdown, dentro de `docs/` y enlazada desde `docs/README.md`. Los diagramas, en Mermaid.
 4. **Git es evidencia**, porque se evalúan la participación y el uso de git. Cada commit lleva a su autor real, y no se reescribe historia compartida ni se aplastan aportes de otros.

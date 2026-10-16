@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut, Moon, RefreshCw, Sun, User } from 'lucide-react';
 import { Menu } from './Menu';
@@ -25,6 +25,14 @@ export default function PanelBar({ home, role, views = [], onRefresh }: {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const name = user?.name || role;
+  // Si la navegación no entra y se desliza, la sección actual queda a la vista (centrada) al cambiar de ruta.
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const n = navRef.current, el = n?.querySelector<HTMLElement>('[aria-current=page]');
+    if (!n || !el || n.scrollWidth <= n.clientWidth) return;
+    const r = el.getBoundingClientRect(), nr = n.getBoundingClientRect();
+    n.scrollBy({ left: r.left - nr.left - (nr.width - r.width) / 2, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }, [pathname]);
 
   return (
     <header className="appbar">
@@ -32,7 +40,7 @@ export default function PanelBar({ home, role, views = [], onRefresh }: {
         <NavLink className="brand" to={home} aria-label="ServicioCocheras, inicio"><span className="logo">SC</span><span>ServicioCocheras</span></NavLink>
         {views.length > 0 && <>
           <span className="sep" />
-          <nav className="nav" aria-label={`Secciones del panel de ${role.toLowerCase()}`}>
+          <nav className="nav" ref={navRef} aria-label={`Secciones del panel de ${role.toLowerCase()}`}>
             {views.map(([to, l]) => (
               <button key={to} type="button" onClick={() => navigate(to)}
                 aria-current={(to === home ? pathname === to : pathname.startsWith(to)) ? 'page' : undefined}>{l}</button>

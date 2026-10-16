@@ -7,6 +7,7 @@ import { Empty, ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
 import { useAuthStore } from '../../stores/authStore';
 import { getReservationsByParking } from '../../services/reservation.service';
 import { api } from '../../services/api';
+import { iconOf } from '../../components/Owner/ui/vehicles';
 import { DOW, addD, occOf, shD, svcOf, today, typePlural, typesOf, wdOf } from '../Owner/owner.lib';
 import CalendarDrawer, { AHEAD_DAYS, BACK_DAYS } from './CalendarDrawer';
 import ResDrawer from './ResDrawer';
@@ -123,8 +124,8 @@ function Terminal({ reservations, parking, shifts, me, onChange }: { reservation
           <span className="dim">{turno ? `Tu turno hoy: ${turno}` : shifts.length ? 'Hoy no tenés turno' : 'Todavía no tenés turnos cargados.'}</span></div>
         <div className="e-occ" aria-label="Ocupación por tipo de vehículo">
           {typesOf(parking).filter(t => svcOf(parking, t.id) > 0).map(t => {
-            const o = occOf(parking, t.id), c = svcOf(parking, t.id);
-            return <div className="e-chip" key={t.id}><span>{typePlural(t.name)} <b>{o}/{c}</b></span><div className={`e-meter${o >= c ? ' full' : ''}`}><i style={{ width: `${Math.min(100, (o / c) * 100)}%` }} /></div></div>;
+            const o = occOf(parking, t.id), c = svcOf(parking, t.id), I = iconOf(t.name);
+            return <div className="e-chip" key={t.id}><span><span className="cap"><I className="i sm" aria-hidden="true" />{typePlural(t.name)}</span> <b>{o}/{c}</b></span><div className={`e-meter${o >= c ? ' full' : ''}`}><i style={{ width: `${Math.min(100, (o / c) * 100)}%` }} /></div></div>;
           })}
         </div>
         <div className="e-tb"><button type="button" className="btn sm" onClick={() => setPanel('summary')}>Resumen</button></div>
