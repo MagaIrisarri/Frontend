@@ -1,16 +1,17 @@
 // Lógica pura del rol dueño del prototipo original: formatos, normalización de datos y edición del calendario de turnos.
 // Sin React ni red: se prueba con `node tests/owner.lib.test.ts`.
 import type { ParkingPriceRow, SpaceType } from '../../types/parking.types';
+import { arDate, arTime } from '../../utils/date.js';
 
 // ---------- formatos ----------
 export const money = (n: number) => '$' + Number(n).toLocaleString('es-AR');
 const pad = (n: number) => String(n).padStart(2, '0');
 export const isoD = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-// L-04: "hoy" en la zona de las sucursales (la misma TZ del backend), no en la del navegador. 'en-CA' da AAAA-MM-DD.
-// shortcut: L-04, las horas se siguen mostrando en la zona del navegador y el reloj es el de la PC, pasar todo a la zona de la sucursal si hay sucursales fuera de Argentina
-export const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+// isoD: cuentas de calendario con fechas 'AAAA-MM-DD' (addD, wdOf). Para el día de un instante, arDate (L-04).
+// L-04: "hoy" y la hora de ahora en la zona de las sucursales, no en la del navegador. El reloj es el de la PC.
+export const today = () => arDate(new Date());
 // L-03: minutos del día de ahora, en la misma zona que today().
-export const nowMin = () => mm(new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
+export const nowMin = () => mm(arTime(new Date()));
 export const addD = (iso: string, n: number) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return isoD(d); };
 export const cap = (t: string) => t ? t[0]!.toUpperCase() + t.slice(1) : t;
 export const fmtD = (iso: string) => new Date(iso + 'T12:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -273,7 +274,7 @@ export const billLines = (b: Bill, services: Svc[] = []): [string, number][] => 
     : b.servicesAmount ? [['Servicios', b.servicesAmount] as [string, number]] : []),
 ];
 
-const clock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
 export function normRes(r: any): Res {
   const s = new Date(r.startTime), e = new Date(r.endTime), c = r.vehicle?.client ?? {};
   return {
@@ -283,7 +284,7 @@ export function normRes(r: any): Res {
     pid: r.parkingSpace?.parking?.id ?? '',
     pname: r.parkingSpace?.parking?.name ?? '—',
     space: r.parkingSpace?.spaceCode ?? '—',
-    date: isoD(s), endDate: isoD(e), start: clock(s), end: clock(e),
+    date: arDate(s), endDate: arDate(e), start: arTime(s), end: arTime(e),
     hours: (e.getTime() - s.getTime()) / 3_600_000,
     plate: r.vehicle?.plate ?? '—',
     vtype: r.vehicle?.vehicleType?.name ?? '',

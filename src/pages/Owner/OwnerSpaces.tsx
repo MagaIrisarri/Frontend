@@ -11,7 +11,8 @@ import { createBulkParkingSpaces, getParkingSpace, removeParkingSpace, updatePar
 import { useOwner } from './OwnerContext';
 import { useVehicleTypes } from '../../hooks/useVehicleTypes';
 import { iconOf } from '../../components/Owner/ui/vehicles';
-import { isoD, plural, shD, typeLabel, typePlural } from './owner.lib';
+import { plural, shD, typeLabel, typePlural } from './owner.lib';
+import { arDate, arTime } from '../../utils/date';
 
 type State = 'LIBRE' | 'OCUPADO' | 'MANTENIMIENTO';
 // R-30: la plaza admite un tipo de vehículo del catálogo del administrador.
@@ -24,8 +25,8 @@ type Action = 'MANTENIMIENTO' | 'BAJA';
 // Reserva futura de la plaza y la plaza libre que le propone el backend (null: no hay lugar en su horario).
 interface Relocation { reservationId: string; code: string; plate: string; startTime: string; endTime: string; toSpaceId: string | null; toSpaceCode: string | null }
 const when = (r: Relocation) => {
-  const s = new Date(r.startTime), e = new Date(r.endTime), t = (d: Date) => d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-  return `${shD(isoD(s))} ${t(s)}–${t(e)}`;
+  const s = new Date(r.startTime), e = new Date(r.endTime);
+  return `${shD(arDate(s))} ${arTime(s)}–${arTime(e)}`; // L-04: en Argentina
 };
 
 // Plazas de cada sucursal: agregar, pasar a mantenimiento, volver a habilitar y dar de baja (R-18).

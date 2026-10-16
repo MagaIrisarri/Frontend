@@ -4,6 +4,7 @@ import { Drawer } from '../../components/Owner/ui/Layer';
 import { Presence } from '../../components/Owner/ui/Presence';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { addD, isoD, money, monday, plural, shD, today } from '../Owner/owner.lib';
+import { arDate } from '../../utils/date';
 import type { ERes } from './employee.lib';
 
 type Per = 'Hoy' | 'Semana' | 'Mes';
@@ -33,7 +34,7 @@ function Summary({ reservations, onClose }: SummaryProps) {
   const sum = (rs: ERes[], f: (r: ERes) => number) => rs.reduce((a, r) => a + f(r), 0);
   const calc = (from: string, to: string) => {
     const inR = (d: string) => d >= from && d <= to;
-    const done = reservations.filter(r => r.status === 'FINALIZADA' && inR(isoD(r.outAt ?? r.endAt)));
+    const done = reservations.filter(r => r.status === 'FINALIZADA' && inR(arDate(r.outAt ?? r.endAt)));
     const paid = done.filter(r => r.invoice?.status === 'PAGADA');
     const by = (...m: string[]) => sum(paid.filter(r => m.includes(r.invoice!.method)), r => r.amount ?? 0);
     const cols = { ef: by('EFECTIVO'), ta: by('TARJETA_DEBITO', 'TARJETA_CREDITO'), mp: by('MERCADO_PAGO'), tr: by('TRANSFERENCIA') };

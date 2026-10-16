@@ -8,7 +8,8 @@ import { payInvoice } from '../../services/invoice.service';
 import { iconOf } from '../../components/Owner/ui/vehicles';
 import { getSpaceAvailability } from '../../services/parkingSpace.service';
 import { getParkingServices } from '../../services/servicePrice.service';
-import { billLines, initials, isoD, money, plural, priceOf, shD, typeLabel, type Svc } from '../Owner/owner.lib';
+import { arDate } from '../../utils/date';
+import { billLines, initials, money, plural, priceOf, shD, typeLabel, type Svc } from '../Owner/owner.lib';
 import { ACTIVE, ARRIVAL_MIN, GRACE_MIN, checkInFrom, noShow, HOUR, METHODS, extraAt, hhmm, list, overdue, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes } from './employee.lib';
 
 const CARD_HINT = 'Se cobra en el posnet. El sistema guarda solo el medio y el comprobante, nunca los datos de la tarjeta.';
@@ -49,10 +50,10 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   };
 
   // R-23: extender de a horas enteras: una hora más desde el fin o, si ya se pasó, la próxima hora entera. El backend valida máximo y cierre.
-  const first = new Date(Math.max(r.endAt.getTime() + HOUR, Date.now()));
-  if (first.getMinutes() || first.getSeconds() || first.getMilliseconds()) first.setHours(first.getHours() + 1, 0, 0, 0);
+  // La hora entera se redondea en ms: el offset de Argentina es de horas enteras, así que coincide con la hora de reloj (L-04).
+  const first = new Date(Math.ceil(Math.max(r.endAt.getTime() + HOUR, Date.now()) / HOUR) * HOUR);
   const ends = [0, 1, 2].map(n => new Date(first.getTime() + n * HOUR));
-  const hh = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:00`;
+  const hh = hhmm;
   const extend = (end: Date) => run(() => extendReservation(r.id, end), (res: any) => {
     const moved: { code: string; to: string }[] = res?.data?.moved ?? [];
     return `Reserva ${r.code} extendida hasta las ${hh(end)}.${moved.length ? ` ${plural(moved.length, 'reserva pasó', 'reservas pasaron')} a otra plaza: ${moved.map(m => `${m.code} → ${m.to}`).join(', ')}.` : ''}`;
@@ -119,7 +120,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
                 <dt>Ingreso</dt><dd>{r.inBy ? `Registrado por ${r.inBy}` : 'Sin registrar'}</dd>
                 <dt>Egreso</dt><dd>{r.outBy ? `Registrado por ${r.outBy}` : 'Sin registrar'}</dd>
               </>}
-              <dt>Horario</dt><dd>{shD(r.date)} · {r.start} – {hhmm(closeAt)} ({r.bill ? r.bill.reservedHours : reservedH} h){shD(isoD(closeAt)) !== shD(r.date) ? ` hasta el ${shD(isoD(closeAt))}` : ''}</dd>
+              <dt>Horario</dt><dd>{shD(r.date)} · {r.start} – {hhmm(closeAt)} ({r.bill ? r.bill.reservedHours : reservedH} h){shD(arDate(closeAt)) !== shD(r.date) ? ` hasta el ${shD(arDate(closeAt))}` : ''}</dd>
               {r.status === 'FINALIZADA' && r.outAt && <><dt>Salida real</dt><dd>{hhmm(r.outAt)}{r.bill?.extraHours ? ` · ${plural(r.bill.extraHours, 'hora extra', 'horas extra')}` : ''}</dd></>}
               <dt>Registrada por</dt><dd>{r.staff || '—'}</dd>
             </dl>
@@ -127,7 +128,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
               <Field label="Extender">{(id, aria) => <select className="sel" id={id} {...aria} aria-label={`Extender la reserva ${r.code}`} value="" disabled={busy}
                 onChange={ev => ev.target.value && extend(ends[Number(ev.target.value)]!)}>
                 <option value="">Elegir…</option>
-                {ends.map((d, i) => <option key={i} value={i}>Hasta las {hh(d)}{d.toDateString() !== r.endAt.toDateString() ? ` del ${shD(isoD(d))}` : ''}</option>)}
+                {ends.map((d, i) => <option key={i} value={i}>Hasta las {hh(d)}{arDate(d) !== arDate(r.endAt) ? ` del ${shD(arDate(d))}` : ''}</option>)}
               </select>}</Field>
               <Field label="Cambiar plaza">{(id, aria) => <select className="sel" id={id} {...aria} aria-label={`Plaza de la reserva ${r.code}`} value={r.spaceId} disabled={busy || spaces === null}
                 onChange={ev => ev.target.value !== r.spaceId && moveTo(ev.target.value)}>
@@ -139,7 +140,7 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
               ? `Si registrás la salida ahora (${hhmm(new Date())}) se cobran ${plural(extraNow, 'hora extra', 'horas extra')}.`
               : `Si registrás la salida ahora (${hhmm(new Date())}) no se cobran horas extra: hay ${GRACE_MIN} min de gracia.`}</span></div>}
             {active && spaces?.length === 0 && <p className="dim" style={{ margin: 0 }}>No hay otra plaza libre para este vehículo en ese horario.</p>}
-            {r.status === 'PENDIENTE' && early && <p className="dim" style={{ margin: 0 }}>El ingreso se registra desde las {hhmm(from)} del {shD(isoD(from))}.</p>}
+            {r.status === 'PENDIENTE' && early && <p className="dim" style={{ margin: 0 }}>El ingreso se registra desde las {hhmm(from)} del {shD(arDate(from))}.</p>}
             {noShow(r) && <p className="dim" style={{ margin: 0 }}>No se registró el ingreso hasta {ARRIVAL_MIN} min después del inicio: la reserva se cancela sola.</p>}
           </section>
 

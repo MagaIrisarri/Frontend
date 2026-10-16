@@ -1,3 +1,4 @@
+import { AR_TZ } from '../../utils/date';
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Clock, FileText, SearchX } from 'lucide-react';
 import { getInvoicesByClientId } from '../../services/invoice.service';
@@ -27,9 +28,10 @@ export function InvoicesDrawer({ isOpen, onClose }: InvoicesDrawerProps) {
   );
 }
 
-const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-AR');
+// L-04: los instantes se muestran en la zona de las sucursales.
+const fmtDate = (d: string) => new Date(d).toLocaleDateString('es-AR', { timeZone: AR_TZ });
 const fmtDateTime = (d: string) =>
-  new Date(d).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  new Date(d).toLocaleString('es-AR', { timeZone: AR_TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 function Content({ onClose }: { onClose: () => void }) {
   const user = useCurrentUser();

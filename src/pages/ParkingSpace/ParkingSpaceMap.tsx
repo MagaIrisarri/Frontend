@@ -10,6 +10,7 @@ import type { ServicePrice } from '@/types/servicePrice.types';
 import { getParkingServices } from '@/services/servicePrice.service';
 import { createReservation } from '../../services/reservation.service';
 import { today } from '../Owner/owner.lib';
+import { atAR } from '../../utils/date';
 
 interface ReservarState {
   vehicleId: string;
@@ -43,8 +44,8 @@ export function ParkingSpaceMap() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [reservationSuccess, setReservationSuccess] = useState(false);
 
-  const startTime = date && entryTime ? new Date(`${date}T${entryTime}:00`) : null;
-  const endTime = date && exitTime ? new Date(`${date}T${exitTime}:00`) : null;
+  const startTime = date && entryTime ? atAR(date, entryTime) : null; // L-04: la hora elegida es de Argentina
+  const endTime = date && exitTime ? atAR(date, exitTime) : null;
 
   const hourOptions = parking ? generateHourOptions(parking.openingTime, parking.closingTime) : [];
 
@@ -54,8 +55,8 @@ export function ParkingSpaceMap() {
     endTime &&
     startTime < endTime &&
     startTime >= new Date() &&
-    startTime.getMinutes() === 0 &&
-    endTime.getMinutes() === 0 &&
+    entryTime.slice(3, 5) === '00' &&
+    exitTime.slice(3, 5) === '00' &&
     entryTime >= parking!.openingTime &&
     exitTime <= parking!.closingTime &&
     (endTime.getTime() - startTime.getTime()) >= parking!.minReservationHours * 60 * 60 * 1000 &&

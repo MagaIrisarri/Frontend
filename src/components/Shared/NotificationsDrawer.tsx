@@ -1,3 +1,4 @@
+import { AR_TZ } from '../../utils/date';
 import { AlertCircle, ArrowRightLeft, Bell, Calendar, Check, Clock, FileText, LogIn, UserCheck, XCircle } from 'lucide-react';
 import type { AppNotification, NotificationType } from '../../services/notification.service';
 import { Drawer } from '../Owner/ui/Layer';
@@ -23,7 +24,7 @@ const ICON: Record<NotificationType, typeof Bell> = {
 };
 
 // fmtD (owner.lib) exige 'YYYY-MM-DD'; acá llega la fecha y hora completa.
-const when = (iso: string) => new Date(iso).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const when = (iso: string) => new Date(iso).toLocaleString('es-AR', { timeZone: AR_TZ, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 // Avisos de la cuenta en el panel lateral del estándar; el estado y el polling viven en NotificationsProvider.
 export function NotificationsDrawer({ isOpen, onClose, items, unread, loading, error, onRetry, onRead, onReadAll }: NotificationsDrawerProps) {

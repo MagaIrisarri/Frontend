@@ -1,3 +1,4 @@
+import { AR_TZ } from '../../utils/date';
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Check, ListChecks, Search } from 'lucide-react';
 import AdminCatalog from './AdminCatalog';
@@ -98,7 +99,7 @@ function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () =
 
   const term = q.trim().toUpperCase();
   const shown = (list ?? []).filter(d => !term || d.description.toUpperCase().includes(term));
-  const when = (iso: string) => new Date(iso).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const when = (iso: string) => new Date(iso).toLocaleString('es-AR', { timeZone: AR_TZ, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   let body;
   if (loadErr) body = <ErrorBox what="las descripciones" onRetry={load} />;

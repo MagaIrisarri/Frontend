@@ -3,6 +3,7 @@ import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { checkInReservation, checkOutReservation } from '../../services/reservation.service';
 import { normRes, type ParkingLike, type Res } from '../Owner/owner.lib';
+import { arTime } from '../../utils/date';
 
 export const list = (x: any) => (Array.isArray(x) ? x : x?.data ?? []);
 
@@ -22,7 +23,7 @@ export const GRACE_MIN = 10;
 export const ARRIVAL_MIN = 15;
 export const HOUR = 3_600_000;
 export const person = (u: any) => [u?.name, u?.last_name].filter(Boolean).join(' ');
-export const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+export const hhmm = arTime; // L-04: la hora de un instante en Argentina, no en la zona del navegador
 
 export interface Inv { id: string; status: string; method: string; received: number | null; receipt: string | null }
 export interface ERes extends Res {

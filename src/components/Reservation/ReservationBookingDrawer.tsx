@@ -15,7 +15,8 @@ import OwnerShell from '../Owner/ui/OwnerShell';
 import { Presence } from '../Owner/ui/Presence';
 import { Empty } from '../Owner/ui/Page';
 import { Field } from '../Owner/ui/Field';
-import { addD, fmtD, money, plural, today, typeLabel, typePlural } from '../../pages/Owner/owner.lib';
+import { addD, fmtD, money, nowMin, plural, today, typeLabel, typePlural } from '../../pages/Owner/owner.lib';
+import { atAR } from '../../utils/date';
 import { VICON, iconOf } from '../Owner/ui/vehicles';
 
 interface ReservationBookingDrawerProps {
@@ -107,11 +108,7 @@ export function ReservationBookingDrawer({
 
     let startH = openH;
     if (date === todayStr) {
-      const now = new Date();
-      const currentH = now.getHours();
-      const currentM = now.getMinutes();
-      const nextH = currentM > 0 ? currentH + 1 : currentH;
-      startH = Math.max(openH, nextH);
+      startH = Math.max(openH, Math.ceil(nowMin() / 60)); // L-04: la hora de ahora en Argentina
     }
 
     const hours: string[] = [];
@@ -250,8 +247,8 @@ export function ReservationBookingDrawer({
     });
   }, [parking, selectedVehicle]);
 
-  const startTime = date && entryTime ? new Date(`${date}T${entryTime}:00`) : null;
-  const endTime = date && exitTime ? new Date(`${date}T${exitTime}:00`) : null;
+  const startTime = date && entryTime ? atAR(date, entryTime) : null; // L-04: la hora elegida es de Argentina
+  const endTime = date && exitTime ? atAR(date, exitTime) : null;
 
   const durationHours =
     startTime && endTime && startTime < endTime

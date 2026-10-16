@@ -7,7 +7,7 @@ import { walkInReservation } from '../../services/reservation.service';
 import { getParkingServices } from '../../services/servicePrice.service';
 import { getBrands, getModels } from '../../services/vehicle.service';
 import { cleanPlate, plateState } from '../../utils/plate';
-import { capOf, mm, money, plural, priceOf, typeLabel, typePlural, type Svc } from '../Owner/owner.lib';
+import { capOf, mm, money, nowMin as minutesNow, plural, priceOf, typeLabel, typePlural, type Svc } from '../Owner/owner.lib';
 import { hhmm, list, type EParking } from './employee.lib';
 
 const EMPTY = { plate: '', brandId: '', modelId: '', name: '', last_name: '', dni: '', email: '', phone: '' };
@@ -39,15 +39,17 @@ function WalkIn({ parking, onChange, onClose }: WalkInProps) {
   }, [v.brandId, toast]);
 
   // Horas posibles: desde el mínimo de la sucursal hasta lo que queda hasta el cierre, sin pasar el máximo.
+  // L-04: la hora de ahora en Argentina; el fin, ahora sin segundos + h horas (igual que el backend).
   const nowD = new Date();
-  const nowMin = nowD.getHours() * 60 + nowD.getMinutes();
+  nowD.setSeconds(0, 0);
+  const nowMin = minutesNow();
   const minH = parking.minReservationHours || 1;
   const maxH = Math.min(parking.maxReservationHours || 24, Math.floor((mm(parking.closingTime) - nowMin) / 60));
   const close = parking.closingTime.slice(0, 5);
   const blocked = nowMin < mm(parking.openingTime) ? `La sucursal abre a las ${parking.openingTime.slice(0, 5)}.`
     : maxH < minH ? `Ya no cabe una estadía de ${plural(minH, 'hora', 'horas')} antes del cierre (${close}): no se registran ingresos nuevos.` : '';
   const h = Math.min(Math.max(hours, minH), Math.max(maxH, minH));
-  const endsAt = new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate(), nowD.getHours(), nowD.getMinutes() + h * 60);
+  const endsAt = new Date(nowD.getTime() + h * 3_600_000);
 
   const model = models.find(m => m.id === v.modelId);
   // R-30: plazas y tarifa del tipo del modelo (por id).
