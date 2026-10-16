@@ -67,6 +67,7 @@ function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
   const save = async () => {
     const n = Number(String(edit).replace(/\D/g, ''));
     if (!n || n <= 0) return setErr('Ingresá un valor mayor a 0.');
+    if (price && Number(price.price) === n) return setEdit(null); // sin cambios: no hay nada que guardar
     setSaving(true);
     try {
       await createParkingPrice(p.id, { vehicleTypeId: type.id, price: n }); // versiona: expira la tarifa anterior
@@ -87,13 +88,14 @@ function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
   if (saving) return <td data-label={t.n}><span className="ctx"><RefreshCw className="i sm spin" /> Guardando…</span></td>;
   if (edit !== null) return (
     <td data-label={t.n}>
-      <div className="inl">
+      {/* Click o foco fuera de la celda: se cancela, como con Escape. Los botones no roban el foco para que su click llegue. */}
+      <div className="inl" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) { setEdit(null); setErr(''); } }}>
         <span className="cur">$</span>
         <input className="inp" inputMode="numeric" autoComplete="off" autoFocus aria-label={`Tarifa por hora, ${aria}`} aria-invalid={!!err}
           value={edit} onChange={e => { setEdit(e.target.value); setErr(''); }}
           onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEdit(null); }} />
-        <button type="button" className="icon-btn sm pri" aria-label="Guardar tarifa" onClick={save}><Check className="i sm" /></button>
-        <button type="button" className="icon-btn sm" aria-label="Cancelar" onClick={() => setEdit(null)}><X className="i sm" /></button>
+        <button type="button" className="icon-btn sm pri" aria-label="Guardar tarifa" onMouseDown={e => e.preventDefault()} onClick={save}><Check className="i sm" /></button>
+        <button type="button" className="icon-btn sm" aria-label="Cancelar" onMouseDown={e => e.preventDefault()} onClick={() => setEdit(null)}><X className="i sm" /></button>
       </div>
       {err && <div className="ferr" role="alert">{err}</div>}
     </td>
