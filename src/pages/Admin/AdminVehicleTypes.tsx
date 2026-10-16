@@ -1,227 +1,153 @@
+import { AR_TZ } from '../../utils/date';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ConfirmDialog from '../../components/Shared/ConfirmDialog/ConfirmDialog';
-import { Pencil, Trash2, ArrowLeft } from 'lucide-react';
-import { getVehicleTypes, createVehicleType, updateVehicleType, removeVehicleType } from '../../services/vehicleType.service';
-import type { VehicleType } from '../../types/vehicle.types.js';
+import { AlertTriangle, Check, ListChecks, Search } from 'lucide-react';
+import AdminCatalog from './AdminCatalog';
+import { VICON } from '../../components/Owner/ui/vehicles';
+import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
+import { Shown } from '../../components/Owner/ui/Presence';
+import { ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
+import { apiError } from '../../components/Owner/ui/Field';
+import { useToast } from '../../components/Owner/ui/Toasts';
+import { plural, typeLabel } from '../Owner/owner.lib';
+import type { VehicleType } from '../../types/vehicle.types';
+import {
+  createVehicleType, getTypeDescriptions, getVehicleTypes, removeVehicleType, setTypeDescriptions, updateVehicleType,
+  type DescriptionChange, type TypeDescription,
+} from '../../services/vehicleType.service';
+import { invalidateVehicleTypes } from '../../hooks/useVehicleTypes';
+
+const Icon = VICON.AUTO;
+
+// R-30: cada tipo tiene sus propias plazas y tarifas. Sin plazas en ninguna cochera, sus vehículos todavía no pueden reservar.
+const coverage = (t: VehicleType) => t.parkings
+  ? `Con plazas en ${plural(t.parkings, 'cochera', 'cocheras')}`
+  : 'Sin plazas en ninguna cochera: sus vehículos todavía no pueden reservar';
+
+// Si es un tipo base y en cuántas cocheras tiene plazas lo calcula el backend; acá solo se muestra.
+// Fuera del componente para que no cambie en cada render (AdminCatalog lo usa como dependencia de la carga).
+// Después de cada cambio se descarta la lista guardada, así el alta de plazas y el filtro del mapa ven el tipo nuevo.
+const changed = <T,>(p: Promise<T>) => p.then(r => { invalidateVehicleTypes(); return r; });
+const API = {
+  list: () => getVehicleTypes().then(res => res.data.map(t => ({
+    id: t.id, name: t.name, locked: t.isBase,
+    description: t.isBase ? `Tipo base del sistema: no se edita ni se elimina · ${coverage(t)}` : coverage(t),
+  }))),
+  create: (v: { name: string }) => changed(createVehicleType({ name: v.name })),
+  update: (id: string, v: { name: string }) => changed(updateVehicleType(id, { name: v.name })),
+  remove: (id: string) => changed(removeVehicleType(id)),
+};
+
+type Target = { id: string; name: string; fresh: boolean }; // fresh: recién creado, con las sugeridas ya tildadas
 
 export default function AdminVehicleTypes() {
-  const navigate = useNavigate();
+  const [target, setTarget] = useState<Target | null>(null);
+  return (
+    <>
+      <AdminCatalog title="Tipos de vehículo" sub="Cada tipo tiene sus propias plazas y tarifas, que carga el dueño de cada cochera, y sus modelos salen de las descripciones del DNRPA que se le asignan. Un tipo con plazas, tarifas, modelos o vehículos no se da de baja."
+        noun={{ one: 'tipo de vehículo', many: 'tipos de vehículo', nuevo: 'Nuevo tipo' }} icon={<Icon className="i" />} api={API}
+        actions={i => [{ label: 'Descripciones del DNRPA', icon: <ListChecks className="i" />, onClick: () => setTarget({ id: i.id, name: i.name, fresh: false }) }]}
+        onCreated={res => res?.data?.id && setTarget({ id: res.data.id, name: res.data.name, fresh: true })} />
+      <Shown when={target}>{t => <DescriptionsDrawer target={t} onClose={() => setTarget(null)} />}</Shown>
+    </>
+  );
+}
 
-  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// RA-26: qué descripciones del DNRPA van a este tipo. Al guardar se reasignan sus modelos y la copia del tipo en sus vehículos;
+// las que se destildan vuelven a la sugerencia automática. Con reservas activas de esos vehículos no se puede (409).
+function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () => void }) {
+  const toast = useToast();
+  const [list, setList] = useState<TypeDescription[] | null>(null);
+  const [loadErr, setLoadErr] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState<DescriptionChange['reservations'] | null>(null);
+  const [review, setReview] = useState<DescriptionChange | null>(null);
 
-  const [newName, setNewName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
-
-  const [deleteTarget, setDeleteTarget] = useState<VehicleType | null>(null);
-
-  const loadVehicleTypes = () => {
-    setLoading(true);
-    getVehicleTypes()
-      .then((res) => setVehicleTypes(res.data))
-      .catch((err) => setError(err.response?.data?.message || 'Error al cargar los tipos de vehículo'))
-      .finally(() => setLoading(false));
+  const load = () => {
+    setLoadErr(false);
+    getTypeDescriptions(target.id)
+      .then(l => { setList(l); setSel(new Set(l.filter(d => d.assigned || (target.fresh && d.suggested)).map(d => d.key))); })
+      .catch(() => setLoadErr(true));
   };
+  useEffect(load, [target.id]);
 
-  useEffect(() => {
-    loadVehicleTypes();
-  }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-
-    setIsSubmitting(true);
-    setError(null);
+  const toggle = (key: string) => { setBlocked(null); setSel(s => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; }); };
+  const fail = (x: any) => {
+    const reservations = x?.response?.status === 409 ? x.response.data?.details?.reservations : undefined;
+    if (reservations?.length) setBlocked(reservations); else toast(apiError(x, 'No se pudo guardar. Intentá de nuevo.'), 'err');
+  };
+  // Primero la vista previa: si hay reservas activas se muestran; si no, se confirma con lo que se mueve.
+  const save = async () => {
+    setBusy(true);
     try {
-      await createVehicleType({ name: newName.trim() });
-      setNewName('');
-      loadVehicleTypes();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al crear el tipo de vehículo');
-    } finally {
-      setIsSubmitting(false);
-    }
+      const dry = await setTypeDescriptions(target.id, [...sel], true);
+      if (dry.reservations.length) setBlocked(dry.reservations);
+      else if (!dry.descriptions) { toast('No hay cambios para guardar.', 'info'); onClose(); }
+      else setReview(dry);
+    } catch (x) { fail(x); } finally { setBusy(false); }
   };
-
-  const startEditing = (vt: VehicleType) => {
-    setEditingId(vt.id);
-    setEditingName(vt.name);
-  };
-
-  const cancelEditing = () => {
-    setEditingId(null);
-    setEditingName('');
-  };
-
-  const saveEditing = async (id: string) => {
-    if (!editingName.trim()) return;
+  const apply = async () => {
+    setReview(null); setBusy(true);
     try {
-      await updateVehicleType(id, { name: editingName.trim() });
-      cancelEditing();
-      loadVehicleTypes();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al actualizar el tipo de vehículo');
-    }
+      const done = await setTypeDescriptions(target.id, [...sel], false);
+      invalidateVehicleTypes();
+      toast(`Descripciones de ${target.name} guardadas: ${plural(done.models, 'modelo reasignado', 'modelos reasignados')}.`);
+      onClose();
+    } catch (x) { fail(x); } finally { setBusy(false); }
   };
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await removeVehicleType(deleteTarget.id);
-      setVehicleTypes((prev) => prev.filter((vt) => vt.id !== deleteTarget.id));
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al eliminar el tipo de vehículo');
-    } finally {
-      setDeleteTarget(null);
-    }
-  };
+  const term = q.trim().toUpperCase();
+  const shown = (list ?? []).filter(d => !term || d.description.toUpperCase().includes(term));
+  const when = (iso: string) => new Date(iso).toLocaleString('es-AR', { timeZone: AR_TZ, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+  let body;
+  if (loadErr) body = <ErrorBox what="las descripciones" onRetry={load} />;
+  else if (!list) body = <SkeletonRows n={4} cols={1} />;
+  else if (!list.length) body = <p className="ctx">Todavía no hay descripciones del DNRPA: se cargan al actualizar el catálogo con el CSV.</p>;
+  else body = (<>
+    <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar descripción (PICK-UP, FURGON…)" aria-label="Buscar descripción" value={q} onChange={e => setQ(e.target.value)} data-first /></div>
+    {!shown.length ? <p className="ctx">Ninguna descripción coincide con “{q}”.</p> : (
+      <div className="optlist" role="group" aria-label={`Descripciones del DNRPA de ${target.name}`}>
+        {shown.map(d => {
+          const checked = sel.has(d.key);
+          return (
+            <button key={d.key} type="button" role="checkbox" aria-checked={checked} className="opt" onClick={() => toggle(d.key)}>
+              <span className="grow">
+                {d.description}
+                <small>{plural(d.models, 'modelo', 'modelos')} · hoy: {typeLabel(d.vehicleType.name)}</small>
+              </span>
+              {d.suggested && <span className="tag">Sugerida</span>}
+              {checked && <Check className="i" aria-hidden="true" />}
+            </button>
+          );
+        })}
+      </div>
+    )}
+  </>);
 
   return (
-    <div className="min-h-screen bg-[#faf9f5] dark:bg-[#0B0F17] text-slate-900 dark:text-white p-6 md:p-10 transition-colors">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <button
-          type="button"
-          onClick={() => navigate('/admin')}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Volver al Panel de Administrador</span>
-        </button>
-
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 md:p-8 shadow-sm">
-          <div className="mb-6">
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Tipos de Vehículo</h1>
-            <p className="text-sm text-slate-600 dark:text-zinc-400 mt-1">
-              Administrá los tipos de vehículo disponibles en el sistema
-            </p>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleCreate} className="flex gap-3 mb-8">
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Nombre del tipo de vehículo (ej: Auto, Moto, Utilitario)"
-              className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              required
-            />
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 cursor-pointer shrink-0"
-            >
-              {isSubmitting ? 'Agregando...' : '+ Agregar'}
-            </button>
-          </form>
-
-          {loading ? (
-            <div className="py-12 text-center text-sm text-slate-500 dark:text-zinc-400">Cargando tipos de vehículo...</div>
-          ) : vehicleTypes.length === 0 ? (
-            <div className="py-12 text-center text-sm text-slate-500 dark:text-zinc-400">Todavía no hay tipos de vehículo cargados.</div>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 dark:bg-zinc-800/50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800">
-                  <tr>
-                    <th className="px-5 py-3">Nombre</th>
-                    <th className="px-5 py-3">Estado</th>
-                    <th className="px-5 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                  {vehicleTypes.map((vt) => (
-                    <tr key={vt.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white">
-                        {editingId === vt.id ? (
-                          <input
-                            type="text"
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 text-sm"
-                            autoFocus
-                          />
-                        ) : (
-                          vt.name
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          vt.isActive === false
-                            ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        }`}>
-                          {vt.isActive === false ? 'Inactivo' : 'Activo'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {editingId === vt.id ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => saveEditing(vt.id)}
-                              className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
-                            >
-                              Guardar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={cancelEditing}
-                              className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => startEditing(vt)}
-                              className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Editar"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(vt)}
-                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Eliminar"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+    <>
+      <Drawer title="Descripciones del DNRPA" sub={target.name} onClose={onClose} focusSel="[data-first]"
+        footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button>
+          <button type="button" className="btn pri" onClick={save} aria-busy={busy} disabled={busy || !list}>Guardar</button></div>}>
+        <div className="dbody">
+          <section className="fs">
+            <p className="ctx" style={{ margin: 0 }}>Los modelos de las descripciones tildadas pasan a {target.name}, y también sus vehículos. Las que destildes vuelven al tipo sugerido.{target.fresh && ' Tildamos las que contienen el nombre del tipo.'}</p>
+            {blocked && (
+              <div className="list" role="alert">
+                <div className="li"><span className="st warn"><AlertTriangle className="i sm" />Todavía no se puede cambiar</span></div>
+                <p className="ad" style={{ margin: 0 }}>Estas reservas activas son de vehículos de esos modelos: su plaza es del tipo actual. Reintentá cuando terminen o se cancelen.</p>
+                {blocked.map(r => <div className="li" key={r.code}><span>{r.code} · {r.plate}</span><span className="ad">{r.parking} · {when(r.startTime)}</span></div>)}
+              </div>
+            )}
+            {body}
+          </section>
         </div>
-      </div>
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Eliminar tipo de vehículo"
-        message={`¿Confirmás que querés eliminar "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Sí, eliminar"
-        cancelLabel="Cancelar"
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
-    </div>
+      </Drawer>
+      <Shown when={review}>{review => <ConfirmModal title={`¿Guardar las descripciones de ${target.name}?`}
+        body={`Cambian de tipo ${plural(review.descriptions, 'descripción', 'descripciones')}: ${plural(review.models, 'modelo', 'modelos')} y ${plural(review.vehicles, 'vehículo registrado', 'vehículos registrados')}.`}
+        ok="Guardar" back="Volver" onConfirm={apply} onClose={() => setReview(null)} />}</Shown>
+    </>
   );
 }

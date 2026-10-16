@@ -1,188 +1,174 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { CalendarClock, LogIn, LogOut, QrCode } from 'lucide-react';
-import { checkInReservation, checkOutReservation } from '../../services/reservation.service';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, MapPin, Plus, Search } from 'lucide-react';
+import OwnerShell from '../../components/Owner/ui/OwnerShell';
+import PanelBar from '../../components/Owner/ui/PanelBar';
+import { Shown } from '../../components/Owner/ui/Presence';
+import { Empty, ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
+import { useAuthStore } from '../../stores/authStore';
+import { getReservationsByParking } from '../../services/reservation.service';
+import { api } from '../../services/api';
+import { iconOf } from '../../components/Owner/ui/vehicles';
+import { DOW, addD, occOf, shD, svcOf, today, typePlural, typesOf, wdOf } from '../Owner/owner.lib';
+import CalendarDrawer, { AHEAD_DAYS, BACK_DAYS } from './CalendarDrawer';
+import ResDrawer from './ResDrawer';
+import SummaryDrawer from './SummaryDrawer';
+import WalkInDrawer from './WalkInDrawer';
+import { hhmm, list, normERes, overdue, person, primaryOf, reservedEnd, stateOf, toPay, useRun, type EParking, type ERes, type Status } from './employee.lib';
 
+const POLL_MS = 30_000;
+const SEGS: ['all' | Status, string][] = [['all', 'Todas'], ['PENDIENTE', 'Pendientes'], ['EN CURSO', 'En curso'], ['FINALIZADA', 'Finalizadas'], ['CANCELADA', 'Canceladas']];
+interface Shift { d: number; t: string } // d: 0 = lunes (como DOW), t: "08:00–16:00"
+
+// Terminal del empleado: reservas de su sucursal, ingreso de mostrador, cambio de plaza, ingreso, salida y cobro.
 export default function EmployeeDashboard() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [shifts, setShifts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [reservationId, setReservationId] = useState('');
-  
-  const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
+  const user = useAuthStore(s => s.user);
+  const userId: string = user?.id || user?._id || '';
+  const [parking, setParking] = useState<EParking | null | undefined>(undefined); // undefined = cargando
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [reservations, setReservations] = useState<ERes[]>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
-  useEffect(() => {
-    const rawUser = localStorage.getItem('user');
-    if (!rawUser) {
-      navigate('/login');
-      return;
-    }
-
+  // La sucursal se lee del backend y no del usuario guardado al loguearse: el dueño puede asignarla después.
+  const refresh = useCallback(async () => {
+    if (!userId) return;
     try {
-      const parsed = JSON.parse(rawUser);
-      const currentUser = parsed?.data ?? parsed?.user ?? parsed;
-      
-      const userType = (currentUser?.type || currentUser?.role || '').toUpperCase();
-      if (!userType.includes('EMP')) {
-        navigate('/profile');
-        return;
-      }
-      
-      setUser(currentUser);
+      const [u, s] = await Promise.all([api.get(`/api/users/${userId}`), api.get(`/api/shifts/employee/${userId}`)]);
+      setShifts(list(s.data).map((x: any) => ({ d: DOW.indexOf(x.dayOfWeek), t: `${x.startTime.slice(0, 5)}–${x.endTime.slice(0, 5)}` })));
+      const pid: string | null = u.data?.data?.parkingId ?? null;
+      if (!pid) { setParking(null); setStatus('ready'); return; }
+      const [p, r] = await Promise.all([api.get(`/api/parkings/${pid}`), getReservationsByParking(pid)]);
+      setParking({ ...p.data?.data, id: pid, name: p.data?.data?.name ?? 'Tu sucursal' }); // trae capacidades, ocupación, tarifas y horario
+      setReservations(list(r).map(normERes));
+      setStatus('ready');
     } catch (err) {
-      navigate('/login');
+      console.error('Error al cargar la terminal del empleado:', err);
+      setStatus('error');
     }
-  }, [navigate]);
-
+  }, [userId]);
+  useEffect(() => { refresh(); }, [refresh]);
+  // Se actualiza sola cada 30 s mientras la pestaña se ve; el botón de la barra la actualiza al momento.
   useEffect(() => {
-    if (!user) return;
-    
-    api.get(`/api/employee-shifts/employee/${user.id}`)
-      .then(res => setShifts(res.data?.data || res.data || []))
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
-  }, [user]);
-
-  const handleCheckIn = async () => {
-    if (!reservationId.trim()) return;
-    try {
-      await checkInReservation(reservationId.trim(), user.id);
-      alert('Check-in exitoso');
-      setReservationId('');
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al hacer check-in');
-    }
-  };
-
-  const handleCheckOut = async () => {
-    if (!reservationId.trim()) return;
-    try {
-      const res = await checkOutReservation(reservationId.trim(), user.id);
-      alert(`Check-out exitoso. Total a pagar: $${res.data?.totalAmount ?? res?.totalAmount ?? 0}`);
-      setReservationId('');
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al hacer check-out');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="p-8 text-center text-slate-600 dark:text-zinc-400">
-        Cargando panel de empleado...
-      </div>
-    );
-  }
+    const t = setInterval(() => { if (!document.hidden) refresh(); }, POLL_MS);
+    return () => clearInterval(t);
+  }, [refresh]);
 
   return (
-    <div className="min-h-screen bg-[#faf9f5] dark:bg-[#0B0F17] text-slate-900 dark:text-white p-6 md:p-10 transition-colors">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-            Hola, {user?.name}
-          </h1>
-          <p className="text-sm text-slate-600 dark:text-zinc-400 mt-1">
-            Bienvenido al panel de empleado
-          </p>
-        </div>
+    <OwnerShell>
+      <PanelBar home="/employee" role="Empleado" onRefresh={refresh} />
+      <main className="e-wrap">
+        {status === 'error' ? <ErrorBox what="las reservas" onRetry={refresh} />
+          : status === 'loading' || parking === undefined ? <SkeletonRows n={5} />
+            : parking === null ? <Empty icon={<MapPin className="i" />} title="Sin sucursal asignada">Pedile al dueño que te asigne una sucursal desde Personal para ver y operar sus reservas.</Empty>
+              : <Terminal reservations={reservations} parking={parking} shifts={shifts} me={person(user)} onChange={refresh} />}
+      </main>
+    </OwnerShell>
+  );
+}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Card Gestión de Vehículos */}
-          <div className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 shadow-sm rounded-2xl transition-colors">
-            <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-white">
-              <QrCode className="text-blue-500 h-6 w-6" />
-              Gestión de Vehículos
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-zinc-400 mb-1.5">
-                  ID de Reserva
-                </label>
-                <input 
-                  type="text" 
-                  value={reservationId}
-                  onChange={(e) => setReservationId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono uppercase"
-                  placeholder="Ingrese el ID de reserva..."
-                />
-              </div>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={handleCheckIn}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>Check-in</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCheckOut}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm shadow-md shadow-amber-600/20 transition-all cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Check-out</span>
-                </button>
-              </div>
-            </div>
-          </div>
+function Terminal({ reservations, parking, shifts, me, onChange }: { reservations: ERes[]; parking: EParking; shifts: Shift[]; me: string; onChange: () => Promise<void> }) {
+  const now = today();
+  const [rd, setRd] = useState(now);
+  const [rs, setRs] = useState<'all' | Status>('all');
+  const [rq, setRq] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [panel, setPanel] = useState<'walkin' | 'summary' | 'calendar' | null>(null);
+  const search = useRef<HTMLInputElement>(null);
+  const { run, busy } = useRun(onChange);
+  const open = reservations.find(r => r.id === openId);
 
-          {/* Card Mis Próximos Turnos */}
-          <div className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 shadow-sm rounded-2xl flex flex-col h-full transition-colors">
-            <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-white">
-              <CalendarClock className="text-emerald-500 h-6 w-6" />
-              Mis Próximos Turnos
-            </h2>
-            <div className="space-y-3 flex-1 overflow-y-auto">
-              {shifts.length === 0 ? (
-                <p className="text-slate-500 dark:text-zinc-400 text-sm">
-                  No tienes turnos asignados actualmente.
-                </p>
-              ) : (
-                shifts.map((shift) => (
-                  <div 
-                    key={shift.id} 
-                    className="p-3.5 bg-slate-50 dark:bg-zinc-950 rounded-xl border border-slate-100 dark:border-zinc-800 flex justify-between items-center transition-colors"
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-900 dark:text-white text-sm">
-                        {shift.dayOfWeek}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-zinc-400">
-                        {shift.startTime} - {shift.endTime}
-                      </div>
-                    </div>
-                    <div className="text-right text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      {shift.parking?.name || 'Sucursal'}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+  const turno = shifts.filter(s => s.d === wdOf(now)).map(s => s.t).join(' · ');
+  const worked = [...new Set(shifts.map(s => (s.d + 1) % 7))]; // días de la semana de JS (0 = domingo)
+  const min = addD(now, -BACK_DAYS), max = addD(now, AHEAD_DAYS);
+  const dayLabel = `${rd === now ? 'Hoy · ' : rd === addD(now, 1) ? 'Mañana · ' : ''}${new Date(rd + 'T12:00').toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')} ${shD(rd)}`;
+
+  // Atajos de la maqueta: N abre Nuevo ingreso y / va a la búsqueda (no se disparan escribiendo en un campo).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (panel || openId || (e.target as HTMLElement).matches('input,select,textarea') || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); setPanel('walkin'); }
+      if (e.key === '/') { e.preventDefault(); search.current?.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [panel, openId]);
+
+  // Hoy también lista los vehículos que siguen adentro desde un día anterior (R-21): si no, su salida no se ve.
+  const D = reservations.filter(r => r.date === rd || (rd === now && r.date < rd && r.status === 'EN CURSO'));
+  const q = rq.trim().toLowerCase().replace(/[\s-]/g, '');
+  const shown = D.filter(r => (rs === 'all' || r.status === rs) && (!q || (r.plate + r.code).toLowerCase().replace(/-/g, '').includes(q)));
+  const byStart = (a: ERes, b: ERes) => a.start.localeCompare(b.start);
+  const groups: [string, ERes[]][] = [
+    ['Por cobrar', shown.filter(r => r.status === 'FINALIZADA' && toPay(r)).sort(byStart)],
+    ['En curso', shown.filter(r => r.status === 'EN CURSO').sort((a, b) => Number(overdue(b)) - Number(overdue(a)) || byStart(a, b))], // los pasados de hora primero
+    ['Pendientes', shown.filter(r => r.status === 'PENDIENTE').sort(byStart)],
+    ['Finalizadas', shown.filter(r => r.status === 'FINALIZADA' && !toPay(r)).sort(byStart)],
+    ['Canceladas', shown.filter(r => r.status === 'CANCELADA').sort(byStart)],
+  ];
+  const clear = () => { setRs('all'); setRq(''); setRd(now); };
+
+  let queue;
+  if (!D.length) queue = <div className="e-empty">Sin reservas el {shD(rd)}. <span className="dim">Probá con otra fecha: las reservas de tu sucursal aparecen acá con su código y su plaza.</span></div>;
+  else if (!shown.length) queue = <div className="e-empty">{rq ? `Sin resultados para «${rq}».` : 'No hay reservas en este estado.'}<button type="button" className="btn sm" onClick={clear}>Limpiar filtros</button></div>;
+  else queue = groups.filter(g => g[1].length).map(([title, rows]) => (
+    <section className="e-grp" key={title}>
+      <h2>{title} <b>{rows.length}</b></h2>
+      <div className="e-list" role="table" aria-label={title}>{rows.map(r => <Row key={r.id} r={r} margin={parking.reservationMargin} busy={busy} run={run} onOpen={() => setOpenId(r.id)} />)}</div>
+    </section>
+  ));
+
+  return (
+    <>
+      <h1 className="sr">Reservas</h1>
+      <header className="e-hd">
+        <div className="e-who"><span className="dim">{parking.name} · Terminal del empleado</span><b>{me || 'Empleado'}</b>
+          <span className="dim">{turno ? `Tu turno hoy: ${turno}` : shifts.length ? 'Hoy no tenés turno' : 'Todavía no tenés turnos cargados.'}</span></div>
+        <div className="e-occ" aria-label="Ocupación por tipo de vehículo">
+          {typesOf(parking).filter(t => svcOf(parking, t.id) > 0).map(t => {
+            const o = occOf(parking, t.id), c = svcOf(parking, t.id), I = iconOf(t.name);
+            return <div className="e-chip" key={t.id}><span><span className="cap"><I className="i sm" aria-hidden="true" />{typePlural(t.name)}</span> <b>{o}/{c}</b></span><div className={`e-meter${o >= c ? ' full' : ''}`}><i style={{ width: `${Math.min(100, (o / c) * 100)}%` }} /></div></div>;
+          })}
         </div>
-        
-        <div className="pt-8 border-t border-slate-200 dark:border-zinc-800 flex justify-between">
-          <button 
-            type="button"
-            onClick={() => navigate('/profile')} 
-            className="text-sm font-medium text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
-          >
-            ← Ir a mi Perfil Personal
-          </button>
-          <button 
-            type="button"
-            onClick={() => {
-              localStorage.removeItem('user');
-              localStorage.removeItem('parkflow_user_id');
-              navigate('/login');
-            }} 
-            className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors cursor-pointer"
-          >
-            Cerrar Sesión
-          </button>
+        <div className="e-tb"><button type="button" className="btn sm" onClick={() => setPanel('summary')}>Resumen</button></div>
+        <button type="button" className="btn pri lg e-new" title="Atajo: N" onClick={() => { setRd(now); setPanel('walkin'); }}><Plus className="i" aria-hidden="true" />Nuevo ingreso</button>
+      </header>
+
+      <div className="e-tools">
+        <div className="e-day" role="group" aria-label="Día">
+          <button type="button" className="btn sm" aria-label="Día anterior" disabled={rd <= min} onClick={() => setRd(addD(rd, -1))}><ChevronLeft className="i" /></button>
+          <button type="button" className="btn sm e-dayl" aria-label={`Elegir fecha en el calendario. Día actual: ${dayLabel}`} onClick={() => setPanel('calendar')}>{dayLabel}</button>
+          <button type="button" className="btn sm" aria-label="Día siguiente" disabled={rd >= max} onClick={() => setRd(addD(rd, 1))}><ChevronRight className="i" /></button>
         </div>
+        <div className="search"><Search className="i" /><input ref={search} className="inp" type="search" placeholder="Patente o código de reserva  ( / )" aria-label="Buscar por patente o código" autoComplete="off" value={rq} onChange={e => setRq(e.target.value)} /></div>
+        <div className="seg" role="group" aria-label="Filtrar por estado">
+          {SEGS.map(([k, l]) => <button type="button" key={k} aria-pressed={rs === k} onClick={() => setRs(k)}>{l}<b>{D.filter(r => k === 'all' || r.status === k).length}</b></button>)}
+        </div>
+      </div>
+
+      <div className="e-queue">{queue}</div>
+
+      <Shown when={open}>{open => <ResDrawer r={open} parking={parking} onChange={onChange} onClose={() => setOpenId(null)} />}</Shown>
+      <WalkInDrawer open={panel === 'walkin'} parking={parking} onChange={onChange} onClose={() => setPanel(null)} />
+      <SummaryDrawer open={panel === 'summary'} reservations={reservations} onClose={() => setPanel(null)} />
+      <CalendarDrawer open={panel === 'calendar'} value={rd} worked={worked} turno={turno} onPick={d => { setRd(d); setPanel(null); }} onClose={() => setPanel(null)} />
+    </>
+  );
+}
+
+// Una reserva en la cola: patente, plaza y horario con quién ingresó y salió, estado y la acción que toca.
+function Row({ r, margin, busy, run, onOpen }: { r: ERes; margin: number; busy: boolean; run: ReturnType<typeof useRun>['run']; onOpen: () => void }) {
+  const p = primaryOf(r, margin);
+  const st = stateOf(r);
+  const io = r.status === 'EN CURSO' || r.status === 'FINALIZADA'
+    ? [r.inBy && `Ingresó ${r.inBy}`, r.outBy && `Salió ${r.outBy}`].filter(Boolean).join(' · ') || 'Sin ingreso registrado' : r.services.map(s => s.name).join(', ');
+  return (
+    <div className="e-row" role="row">
+      <div role="cell"><span className="e-pl">{r.plate}</span><div className="e-sub">{[r.code, r.bm, r.client.n].filter(Boolean).join(' · ')}</div></div>
+      <div role="cell"><b>Plaza {r.space} · {r.start} – {hhmm(reservedEnd(r))}{r.endDate !== r.date ? ` (${shD(r.endDate)})` : ''}</b><div className="e-sub" title={io}>{io || '—'}</div></div>
+      <span role="cell" className={`st ${st.c}`}>{st.l}</span>
+      <div role="cell" className="e-acts">
+        {p ? <button type="button" className="btn sm pri" aria-label={`${p.label} ${r.plate}`} disabled={busy || p.disabled}
+          onClick={() => p.key === 'pay' ? onOpen() : run(p.call!, p.ok!)}>{p.label}</button> : <span />}
+        <button type="button" className="btn sm" aria-label={`Gestionar la reserva ${r.code}`} onClick={onOpen}>Gestionar</button>
       </div>
     </div>
   );

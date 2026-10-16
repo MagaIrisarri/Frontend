@@ -3,23 +3,18 @@
   name: string;
 }
 
+export interface Model {
+  id: string;
+  name: string;
+  vehicleType?: { id: string; name: string };
+}
+
 export interface VehicleType {
   id: string;
   name: string;
   isActive?: boolean;
-}
-
-export interface CreateVehicleTypeInput {
-  name: string;
-}
-
-export type UpdateVehicleTypeInput = Partial<CreateVehicleTypeInput>;
-
-export interface Model {
-  id: string;
-  name: string;
-  brand: Brand;
-  vehicleType: VehicleType;
+  isBase?: boolean; // AUTO, MOTO y CAMIONETA: no se renombran ni se dan de baja
+  parkings?: number; // en cuántas cocheras tiene plazas activas; sin ninguna, sus vehículos no pueden reservar (R-30)
 }
 
 export interface Client {
@@ -33,7 +28,7 @@ export interface Client {
 export interface Vehicle {
   id: string;
   plate: string;
-  year: number;
+  year?: number | null;
   brand?: { id: string; name: string };
   model?: { id: string; name: string };
   client?: Client;
@@ -43,7 +38,7 @@ export interface Vehicle {
 
 export interface CreateVehicle {
   plate: string;
-  year: number;
+  year?: number;
   brandId: string;
   modelId: string;
   insuranceId?: string;
@@ -51,8 +46,11 @@ export interface CreateVehicle {
 
 export interface UpdateVehicle {
   plate: string;
-  year: number;
+  year?: number | null; // null quita el año
   brandId: string;
   modelId: string;
-  insuranceId?: string;
+  insuranceId?: string | null;
+}
+export interface VehicleTypeInput {
+  name: string;
 }

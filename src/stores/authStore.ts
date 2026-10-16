@@ -11,7 +11,14 @@ export interface CurrentUser {
   email?: string;
   phone?: string;
   dni?: string;
+  mustChangePassword?: boolean; // contraseña temporal: el DNI (cuenta del mostrador, R-29) o la que puso el administrador (DA-02)
   date_of_birth?: string;
+  // Dueño: datos fiscales; cualquiera: avisos que apagó (MUTABLE_NOTIFICATIONS del backend).
+  businessName?: string | null;
+  cuit?: string | null;
+  vatCondition?: string | null;
+  fiscalAddress?: string | null;
+  mutedNotifications?: string[] | null;
   [key: string]: any;
 }
 
@@ -27,14 +34,20 @@ export function normalizeRole(roleOrType?: string): NormalizedRole {
   return '';
 }
 
+// Pantalla de inicio de cada rol: el cliente usa el mapa; el resto, solo su panel.
+export function homeForRole(role: NormalizedRole): string {
+  if (role === 'DUEÑO') return '/owner';
+  if (role === 'EMPLEADO') return '/employee';
+  if (role === 'ADMINISTRADOR') return '/admin';
+  return '/';
+}
+
 export interface AuthState {
   user: CurrentUser | null;
   isAuthenticated: boolean;
   isOwner: boolean;
-  isAdmin: boolean;
-  isEmployee: boolean;
   isClient: boolean;
-  setUser: (user: CurrentUser | null) => void;
+  setUser: (user: CurrentUser | null, token?: string) => void; // el token llega solo con el login
   logout: () => void;
 }
 
@@ -55,27 +68,21 @@ export const useAuthStore = create<AuthState>()(
       user: getInitialUser(),
       isAuthenticated: !!getInitialUser(),
       isOwner: normalizeRole(getInitialUser()?.type || getInitialUser()?.role) === 'DUEÑO',
-      isAdmin: normalizeRole(getInitialUser()?.type || getInitialUser()?.role) === 'ADMINISTRADOR',
-      isEmployee: normalizeRole(getInitialUser()?.type || getInitialUser()?.role) === 'EMPLEADO',
       isClient:
         !!getInitialUser() &&
         normalizeRole(getInitialUser()?.type || getInitialUser()?.role) !== 'DUEÑO' &&
         normalizeRole(getInitialUser()?.type || getInitialUser()?.role) !== 'ADMINISTRADOR' &&
         normalizeRole(getInitialUser()?.type || getInitialUser()?.role) !== 'EMPLEADO',
 
-      setUser: (user: CurrentUser | null) => {
+      setUser: (user: CurrentUser | null, token?: string) => {
         if (!user) {
           localStorage.removeItem('user');
-          localStorage.removeItem('parkflow_user_id');
           localStorage.removeItem('user_id');
           localStorage.removeItem('token');
-          localStorage.removeItem('parkflow_token');
           set({
             user: null,
             isAuthenticated: false,
             isOwner: false,
-            isAdmin: false,
-            isEmployee: false,
             isClient: false,
           });
           return;
@@ -89,48 +96,38 @@ export const useAuthStore = create<AuthState>()(
         };
 
         localStorage.setItem('user', JSON.stringify(enrichedUser));
+        if (token) localStorage.setItem('token', token); // lo lee services/api.ts
         const userId = enrichedUser.id || enrichedUser._id;
-        if (userId) {
-          localStorage.setItem('parkflow_user_id', userId);
-          localStorage.setItem('user_id', userId);
-        }
+        if (userId) localStorage.setItem('user_id', userId);
 
         set({
           user: enrichedUser,
           isAuthenticated: true,
           isOwner: normalized === 'DUEÑO',
-          isAdmin: normalized === 'ADMINISTRADOR',
-          isEmployee: normalized === 'EMPLEADO',
           isClient: normalized === 'CLIENTE' || !normalized,
         });
       },
 
       logout: () => {
         localStorage.removeItem('user');
-        localStorage.removeItem('parkflow_user_id');
         localStorage.removeItem('user_id');
         localStorage.removeItem('token');
-        localStorage.removeItem('parkflow_token');
         set({
           user: null,
           isAuthenticated: false,
           isOwner: false,
-          isAdmin: false,
-          isEmployee: false,
           isClient: false,
         });
       },
     }),
     {
-      name: 'parkflow_auth_session',
+      name: 'auth_session',
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         if (state && state.user) {
           const normalized = normalizeRole(state.user.type || state.user.role);
           state.isAuthenticated = true;
           state.isOwner = normalized === 'DUEÑO';
-          state.isAdmin = normalized === 'ADMINISTRADOR';
-          state.isEmployee = normalized === 'EMPLEADO';
           state.isClient = normalized === 'CLIENTE' || !normalized;
         }
       },

@@ -1,0 +1,160 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Calendar, FileText, Trash2 } from 'lucide-react';
+import { ConfirmModal, Drawer } from '../Owner/ui/Layer';
+import { Presence } from '../Owner/ui/Presence';
+import { VICON } from '../Owner/ui/vehicles';
+import { Field, Input, Password, apiError } from '../Owner/ui/Field';
+import { useToast } from '../Owner/ui/Toasts';
+import { changePassword, removeUser, updateUser } from '../../services/user.service';
+import { getParkingsByOwner } from '../../services/parking.service';
+import { useAuthStore } from '../../stores/authStore';
+
+const IVA = ['Responsable Inscripto', 'Monotributo', 'Exento'];
+// Datos fiscales y avisos apagados se guardan en el usuario (servidor): NotificationService saltea los que apagó.
+
+// "Mi perfil" en panel lateral. Reemplaza a la página /profile; lo abre cualquier rol.
+export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
+  const me = useAuthStore(s => s.user) ?? {};
+  const setUser = useAuthStore(s => s.setUser);
+  const logout = useAuthStore(s => s.logout);
+  const navigate = useNavigate();
+  const toast = useToast();
+  const id: string = me.id || me._id || '';
+  const type = String(me.type || me.role || '').toUpperCase();
+  const isOwner = type.includes('DUE') || type.includes('OWNER');
+  const isClient = !isOwner && !type.includes('ADMIN') && !type.includes('EMP');
+
+  const [v, setV] = useState({ name: me.name ?? '', last_name: me.last_name ?? '', email: me.email ?? '', phone: me.phone ?? '', dob: me.date_of_birth?.slice(0, 10) ?? '', pw0: '', pw1: '', pw2: '' });
+  const [fiscal, setFiscal] = useState({ businessName: me.businessName ?? '', cuit: me.cuit ?? '', vatCondition: me.vatCondition ?? IVA[0]!, fiscalAddress: me.fiscalAddress ?? '' });
+  const muted: string[] = me.mutedNotifications ?? [];
+  const [prefs, setPrefs] = useState({ alertFullCapacity: !muted.includes('SUCURSAL_LLENA'), alertNewBooking: !muted.includes('RESERVA_NUEVA') });
+  const [err, setErr] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [active, setActive] = useState<number | null>(isOwner ? null : 0);
+
+  useEffect(() => {
+    if (!isOwner || !id) return;
+    getParkingsByOwner(id).then(r => setActive((Array.isArray(r) ? r : r?.data ?? []).filter((p: any) => p.isActive).length)).catch(() => setActive(0));
+  }, [isOwner, id]);
+
+  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => { setV({ ...v, [k]: e.target.value }); setErr({ ...err, [k]: '' }); };
+  const go = (to: string) => { onClose(); navigate(to); };
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    const er: Record<string, string> = {};
+    if (!v.name.trim()) er.name = 'Ingresá tu nombre.';
+    if (!v.last_name.trim()) er.last_name = 'Ingresá tu apellido.';
+    if (!/^\S+@\S+\.\S+$/.test(v.email.trim())) er.email = 'Ingresá un email válido.';
+    if (isOwner && fiscal.cuit.trim() && !/^\d{2}-?\d{8}-?\d$/.test(fiscal.cuit.trim())) er.cuit = 'Formato esperado: 30-12345678-9.';
+    if (me.mustChangePassword && !v.pw1) er.pw1 = 'Elegí una contraseña nueva.';
+    if (v.pw0 || v.pw1 || v.pw2) {
+      if (!v.pw0) er.pw0 = 'Ingresá tu contraseña actual.';
+      if (v.pw1.length < 6) er.pw1 = 'Mínimo 6 caracteres.';
+      else if (v.pw1 === me.dni) er.pw1 = 'No puede ser tu DNI.';
+      else if (v.pw1 !== v.pw2) er.pw2 = 'Las contraseñas no coinciden.';
+    }
+    setErr(er);
+    if (Object.keys(er).length) return toast('Revisá los campos marcados.', 'err');
+    setBusy(true);
+    try {
+      // Teléfono y nacimiento pueden faltar en un cliente dado de alta en el mostrador (R-29): vacíos no se mandan.
+      const data = {
+        name: v.name.trim(), last_name: v.last_name.trim(), email: v.email.trim(),
+        ...(v.phone.trim() && { phone: v.phone.trim() }), ...(v.dob && { date_of_birth: v.dob }),
+        // Vacío borra el dato; el CUIT vuelve del servidor con guiones y el dígito verificado.
+        ...(isOwner && {
+          businessName: fiscal.businessName.trim(), cuit: fiscal.cuit.trim(), vatCondition: fiscal.vatCondition, fiscalAddress: fiscal.fiscalAddress.trim(),
+          mutedNotifications: [...(prefs.alertNewBooking ? [] : ['RESERVA_NUEVA']), ...(prefs.alertFullCapacity ? [] : ['SUCURSAL_LLENA'])],
+        }),
+      };
+      const saved = await updateUser(id, data as any);
+      if (v.pw1) await changePassword(id, v.pw0, v.pw1);
+      setUser({ ...me, ...data, ...(saved?.data ?? {}), ...(v.pw1 && { mustChangePassword: false }) });
+      toast(v.pw1 ? 'Perfil guardado y contraseña actualizada.' : 'Perfil guardado.');
+      onClose();
+    } catch (x) {
+      toast(apiError(x), 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const del = async () => {
+    try {
+      await removeUser(id);
+      logout();
+      navigate('/');
+    } catch (x) {
+      setConfirmDel(false);
+      toast(apiError(x, 'No se pudo eliminar la cuenta.'), 'err');
+    }
+  };
+
+  const links: [string, string, typeof Calendar][] = [['/reservations', 'Mis reservas', Calendar], ['/invoices', 'Facturación y pagos', FileText], ['/vehicles', 'Mis vehículos', VICON.AUTO]];
+
+  return (
+    <>
+      <Drawer title="Mi perfil" sub={isOwner ? 'Datos de tu cuenta de dueño' : 'Datos de tu cuenta'} onClose={onClose}
+        footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn pri" type="submit" form="meform" aria-busy={busy}>Guardar cambios</button></div>}>
+        <form className="dbody" id="meform" noValidate onSubmit={save}>
+          {isClient && (
+            <section className="fs"><div className="fh"><h3>Mi cuenta</h3></div>
+              <div className="list">{links.map(([to, label, I]) => (
+                <button type="button" key={to} className="li" style={{ border: 0, background: 'none', color: 'inherit', textAlign: 'left', width: '100%', cursor: 'pointer' }} onClick={() => go(to)}>
+                  <span className="l"><I className="i" />{label}</span><ArrowRight className="i sm" />
+                </button>
+              ))}</div>
+            </section>
+          )}
+          <section className="fs"><div className="fh"><h3>Datos personales</h3></div>
+            <div className="g2">
+              <Input label="Nombre" value={v.name} onChange={set('name')} error={err.name} autoComplete="given-name" data-first />
+              <Input label="Apellido" value={v.last_name} onChange={set('last_name')} error={err.last_name} autoComplete="family-name" />
+            </div>
+            <Input label="Email" type="email" value={v.email} onChange={set('email')} error={err.email} autoComplete="email" />
+            <div className="g2">
+              <Input label="Teléfono" type="tel" value={v.phone} onChange={set('phone')} error={err.phone} autoComplete="tel" />
+              <Input label="Fecha de nacimiento" type="date" value={v.dob} onChange={set('dob')} error={err.dob} autoComplete="bday" />
+            </div>
+          </section>
+          {isOwner && (
+            <section className="fs"><div className="fh"><h3>Datos fiscales</h3></div>
+              <Input label="Razón social" value={fiscal.businessName} onChange={e => setFiscal({ ...fiscal, businessName: e.target.value })} />
+              <div className="g2">
+                <Input label="CUIT / CUIL" placeholder="30-XXXXXXXX-X" inputMode="numeric" value={fiscal.cuit} onChange={e => { setFiscal({ ...fiscal, cuit: e.target.value }); setErr({ ...err, cuit: '' }); }} error={err.cuit} />
+                <Field label="Condición IVA">{(fid) => (
+                  <select className="sel" id={fid} value={fiscal.vatCondition} onChange={e => setFiscal({ ...fiscal, vatCondition: e.target.value })}>{IVA.map(o => <option key={o}>{o}</option>)}</select>
+                )}</Field>
+              </div>
+              <Input label="Dirección fiscal" value={fiscal.fiscalAddress} onChange={e => setFiscal({ ...fiscal, fiscalAddress: e.target.value })} />
+            </section>
+          )}
+          <section className="fs"><div className="fh"><h3>Seguridad</h3></div>
+            {me.mustChangePassword
+              ? <p className="ctx" role="alert" style={{ marginTop: -6 }}>Tu contraseña actual es temporal (tu DNI, si la cuenta se creó en el mostrador). Cambiala para registrar vehículos y reservar.</p>
+              : <p className="ctx" style={{ marginTop: -6 }}>Completá solo si querés cambiar la contraseña.</p>}
+            <Password label="Contraseña actual" value={v.pw0} onChange={set('pw0')} error={err.pw0} autoComplete="current-password" />
+            <div className="g2">
+              <Password label="Nueva contraseña" value={v.pw1} onChange={set('pw1')} error={err.pw1} autoComplete="new-password" />
+              <Password label="Repetir nueva" value={v.pw2} onChange={set('pw2')} error={err.pw2} autoComplete="new-password" />
+            </div>
+          </section>
+          {isOwner && (
+            <section className="fs"><div className="fh"><h3>Notificaciones</h3></div>
+              <label className="switch"><input type="checkbox" checked={prefs.alertFullCapacity} onChange={e => setPrefs({ ...prefs, alertFullCapacity: e.target.checked })} /><span className="t" />Avisarme cuando una sucursal llegue al 90 % de ocupación</label>
+              <label className="switch"><input type="checkbox" checked={prefs.alertNewBooking} onChange={e => setPrefs({ ...prefs, alertNewBooking: e.target.checked })} /><span className="t" />Avisarme de cada nueva reserva</label>
+            </section>
+          )}
+          <section className="fs"><div className="fh"><h3>Eliminar cuenta</h3></div>
+            <p className="ctx">{active ? `Tenés ${active} ${active === 1 ? 'sucursal activa' : 'sucursales activas'}. Pausalas antes de eliminar la cuenta.` : 'Se borran tu cuenta y todos tus datos. No se puede deshacer.'}</p>
+            <div><button type="button" className="btn danger" disabled={active === null || !!active} onClick={() => setConfirmDel(true)}><Trash2 className="i sm" />Eliminar mi cuenta</button></div>
+          </section>
+        </form>
+      </Drawer>
+      <Presence open={confirmDel}><ConfirmModal title="¿Eliminar tu cuenta?" body="Se borran tu cuenta y todos tus datos. No se puede deshacer." ok="Eliminar cuenta" danger onConfirm={del} onClose={() => setConfirmDel(false)} /></Presence>
+    </>
+  );
+}

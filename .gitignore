@@ -4,12 +4,11 @@ dist-ssr/
 *.local
 *.tsbuildinfo
 prompt.md
-
+.impeccable/
 .vite/
 .eslintcache
 .stylelintcache
 
-.env
 .env.local
 .env.*.local
 !.env.example
@@ -41,3 +40,18 @@ Thumbs.db
 
 tsconfig.tsbuildinfo
 package-lock.json
+
+# Pruebas de desarrollo, locales. Las de la cátedra viven en tests-catedra/ y se versionan.
+tests/
+blob-report/
+playwright/.cache/
+
+# Claude: skills 
+
+# Ralph
+
+# Herramientas de IA (agentes, skills, scripts autónomos): locales de cada integrante, no son parte del producto
+.claude/
+.agents/
+skills-lock.json
+scripts/ralph/

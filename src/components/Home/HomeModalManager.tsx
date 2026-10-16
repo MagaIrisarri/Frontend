@@ -1,11 +1,11 @@
-import React from 'react';
-import { ReservationBookingModal } from '../../components/Reservation/ReservationBookingModal';
-import { VehicleManagerModal } from '../../components/Vehicle/VehicleManagerModal';
-import { ReservationsModal } from '../../components/Reservation/ReservationsModal';
-import { FavoritesModal } from '../../components/Parking/FavoritesModal';
-import { NotificationsModal } from '../../components/Shared/NotificationsModal';
+import React, { useState } from 'react';
+import { ReservationBookingDrawer } from '../../components/Reservation/ReservationBookingDrawer';
+import { VehiclesDrawer } from '../../components/Vehicle/VehiclesDrawer';
+import { ReservationsDrawer } from '../../components/Reservation/ReservationsDrawer';
+import { FavoritesDrawer } from '../../components/Parking/FavoritesDrawer';
+import { InvoicesDrawer } from '../../components/Invoice/InvoicesDrawer';
 import { SupportModal } from '../../components/Home/SupportModal';
-import { AuthModal } from '../../components/Auth/AuthModal';
+import { AuthDrawer } from '../../components/Auth/AuthDrawer';
 
 export const HomeModalManager: React.FC<any> = (props: any) => {
   const {
@@ -14,6 +14,7 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
     selectedParking,
     filters,
     setIsVehicleModalOpen,
+    setVehicleModalTab,
     handleOpenReservations,
     fetchParkings,
     fetchClientReservations,
@@ -27,17 +28,16 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
     clientReservations,
     loadingReservations,
     handleCancelReservation,
-    setIsListDrawerOpen,
+    handleRateReservation,
+    openList,
     isFavoritesModalOpen,
     setIsFavoritesModalOpen,
     favoriteParkings,
     toggleFavorite,
     setSelectedParkingId,
     handleOpenReservation,
-    isNotificationsOpen,
-    setIsNotificationsOpen,
-    notifications,
-    setNotifications,
+    isInvoicesOpen,
+    closeInvoices,
     isSupportOpen,
     setIsSupportOpen,
     isAuthModalOpen,
@@ -45,16 +45,18 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
     authModalTab,
     handleAuthSuccess,
   } = props;
+  const [vehiclesRev, setVehiclesRev] = useState(0); // sube al cerrar Mis vehículos para que la reserva en curso recargue la lista
 
   return (
     <>
-      {/* Modal de Reserva Directa en el Home */}
-      <ReservationBookingModal
+      {/* Panel de Reserva directa en el Home */}
+      <ReservationBookingDrawer
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         parking={selectedParking}
         initialVehicleCategory={filters?.vehicleType}
-        onOpenVehicleRegister={() => setIsVehicleModalOpen(true)}
+        vehiclesRev={vehiclesRev}
+        onOpenVehicleRegister={() => { setVehicleModalTab('create'); setIsVehicleModalOpen(true); }}
         onViewMyReservations={() => handleOpenReservations('active')}
         onReservationSuccess={() => {
           if (fetchParkings) fetchParkings();
@@ -63,15 +65,15 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
         }}
       />
 
-      {/* Modal de Gestión y Registro de Vehículos */}
-      <VehicleManagerModal
+      {/* Panel de Mis Vehículos (lista, alta y edición) */}
+      <VehiclesDrawer
         isOpen={isVehicleModalOpen}
-        onClose={() => setIsVehicleModalOpen(false)}
+        onClose={() => { setIsVehicleModalOpen(false); setVehiclesRev((n) => n + 1); }}
         initialTab={vehicleModalTab}
       />
 
-      {/* Modal de Mis Reservas e Historial */}
-      <ReservationsModal
+      {/* Panel de Mis Reservas e Historial */}
+      <ReservationsDrawer
         isOpen={isReservationsModalOpen}
         onClose={() => setIsReservationsModalOpen(false)}
         tab={reservationsModalTab}
@@ -79,14 +81,15 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
         reservations={clientReservations}
         loading={loadingReservations}
         onCancelReservation={handleCancelReservation}
+        onRateReservation={handleRateReservation}
         onExploreParkings={() => {
           setIsReservationsModalOpen(false);
-          setIsListDrawerOpen(true);
+          openList();
         }}
       />
 
-      {/* Modal de Favoritos */}
-      <FavoritesModal
+      {/* Panel de Favoritos */}
+      <FavoritesDrawer
         isOpen={isFavoritesModalOpen}
         onClose={() => setIsFavoritesModalOpen(false)}
         favoriteParkings={favoriteParkings}
@@ -95,17 +98,8 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
         onOpenReservation={handleOpenReservation}
       />
 
-      {/* Modal de Notificaciones */}
-      <NotificationsModal
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-        notifications={notifications}
-        onMarkAllAsRead={() => {
-          if (setNotifications) {
-            setNotifications((prev: any[]) => prev.map((n) => ({ ...n, read: true })));
-          }
-        }}
-      />
+      {/* Panel de Facturas y Pagos */}
+      <InvoicesDrawer isOpen={!!isInvoicesOpen} onClose={closeInvoices} />
 
       {/* Modal de Ayuda y Soporte */}
       <SupportModal
@@ -113,8 +107,8 @@ export const HomeModalManager: React.FC<any> = (props: any) => {
         setIsSupportOpen={setIsSupportOpen}
       />
 
-      {/* Modal de Autenticación Directa */}
-      <AuthModal
+      {/* Panel de acceso (iniciar sesión / crear cuenta) */}
+      <AuthDrawer
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         initialTab={authModalTab}

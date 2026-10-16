@@ -1,7 +1,10 @@
 export interface Reservation {
   id: string;
+  code?: string;
+  rating?: number | null; // R-27
   startTime: string;
   endTime: string;
+  createdAt?: string | null;
   vehicle: any;
   parkingSpace: any;
   status: string;

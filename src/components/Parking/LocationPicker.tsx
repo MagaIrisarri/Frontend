@@ -1,172 +1,104 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import * as maptilersdk from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
-import { Search, MapPin, Locate, Loader2 } from 'lucide-react';
-import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle, MAPTILER_API_KEY } from '../../config/map.js';
+import { Locate, MapPin, Route, Search } from 'lucide-react';
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle } from '../../config/map.js';
 import { useTheme } from '../../context/ThemeContext';
+import { Field, Input } from '../Owner/ui/Field';
+import { PROVINCES, nearArea, reverseGeocode, searchAddress, searchLocalities, type GeoArea, type GeoPlace } from '../../services/geocoding';
+import { norm } from '../../utils/search';
+import '../../styles/base.scss';
+import '../../styles/ui.scss';
 
-export interface LocationData {
+// Todo lo que describe dónde está una cochera. El selector lo muestra y lo edita; el formulario lo guarda.
+export interface PlaceValue {
+  province: string;
+  locality: string; // vacía = todavía sin confirmar (hay que elegirla de la lista)
+  neighborhood: string;
+  address: string;
+  postalCode: string;
   lat: number;
   lng: number;
-  address?: string;
-  locality?: string;
-  postalCode?: string;
 }
-
-const ROSARIO_ZONES = new Set([
-  'centro',
-  'distrito centro',
-  'pichincha',
-  'abasto',
-  'martin',
-  'barrio martin',
-  'echesortu',
-  'alberdi',
-  'arroyito',
-  'belgrano',
-  'fisherton',
-  'tiro suizo',
-  'las delicias',
-  'parque casado',
-  'tablada',
-  'distrito sur',
-  'distrito norte',
-  'distrito oeste',
-  'distrito noroeste',
-  'distrito sudoeste',
-  'republica de la sexta',
-]);
 
 interface LocationPickerProps {
-  lat: number;
-  lng: number;
-  onChangeLocation: (locationData: LocationData) => void;
+  value: PlaceValue;
+  onChange: (patch: Partial<PlaceValue>) => void;
+  errors?: Partial<Record<'locality' | 'address' | 'postalCode', string>>;
   className?: string;
-  defaultLocality?: string;
-  defaultPostalCode?: string;
 }
 
-export function LocationPicker({
-  lat,
-  lng,
-  onChangeLocation,
-  className = '',
-  defaultLocality,
-  defaultPostalCode,
-}: LocationPickerProps) {
+// Selector de ubicación del estándar, en tres pasos a la vista:
+// 1) provincia, localidad (se elige de la lista, así no existe "Rosario, Chaco") y calle y altura con sugerencias mientras se escribe;
+// 2) confirmar el punto en el mapa (el pin se arrastra);
+// 3) revisar los datos: calle, barrio y código postal siempre visibles y editables (sin "corregir a mano" escondido).
+// Funciona dentro y fuera del panel del dueño (root .owner).
+export function LocationPicker({ value, onChange, errors, className = '' }: LocationPickerProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maptilersdk.Map | null>(null);
   const markerRef = useRef<maptilersdk.Marker | null>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [isGeolocating, setIsGeolocating] = useState(false);
-
-  // Posición inicial válida [lng, lat]
+  const { lat, lng, province, locality } = value;
   const initialLng = lng && !isNaN(lng) && lng !== 0 ? Number(lng) : DEFAULT_MAP_CENTER[0];
   const initialLat = lat && !isNaN(lat) && lat !== 0 ? Number(lat) : DEFAULT_MAP_CENTER[1];
+  const center = useRef<[number, number]>([initialLng, initialLat]); // centro de la localidad confirmada
 
-  // Geocodificación inversa (de coordenadas a dirección)
-  const handlePositionChange = useCallback(
-    async (newLng: number, newLat: number) => {
-      let address = '';
-      let locality = '';
-      let postalCode = '';
+  // ── Localidad ──
+  const [locText, setLocText] = useState(locality);
+  const [locOpts, setLocOpts] = useState<GeoArea[]>([]);
+  const [locActive, setLocActive] = useState(-1);
+  const [locStatus, setLocStatus] = useState<'idle' | 'empty' | 'error'>('idle');
+  const locReq = useRef(0);
+  const locListId = useId();
+  // El pin pudo cambiar la localidad: el texto la sigue. Se ajusta al renderizar (no en un efecto) para no pisar lo que se está escribiendo.
+  const [seenLocality, setSeenLocality] = useState(locality);
+  if (locality !== seenLocality) {
+    setSeenLocality(locality);
+    if (locality) setLocText(locality);
+  }
 
-      try {
-        if (MAPTILER_API_KEY) {
-          const result = await maptilersdk.geocoding.reverse([newLng, newLat]);
-          if (result && result.features && result.features.length > 0) {
-            const feat = result.features[0];
+  // ── Dirección ──
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<GeoPlace[]>([]);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'empty'>('idle');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [active, setActive] = useState(-1); // opción resaltada con las flechas
+  const picked = useRef(''); // texto que vino de elegir una opción: no vuelve a buscar
+  const request = useRef(0); // descarta respuestas viejas
+  const [locating, setLocating] = useState(false);
 
-            // Extraer calle y altura limpias sin ensuciar con toda la jerarquía
-            if (feat.text && feat.address) {
-              address = `${feat.text} ${feat.address}`.trim();
-            } else if (feat.text && !feat.id?.startsWith('place') && !feat.id?.startsWith('locality')) {
-              address = feat.text.trim();
-            } else if (feat.place_name) {
-              address = feat.place_name.split(',')[0].trim();
-            }
+  const resetResults = () => {
+    request.current++;
+    setResults([]);
+    setStatus('idle');
+  };
 
-            const context = feat.context || [];
-            const placeContext = context.find((c: any) => c.id?.startsWith('place'));
-            const municipalityContext = context.find((c: any) => c.id?.startsWith('municipality'));
-            const postalContext = context.find((c: any) => c.id?.startsWith('postal_code'));
+  // Completa lo que falte (barrio, código postal) con la geocodificación inversa del punto.
+  // Si el punto cae en la localidad confirmada se respeta esa elección; si el pin se fue a otra, manda la geocodificación inversa.
+  const locate = useCallback(async (newLng: number, newLat: number, preset?: Partial<GeoPlace>) => {
+    const rev = await reverseGeocode(newLng, newLat);
+    const v = valueRef.current;
+    const area: GeoArea = { province: v.province, locality: v.locality, center: center.current };
+    const inArea = !!v.locality && nearArea(area, newLng, newLat);
+    if (!inArea) center.current = [newLng, newLat];
+    const patch: Partial<PlaceValue> = {
+      lat: Number(newLat.toFixed(6)),
+      lng: Number(newLng.toFixed(6)),
+      province: inArea ? v.province : PROVINCES.find((p) => norm(p) === norm(rev.province)) ?? v.province,
+      locality: inArea ? v.locality : rev.locality || preset?.locality || '',
+    };
+    const text = { address: preset?.address || rev.address, neighborhood: preset?.neighborhood || rev.neighborhood, postalCode: preset?.postalCode || rev.postalCode };
+    for (const [k, t] of Object.entries(text)) if (t) (patch as Record<string, unknown>)[k] = t; // no pisa lo que ya había con un vacío
+    onChangeRef.current(patch);
+  }, []);
 
-            const rawLocality = placeContext?.text || municipalityContext?.text || '';
-            const rawPostal = postalContext?.text || '';
-            postalCode = rawPostal.replace(/\D/g, ''); // Extraer solo dígitos numéricos (S2000 -> 2000)
-
-            // Detección de Rosario para que 'Centro' no sobreescriba la localidad
-            const isRosarioCoords = newLng >= -60.85 && newLng <= -60.50 && newLat >= -33.15 && newLat <= -32.80;
-            if (
-              !rawLocality ||
-              ROSARIO_ZONES.has(rawLocality.toLowerCase().trim()) ||
-              postalCode === '2000' ||
-              isRosarioCoords
-            ) {
-              locality = 'Rosario';
-              if (!postalCode) postalCode = '2000';
-            } else {
-              locality = rawLocality;
-            }
-          }
-        } else {
-          // Fallback a Nominatim si no hay key configurada
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${newLat}&lon=${newLng}`
-          );
-          const data = await response.json();
-          if (data && data.address) {
-            address = data.address.road
-              ? `${data.address.road} ${data.address.house_number || ''}`.trim()
-              : data.display_name?.split(',')[0]?.trim() || '';
-
-            const rawPostal = data.address.postcode || '';
-            postalCode = rawPostal.replace(/\D/g, '');
-
-            const candidateLocality =
-              data.address.city ||
-              data.address.town ||
-              data.address.village ||
-              data.address.municipality ||
-              '';
-
-            const isRosarioCoords = newLng >= -60.85 && newLng <= -60.50 && newLat >= -33.15 && newLat <= -32.80;
-            if (
-              !candidateLocality ||
-              ROSARIO_ZONES.has(candidateLocality.toLowerCase().trim()) ||
-              postalCode === '2000' ||
-              (data.address.suburb && ROSARIO_ZONES.has(data.address.suburb.toLowerCase())) ||
-              isRosarioCoords
-            ) {
-              locality = 'Rosario';
-              if (!postalCode) postalCode = '2000';
-            } else {
-              locality = candidateLocality;
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error en geocodificación inversa:', error);
-      }
-
-      onChangeLocation({
-        lat: Number(newLat.toFixed(6)),
-        lng: Number(newLng.toFixed(6)),
-        address,
-        locality,
-        postalCode,
-      });
-    },
-    [onChangeLocation]
-  );
-
-  // Inicializar mapa
   useEffect(() => {
     if (!mapContainerRef.current) return;
-
     const map = new maptilersdk.Map({
       container: mapContainerRef.current,
       style: getMapStyle(theme),
@@ -174,234 +106,327 @@ export function LocationPicker({
       zoom: DEFAULT_MAP_ZOOM,
       navigationControl: 'bottom-right',
     });
-
     map.on('styleimagemissing', () => {});
 
-    const marker = new maptilersdk.Marker({
-      draggable: true,
-      color: '#2563eb',
-    })
+    const accent = getComputedStyle(mapContainerRef.current).getPropertyValue('--ac-h').trim();
+    const marker = new maptilersdk.Marker({ draggable: true, ...(accent ? { color: accent } : {}) })
       .setLngLat([initialLng, initialLat])
       .addTo(map);
 
     marker.on('dragend', () => {
-      const lngLat = marker.getLngLat();
-      handlePositionChange(lngLat.lng, lngLat.lat);
+      const p = marker.getLngLat();
+      locate(p.lng, p.lat);
     });
-
     map.on('click', (e) => {
       marker.setLngLat(e.lngLat);
-      handlePositionChange(e.lngLat.lng, e.lngLat.lat);
+      locate(e.lngLat.lng, e.lngLat.lat);
     });
 
     mapRef.current = map;
     markerRef.current = marker;
-
     return () => {
       try {
         marker.remove();
         map.remove();
       } catch {
-        // Safe unmount
+        // desmontaje seguro
       }
       mapRef.current = null;
       markerRef.current = null;
     };
   }, []);
 
-  // Sincronizar coordenadas externas
+  // Sincroniza coordenadas externas (al abrir una sucursal existente)
   useEffect(() => {
     if (!mapRef.current || !markerRef.current) return;
     if (!lat || !lng || isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
-
-    const currentPos = markerRef.current.getLngLat();
-    if (
-      Math.abs(currentPos.lat - lat) > 0.0001 ||
-      Math.abs(currentPos.lng - lng) > 0.0001
-    ) {
+    const cur = markerRef.current.getLngLat();
+    if (Math.abs(cur.lat - lat) > 0.0001 || Math.abs(cur.lng - lng) > 0.0001) {
       markerRef.current.setLngLat([lng, lat]);
       mapRef.current.flyTo({ center: [lng, lat], zoom: 15, duration: 800 });
     }
   }, [lat, lng]);
 
-  // Actualizar tema del mapa si cambia (ignorar primer render ya que Map() ya recibe el estilo inicial)
-  const isFirstThemeRun = useRef(true);
+  // Tema del mapa (el primer render ya lo recibe en el constructor)
+  const firstTheme = useRef(true);
   useEffect(() => {
-    if (isFirstThemeRun.current) {
-      isFirstThemeRun.current = false;
+    if (firstTheme.current) {
+      firstTheme.current = false;
       return;
     }
-    const map = mapRef.current;
-    if (!map) return;
     try {
-      map.setStyle(getMapStyle(theme));
+      mapRef.current?.setStyle(getMapStyle(theme));
     } catch {
-      // Ignore style change error if unmounting
+      // se está desmontando
     }
   }, [theme]);
 
-  // Búsqueda de dirección (Geocodificación directa con sesgo de proximidad y código postal)
-  const handleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const query = searchQuery.trim();
-    if (!query || !mapRef.current || !markerRef.current) return;
+  // ── Provincia y localidad ──
+  const changeProvince = (p: string) => {
+    setLocText('');
+    setLocOpts([]);
+    setLocStatus('idle');
+    resetResults();
+    onChange({ province: p, locality: '' });
+  };
 
-    setIsSearching(true);
-    try {
-      const lower = query.toLowerCase();
-      const hasCitySpecified =
-        lower.includes('rosario') ||
-        lower.includes('buenos aires') ||
-        lower.includes('caba') ||
-        lower.includes('cordoba') ||
-        lower.includes('mendoza') ||
-        lower.includes('santa fe') ||
-        lower.includes('funes') ||
-        lower.includes('roldan') ||
-        lower.includes('baigorria') ||
-        lower.includes('galvez');
-
-      const locToUse = defaultLocality?.trim() || 'Rosario';
-      const postalToUse = defaultPostalCode?.trim() || '2000';
-      const targetQuery = hasCitySpecified
-        ? query
-        : `${query}, ${postalToUse} ${locToUse}, Santa Fe, Argentina`;
-
-      const currentCenter = mapRef.current.getCenter();
-      const proximityPos: [number, number] = [currentCenter.lng, currentCenter.lat];
-
-      if (MAPTILER_API_KEY) {
-        let result = await maptilersdk.geocoding.forward(targetQuery, {
-          country: ['ar'],
-          proximity: proximityPos,
-        });
-
-        // Si la búsqueda contextualizada no arrojó resultados, probar búsqueda directa con proximidad
-        if (!result || !result.features || result.features.length === 0) {
-          result = await maptilersdk.geocoding.forward(query, {
-            country: ['ar'],
-            proximity: proximityPos,
-          });
-        }
-
-        if (result && result.features && result.features.length > 0) {
-          const [foundLng, foundLat] = result.features[0].center;
-          mapRef.current.flyTo({ center: [foundLng, foundLat], zoom: 16, duration: 1000 });
-          markerRef.current.setLngLat([foundLng, foundLat]);
-          await handlePositionChange(foundLng, foundLat);
-        } else {
-          alert('No se encontraron resultados para la dirección buscada. Probá agregando la altura exacta o la calle.');
-        }
-      } else {
-        const nominatimQuery = hasCitySpecified
-          ? query
-          : `${query}, ${postalToUse} ${locToUse}, Santa Fe, Argentina`;
-
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            nominatimQuery
-          )}&countrycodes=ar&limit=1`
-        );
-        const data = await response.json();
-        if (data && data.length > 0) {
-          const foundLat = parseFloat(data[0].lat);
-          const foundLng = parseFloat(data[0].lon);
-          mapRef.current.flyTo({ center: [foundLng, foundLat], zoom: 16, duration: 1000 });
-          markerRef.current.setLngLat([foundLng, foundLat]);
-          await handlePositionChange(foundLng, foundLat);
-        } else {
-          alert('No se encontraron resultados para la dirección buscada.');
-        }
-      }
-    } catch (error) {
-      console.error('Error al buscar dirección:', error);
-    } finally {
-      setIsSearching(false);
+  const onLocText = (t: string) => {
+    setLocText(t);
+    if (locality && norm(t) !== norm(locality)) { // tocó el texto: la localidad deja de estar confirmada
+      resetResults();
+      onChange({ locality: '' });
     }
   };
 
-  // Botón Mi Ubicación
-  const handleGeolocation = () => {
-    if (!navigator.geolocation || !mapRef.current || !markerRef.current) return;
+  const chooseLocality = (o: GeoArea) => {
+    const changed = norm(o.locality) !== norm(locality) || norm(o.province) !== norm(province);
+    center.current = o.center;
+    setLocText(o.locality);
+    setLocOpts([]);
+    setLocStatus('idle');
+    resetResults();
+    markerRef.current?.setLngLat(o.center);
+    mapRef.current?.flyTo({ center: o.center, zoom: DEFAULT_MAP_ZOOM, duration: 800 });
+    // Otra ciudad = otra dirección: no se arrastran calle, barrio ni código postal de la anterior.
+    onChange({ province: o.province, locality: o.locality, lat: o.center[1], lng: o.center[0], ...(changed ? { address: '', neighborhood: '', postalCode: '' } : {}) });
+    setQuery('');
+    picked.current = '';
+  };
 
-    setIsGeolocating(true);
+  // Localidades de la provincia mientras se escribe ("san nic" → San Nicolás de los Arroyos)
+  useEffect(() => {
+    const q = locText.trim();
+    if (q.length < 2 || (locality && norm(q) === norm(locality))) {
+      setLocOpts([]);
+      setLocStatus('idle');
+      return;
+    }
+    const id = ++locReq.current;
+    const t = setTimeout(async () => {
+      try {
+        const opts = await searchLocalities(province, q);
+        if (id !== locReq.current) return;
+        setLocOpts(opts);
+        setLocActive(-1);
+        setLocStatus(opts.length ? 'idle' : 'empty');
+      } catch {
+        if (id === locReq.current) { setLocOpts([]); setLocStatus('error'); }
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [locText, province, locality]);
+
+  const onLocKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!locOpts.length) return;
+      e.preventDefault();
+      setLocActive((i) => (e.key === 'ArrowDown' ? (i + 1) % locOpts.length : (i - 1 + locOpts.length) % locOpts.length));
+    } else if (e.key === 'Enter') {
+      e.preventDefault(); // el selector vive dentro del formulario de la sucursal: Enter no debe enviarlo
+      e.stopPropagation();
+      const choice = locOpts[locActive] ?? locOpts[0];
+      if (choice) chooseLocality(choice);
+    } else if (e.key === 'Escape' && locOpts.length) {
+      e.stopPropagation();
+      setLocOpts([]);
+    }
+  };
+
+  // ── Dirección: sugerencias mientras se escribe (con una pausa para no consultar en cada tecla) ──
+  useEffect(() => {
+    const q = query.trim();
+    if (q === picked.current) return;
+    if (q.length < 3 || !locality) {
+      setResults([]);
+      setStatus('idle');
+      return;
+    }
+    const t = setTimeout(async () => {
+      const id = ++request.current;
+      setStatus('loading');
+      const found = await searchAddress(q, { province, locality, center: center.current });
+      if (id !== request.current) return;
+      setResults(found);
+      setActive(-1);
+      setStatus(found.length ? 'idle' : 'empty');
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query, province, locality]);
+
+  const pick = (p: GeoPlace) => {
+    if (p.kind === 'street') {
+      // Solo la calle: se completa el nombre y se sigue escribiendo la altura (no se elige ningún punto todavía)
+      picked.current = p.street;
+      request.current++;
+      setResults([]);
+      setStatus('idle');
+      setQuery(`${p.street} `);
+      inputRef.current?.focus();
+      return;
+    }
+    mapRef.current?.flyTo({ center: [p.lng, p.lat], zoom: 17, duration: 800 });
+    markerRef.current?.setLngLat([p.lng, p.lat]);
+    picked.current = p.address;
+    request.current++;
+    setResults([]);
+    setStatus('idle');
+    setQuery(p.address);
+    locate(p.lng, p.lat, p);
+  };
+
+  const geolocate = () => {
+    if (!navigator.geolocation) return;
+    setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const userLat = pos.coords.latitude;
-        const userLng = pos.coords.longitude;
-        mapRef.current?.flyTo({ center: [userLng, userLat], zoom: 16, duration: 1000 });
-        markerRef.current?.setLngLat([userLng, userLat]);
-        handlePositionChange(userLng, userLat);
-        setIsGeolocating(false);
+        const { latitude, longitude } = pos.coords;
+        mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 16, duration: 800 });
+        markerRef.current?.setLngLat([longitude, latitude]);
+        locate(longitude, latitude);
+        setLocating(false);
       },
-      (err) => {
-        console.error('Error al obtener geolocalización:', err);
-        setIsGeolocating(false);
-      },
+      () => setLocating(false),
       { enableHighAccuracy: true, timeout: 8000 }
     );
   };
 
+  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!results.length) return;
+      e.preventDefault();
+      setActive((i) => (e.key === 'ArrowDown' ? (i + 1) % results.length : (i - 1 + results.length) % results.length));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      const choice = results[active] ?? results[0];
+      if (choice) pick(choice);
+    } else if (e.key === 'Escape' && results.length) {
+      e.stopPropagation();
+      setResults([]);
+    }
+  };
+
+  const locQ = locText.trim();
   return (
-    <div className={`w-full flex flex-col gap-3 ${className}`}>
-      {/* Barra de búsqueda sobre el mapa (div sin anidar form para no disparar el submit del formulario padre) */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-500" />
-          <input
-            type="text"
-            placeholder="Buscar calle y altura en el mapa..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSearch();
-              }
-            }}
-            className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
-          />
+    <div className={`owner bare lp ${className}`}>
+      <section className="lpstep" aria-labelledby="lp-step1">
+        <h4 className="eyebrow" id="lp-step1">1. Buscá la dirección</h4>
+        <div className="g2">
+          <Field label="Provincia">
+            {(id) => (
+              <select id={id} className="sel" value={province} onChange={(e) => changeProvince(e.target.value)}>
+                {!PROVINCES.includes(province) && <option value={province}>{province || 'Elegí la provincia'}</option>}
+                {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            )}
+          </Field>
+          <Field label="Ciudad o localidad" error={errors?.locality}>
+            {(id, aria) => (
+              <input
+                id={id}
+                className="inp"
+                role="combobox"
+                aria-expanded={locOpts.length > 0}
+                aria-controls={locListId}
+                aria-activedescendant={locActive >= 0 ? `${locListId}-${locActive}` : undefined}
+                aria-autocomplete="list"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Ej. Rosario"
+                value={locText}
+                onChange={(e) => onLocText(e.target.value)}
+                onKeyDown={onLocKey}
+                {...aria}
+              />
+            )}
+          </Field>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleSearch();
-          }}
-          disabled={isSearching}
-          className="px-3.5 py-2 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-sm flex items-center gap-1.5"
-        >
-          {isSearching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Buscar'}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleGeolocation();
-          }}
-          disabled={isGeolocating}
-          title="Usar mi ubicación actual"
-          className="p-2 text-slate-600 dark:text-zinc-300 bg-white dark:bg-zinc-950 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 rounded-xl transition-colors disabled:opacity-50 inline-flex items-center justify-center cursor-pointer shadow-sm"
-        >
-          <Locate className={`h-4 w-4 ${isGeolocating ? 'animate-spin text-blue-500' : ''}`} />
-        </button>
-      </div>
 
-      {/* Contenedor del mapa interactivo */}
-      <div className="h-72 lg:h-80 w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 relative z-0 shadow-sm">
-        <div ref={mapContainerRef} className="w-full h-full" />
-      </div>
+        {locStatus === 'empty' && <p className="ctx" role="status">No encontramos “{locQ}” en {province}. Revisá el nombre o la provincia.</p>}
+        {locStatus === 'error' && <p className="ctx" role="status">No pudimos consultar las localidades. Revisá tu conexión e intentá de nuevo.</p>}
+        {locOpts.length > 0 && (
+          <ul className="optlist" id={locListId} role="listbox" aria-label="Localidades encontradas">
+            {locOpts.map((o, i) => (
+              <li key={`${o.locality}-${o.detail}`}>
+                <button type="button" id={`${locListId}-${i}`} role="option" aria-selected={i === locActive} className="opt" onClick={() => chooseLocality(o)}>
+                  <MapPin className="i" aria-hidden="true" />
+                  <span className="grow">{o.locality}<small>{o.detail}</small></span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
-      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 px-1">
-        <span className="flex items-center gap-1">
-          <MapPin className="h-3 w-3 text-blue-500" />
-          {lat && lng ? `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}` : 'Sin fijar'}
-        </span>
-        <span className="italic">Arrastrá el pin para ajustar</span>
-      </div>
+        <div className="lpbar">
+          <div className="search">
+            <Search className="i" aria-hidden="true" />
+            <input
+              type="text"
+              className="inp"
+              role="combobox"
+              aria-label="Calle y altura a buscar"
+              aria-expanded={results.length > 0}
+              aria-controls="lp-results"
+              aria-activedescendant={active >= 0 ? `lp-opt-${active}` : undefined}
+              aria-autocomplete="list"
+              placeholder={locality ? 'Buscar calle y altura' : 'Elegí primero la ciudad'}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={!locality}
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onKey}
+            />
+          </div>
+          <button type="button" className="icon-btn" data-tip="Usar mi ubicación" aria-label="Usar mi ubicación" onClick={geolocate} disabled={locating}>
+            <Locate className={`i${locating ? ' spin' : ''}`} />
+          </button>
+        </div>
+
+        {status === 'loading' && <p className="ctx" role="status">Buscando…</p>}
+        {status === 'empty' && (
+          <p className="ctx" role="status">
+            No encontramos esa dirección en {locality}. Revisá la calle y la altura, marcá el punto en el mapa o escribila en el paso 3.
+          </p>
+        )}
+
+        {results.length > 0 && (
+          <ul className="optlist" id="lp-results" role="listbox" aria-label="Direcciones encontradas">
+            {results.map((p, i) => (
+              <li key={`${p.lat},${p.lng},${i}`}>
+                <button type="button" id={`lp-opt-${i}`} role="option" aria-selected={i === active} className="opt" onClick={() => pick(p)}>
+                  {p.kind === 'street' ? <Route className="i" aria-hidden="true" /> : <MapPin className="i" aria-hidden="true" />}
+                  <span className="grow">
+                    {p.address}
+                    <small>{p.kind === 'street' ? 'Calle · escribí la altura' : [p.locality, p.province].filter(Boolean).join(', ')}</small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="lpstep" aria-labelledby="lp-step2">
+        <h4 className="eyebrow" id="lp-step2">2. Confirmá el punto en el mapa</h4>
+        <div className="lpmap" aria-label="Mapa para ubicar la cochera">
+          <div ref={mapContainerRef} className="lpcanvas" />
+        </div>
+        <div className="lpfoot">
+          <span><MapPin className="i sm" aria-hidden="true" />{lat && lng ? `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}` : 'Sin fijar'}</span>
+          <span>Arrastrá el pin hasta la entrada del local</span>
+        </div>
+      </section>
+
+      <section className="lpstep" aria-labelledby="lp-step3">
+        <h4 className="eyebrow" id="lp-step3">3. Revisá los datos</h4>
+        <Input label="Calle y altura" placeholder="Ej. Av. Pellegrini 1540" autoComplete="off" value={value.address} onChange={(e) => onChange({ address: e.target.value })} error={errors?.address} />
+        <div className="g2">
+          <Input label="Barrio o zona (opcional)" placeholder="Ej. Centro, Pichincha" hint="Es lo que los clientes buscan en el mapa." value={value.neighborhood} onChange={(e) => onChange({ neighborhood: e.target.value })} />
+          <Input label="Código postal" placeholder="2000 o S2000ABC" maxLength={8} autoCapitalize="characters" autoComplete="postal-code" value={value.postalCode} onChange={(e) => onChange({ postalCode: e.target.value })} error={errors?.postalCode} />
+        </div>
+      </section>
     </div>
   );
 }

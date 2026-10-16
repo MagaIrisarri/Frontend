@@ -9,10 +9,12 @@ import { cn } from '@/lib/utils.js';
 import type { ServicePrice } from '@/types/servicePrice.types';
 import { getParkingServices } from '@/services/servicePrice.service';
 import { createReservation } from '../../services/reservation.service';
+import { today } from '../Owner/owner.lib';
+import { atAR } from '../../utils/date';
 
 interface ReservarState {
   vehicleId: string;
-  vehicleType: string;
+  vehicleTypeId: string; // R-30: las plazas del mismo tipo de vehículo
 }
 
 function generateHourOptions(openingTime: string, closingTime: string): string[] {
@@ -42,8 +44,8 @@ export function ParkingSpaceMap() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [reservationSuccess, setReservationSuccess] = useState(false);
 
-  const startTime = date && entryTime ? new Date(`${date}T${entryTime}:00`) : null;
-  const endTime = date && exitTime ? new Date(`${date}T${exitTime}:00`) : null;
+  const startTime = date && entryTime ? atAR(date, entryTime) : null; // L-04: la hora elegida es de Argentina
+  const endTime = date && exitTime ? atAR(date, exitTime) : null;
 
   const hourOptions = parking ? generateHourOptions(parking.openingTime, parking.closingTime) : [];
 
@@ -53,8 +55,8 @@ export function ParkingSpaceMap() {
     endTime &&
     startTime < endTime &&
     startTime >= new Date() &&
-    startTime.getMinutes() === 0 &&
-    endTime.getMinutes() === 0 &&
+    entryTime.slice(3, 5) === '00' &&
+    exitTime.slice(3, 5) === '00' &&
     entryTime >= parking!.openingTime &&
     exitTime <= parking!.closingTime &&
     (endTime.getTime() - startTime.getTime()) >= parking!.minReservationHours * 60 * 60 * 1000 &&
@@ -72,7 +74,7 @@ export function ParkingSpaceMap() {
   };
 
   useEffect(() => {
-    if (!state?.vehicleId || !state?.vehicleType) {
+    if (!state?.vehicleId || !state?.vehicleTypeId) {
       navigate('/');
       return;
     }
@@ -101,12 +103,12 @@ export function ParkingSpaceMap() {
   });
 
   useEffect(() => {
-    if (!isHorarioValid || !id || !state?.vehicleType || !startTime || !endTime) {
+    if (!isHorarioValid || !id || !state?.vehicleTypeId || !startTime || !endTime) {
       setSpacesWithAvailability(null);
       setSelectedSpaceId(null);
       return;
     }
-    getSpaceAvailability(id, state.vehicleType, startTime, endTime).then((res) => {
+    getSpaceAvailability(id, state.vehicleTypeId, startTime, endTime).then((res) => {
       setSpacesWithAvailability(res.data);
       setSelectedSpaceId(null);
     });
@@ -151,7 +153,7 @@ export function ParkingSpaceMap() {
               <label className="block text-xs text-muted-foreground mb-1">Fecha de Ingreso</label>
               <input
                 type="date"
-                min={new Date().toISOString().split('T')[0]}
+                min={today()}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all outline-none"

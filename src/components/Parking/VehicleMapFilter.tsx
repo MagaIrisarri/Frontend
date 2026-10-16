@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, SlidersHorizontal, Check, X, Car, Bike, Truck, Tag } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, Check, X, Tag } from 'lucide-react';
+import { iconOf } from '../Owner/ui/vehicles';
+import { useVehicleTypes } from '../../hooks/useVehicleTypes';
+import { typeLabel, typePlural } from '../../pages/Owner/owner.lib';
 import type { VehicleFilterType } from '../../types/mapFilters.types';
 
 interface VehicleOption {
@@ -9,161 +12,104 @@ interface VehicleOption {
   description: string;
 }
 
-const VEHICLE_OPTIONS: VehicleOption[] = [
-  { type: 'MOTO', label: 'Moto', icon: Bike, description: 'Tarifa para motos' },
-  { type: 'AUTO', label: 'Auto', icon: Car, description: 'Tarifa para autos' },
-  { type: 'CAMIONETA', label: 'Camioneta', icon: Truck, description: 'Tarifa utilitarios y pickups' },
-];
-
 interface VehicleMapFilterProps {
   selectedVehicleType: VehicleFilterType | null;
   onSelectVehicleType: (type: VehicleFilterType | null) => void;
   className?: string;
 }
 
+// Se monta dentro de .owner (barra superior de Home): usa .btn / .menu del formato del rol dueño.
 export const VehicleMapFilter: React.FC<VehicleMapFilterProps> = ({
   selectedVehicleType,
   onSelectVehicleType,
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  // R-30: un ítem por tipo del catálogo del administrador (AUTO, MOTO, CAMIONETA y los que agregue).
+  const { types } = useVehicleTypes();
+  const VEHICLE_OPTIONS: VehicleOption[] = types.map((t) => ({
+    type: { id: t.id, name: t.name }, label: typeLabel(t.name), icon: iconOf(t.name), description: `Tarifa para ${typePlural(t.name).toLowerCase()}`,
+  }));
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Cerrar dropdown al hacer click afuera
+  // Cerrar dropdown al hacer click afuera o con Escape
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    if (!isOpen) return;
+    const onDown = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
     };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
     };
   }, [isOpen]);
 
-  const activeOption = VEHICLE_OPTIONS.find((opt) => opt.type === selectedVehicleType);
+  const activeOption = selectedVehicleType
+    ? VEHICLE_OPTIONS.find((opt) => opt.type.id === selectedVehicleType.id)
+      ?? { type: selectedVehicleType, label: typeLabel(selectedVehicleType.name), icon: iconOf(selectedVehicleType.name), description: '' }
+    : undefined;
 
   const handleSelect = (type: VehicleFilterType | null) => {
     onSelectVehicleType(type);
     setIsOpen(false);
   };
 
+  const item = (
+    key: string,
+    checked: boolean,
+    Icon: React.ComponentType<{ className?: string }>,
+    label: string,
+    description: string,
+    type: VehicleFilterType | null
+  ) => (
+    <button key={key} type="button" role="menuitemradio" aria-checked={checked} onClick={() => handleSelect(type)}>
+      <span>
+        <Icon className="i" />
+        <span>
+          {label}
+          <small>{description}</small>
+        </span>
+      </span>
+      {checked && <Check className="i" />}
+    </button>
+  );
+
   return (
-    <div ref={dropdownRef} className={`relative shrink-0 ${className}`}>
-      {/* Botón Trigger del desplegable */}
+    <div ref={dropdownRef} className={`vwrap ${className}`}>
       <button
         type="button"
+        className={`btn hfloat${selectedVehicleType ? ' on' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border shadow-xl text-xs font-semibold transition-all cursor-pointer select-none active:scale-95 ${
-          selectedVehicleType
-            ? 'bg-blue-600 text-white border-blue-500 shadow-blue-600/20'
-            : 'bg-white/95 dark:bg-zinc-900/95 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-white border-zinc-200 dark:border-zinc-800'
-        }`}
-        title="Filtrar precio por tipo de vehículo"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
       >
-        {activeOption ? (
-          <>
-            <activeOption.icon className="h-4 w-4 shrink-0" />
-            <span className="font-bold">{activeOption.label}</span>
-          </>
-        ) : (
-          <>
-            <SlidersHorizontal className="h-4 w-4 text-blue-500 dark:text-blue-400 shrink-0" />
-            <span className="hidden sm:inline">Filtrar precio</span>
-          </>
-        )}
-
-        <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform duration-200 ${
-            isOpen ? 'rotate-180' : ''
-          } ${selectedVehicleType ? 'text-white/80' : 'text-zinc-400'}`}
-        />
+        {activeOption ? <activeOption.icon className="i" /> : <SlidersHorizontal className="i" />}
+        <span className="lbl-d">Vehículo: {activeOption ? activeOption.label : 'Todos'}</span>
+        <ChevronDown className="i sm" />
       </button>
 
-      {/* Menú Desplegable */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 p-2 text-xs animate-in fade-in zoom-in-95 duration-150">
-          <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 mb-1">
-            <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">
-              Filtrar precio en el mapa
-            </span>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              Seleccioná un vehículo para ver su tarifa
-            </span>
-          </div>
-
-          <div className="space-y-1">
-            {/* Opción: Sin filtro / Todos (Precio más bajo) */}
-            <button
-              type="button"
-              onClick={() => handleSelect(null)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-left cursor-pointer ${
-                selectedVehicleType === null
-                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold'
-                  : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Tag className="h-4 w-4 text-zinc-500 shrink-0" />
-                <div>
-                  <span className="block font-semibold">Todos los vehículos</span>
-                  <span className="block text-[10px] text-zinc-400 dark:text-zinc-500 font-normal">
-                    Muestra el precio mínimo (Desde $X/h)
-                  </span>
-                </div>
-              </div>
-              {selectedVehicleType === null && (
-                <Check className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-              )}
-            </button>
-
-            {/* Opciones por tipo de vehículo */}
-            {VEHICLE_OPTIONS.map((opt) => {
-              const isSelected = selectedVehicleType === opt.type;
-              const IconComp = opt.icon;
-              return (
-                <button
-                  key={opt.type}
-                  type="button"
-                  onClick={() => handleSelect(opt.type)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-left cursor-pointer ${
-                    isSelected
-                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold'
-                      : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <IconComp className={`h-4 w-4 shrink-0 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-500'}`} />
-                    <div>
-                      <span className="block font-semibold">{opt.label}</span>
-                      <span className="block text-[10px] text-zinc-400 dark:text-zinc-500 font-normal">
-                        {opt.description}
-                      </span>
-                    </div>
-                  </div>
-                  {isSelected && (
-                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
+        <div role="menu" aria-label="Tipo de vehículo" className="menu on vmenu">
+          <div className="mh">Mostrá solo las cocheras con lugar y tarifa para tu vehículo.</div>
+          {item('all', selectedVehicleType === null, Tag, 'Todos los vehículos', 'Sin filtrar: precio mínimo (Desde $X/h)', null)}
+          {VEHICLE_OPTIONS.map((opt) =>
+            item(opt.type.id, selectedVehicleType?.id === opt.type.id, opt.icon, opt.label, opt.description, opt.type)
+          )}
           {selectedVehicleType && (
-            <div className="mt-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={() => handleSelect(null)}
-                className="w-full py-1.5 px-3 text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <X className="h-3.5 w-3.5" />
-                <span>Restablecer filtro</span>
+            <>
+              <hr />
+              <button type="button" role="menuitem" onClick={() => handleSelect(null)}>
+                <span>
+                  <X className="i" />
+                  Restablecer filtro
+                </span>
               </button>
-            </div>
+            </>
           )}
         </div>
       )}

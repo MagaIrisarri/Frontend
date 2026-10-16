@@ -1,28 +1,39 @@
-import React, { useEffect, useRef, memo, useCallback } from 'react';
+import { createElement, useEffect, useRef, memo, useCallback, useState } from 'react';
+import { Loader2, Search } from 'lucide-react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import * as maptilersdk from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import type { Parking } from '../../types/parking.types';
 import type { VehicleFilterType } from '../../types/mapFilters.types';
-import { formatSpotPrice } from '../../utils/parkingPriceUtils.js';
+import { formatSpotPrice, getUnavailableReason } from '../../utils/parkingPriceUtils.js';
+import { iconOf } from '../Owner/ui/vehicles';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle } from '../../config/map.js';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../Owner/ui/Toasts';
+import type { LngLat } from '../../utils/distance';
 
 interface MapViewProps {
   spots: Parking[];
   selectedId: string | null;
   onSelect?: (id: string) => void;
-  prices?: Record<string, number>;
   selectedVehicleType?: VehicleFilterType | null;
+  fit?: boolean; // encuadrar los pines cuando cambian (no, si la lista sale de la zona que el usuario está mirando)
+  onSearchArea?: (bounds: [number, number, number, number]) => void; // [oeste, sur, este, norte]
+  onViewChange?: (bounds: [number, number, number, number]) => void; // lo que se ve, al cargar y tras cada movimiento
+  onLocate?: (pos: LngLat) => void; // el usuario tocó "Mi ubicación" y el navegador la dio
 }
 
-const EMPTY_PRICES: Record<string, number> = {};
+const toArea = (b: maptilersdk.LngLatBounds): [number, number, number, number] => [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
 
 function MapViewComponent({
   spots,
   selectedId,
   onSelect,
-  prices = EMPTY_PRICES,
   selectedVehicleType = null,
+  fit = true,
+  onSearchArea,
+  onViewChange,
+  onLocate,
 }: MapViewProps) {
   const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -30,43 +41,41 @@ function MapViewComponent({
   const activeMarkersRef = useRef<maptilersdk.Marker[]>([]);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
-  const isInternalClickRef = useRef(false);
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
+  const onLocateRef = useRef(onLocate);
+  onLocateRef.current = onLocate;
+  const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  const centeredIdRef = useRef<string | null>(null);
+  const fittedKeyRef = useRef<string | null>(null);
+  const [searching, setSearching] = useState(false);
+  const searchTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => clearTimeout(searchTimerRef.current), []);
+  const [moved, setMoved] = useState(false); // el usuario movió o acercó el mapa: se ofrece "Buscar en esta zona"
 
   // Helper para generar el contenido HTML de un pin individual
   const getSingleMarkerHtml = useCallback((spot: Parking, isSelected: boolean) => {
     const spotPrice = formatSpotPrice(spot, selectedVehicleType);
-    const isUnavailable = !spotPrice.isAvailable;
+    const reason = selectedVehicleType ? getUnavailableReason(spot, selectedVehicleType.id) : null;
+    const isUnavailable = !spotPrice.isAvailable || reason !== null;
 
-    if (isSelected) {
-      return `
-        <div class="px-3.5 py-1.5 rounded-full ${
-          isUnavailable
-            ? 'bg-zinc-800 text-zinc-300 border-zinc-600'
-            : 'bg-blue-600 text-white border-blue-400 dark:border-blue-300'
-        } font-extrabold text-xs shadow-xl shadow-blue-500/40 scale-105 ring-4 ring-blue-500/30 transition-all duration-150 border whitespace-nowrap flex items-center gap-1.5 select-none z-30">
-          ${selectedVehicleType && spotPrice.isAvailable ? `<span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse shrink-0"></span>` : ''}
-          <span>${spotPrice.text}</span>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="px-3 py-1.5 rounded-full ${
-        isUnavailable
-          ? 'bg-zinc-100/90 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 border-zinc-300 dark:border-zinc-700'
-          : 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white font-bold border-zinc-200 dark:border-zinc-700 hover:scale-105 hover:shadow-lg hover:border-blue-500'
-      } text-xs shadow-md border transition-all duration-150 whitespace-nowrap flex items-center gap-1.5 select-none">
-        ${selectedVehicleType && spotPrice.isAvailable ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>` : ''}
-        <span>${spotPrice.text}</span>
-      </div>
-    `;
+    // Con filtro: ícono de la categoría (los mismos del panel del dueño) y precio de esa categoría; sin filtro: "desde" el menor.
+    // Completo / sin tarifa se dicen con texto, no solo con color. Estilos en styles/home.scss (.pin).
+    const icon = selectedVehicleType ? renderToStaticMarkup(createElement(iconOf(selectedVehicleType.name), { className: 'i sm', 'aria-hidden': true })) : '';
+    const label =
+      reason === 'NO_SPACE' ? 'Completo'
+      : reason === 'NO_PRICE' || spotPrice.price === null ? (selectedVehicleType ? 'Sin tarifa' : 'Consultar')
+      : `${selectedVehicleType ? '' : '<small>desde</small> '}$${spotPrice.price.toLocaleString('es-AR')}<small>/h</small>`;
+    return `<div class="pin${isSelected ? ' sel' : ''}${isUnavailable ? ' na' : ''}">${icon}<span>${label}</span></div>`;
   }, [selectedVehicleType]);
 
   // Helper para generar el contenido HTML de un Cluster
   const getClusterHtml = (count: number) => {
     return `
-      <div class="px-3 py-1.5 rounded-full bg-zinc-900 dark:bg-zinc-800 text-white font-black text-xs shadow-xl border border-zinc-700 dark:border-zinc-600 flex items-center gap-1.5 cursor-pointer hover:scale-110 hover:bg-blue-600 transition-all select-none">
-        <span class="w-2 h-2 rounded-full bg-blue-400 shrink-0 animate-ping"></span>
+      <div class="cluster">
+        <span class="dot"></span>
         <span>${count} cocheras</span>
       </div>
     `;
@@ -143,7 +152,7 @@ function MapViewComponent({
           map.flyTo({
             center: cluster.center,
             zoom: Math.min(18, map.getZoom() + 2.5),
-            duration: 600,
+            duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600,
           });
         });
 
@@ -165,7 +174,6 @@ function MapViewComponent({
 
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          isInternalClickRef.current = true;
           if (onSelectRef.current) {
             onSelectRef.current(spot.id);
           }
@@ -193,18 +201,62 @@ function MapViewComponent({
       center: DEFAULT_MAP_CENTER,
       zoom: DEFAULT_MAP_ZOOM,
       navigationControl: 'bottom-right',
+      geolocateControl: false, // se agrega abajo para escuchar sus eventos
+      locale: { // etiquetas accesibles de los controles del mapa, en español
+        'GeolocateControl.FindMyLocation': 'Mi ubicación',
+        'GeolocateControl.LocationNotAvailable': 'Ubicación no disponible',
+        'NavigationControl.ZoomIn': 'Acercar',
+        'NavigationControl.ZoomOut': 'Alejar',
+        'NavigationControl.ResetBearing': 'Orientar al norte',
+        'AttributionControl.ToggleAttribution': 'Créditos del mapa',
+      },
+      attributionControl: { compact: true }, // botón ⓘ que se despliega; la atribución de OSM y MapTiler es obligatoria por licencia y no se quita
     });
 
+    // "Mi ubicación": el permiso se pide solo al tocar el botón. Al ubicarse se ofrece "Buscar en esta zona" y el listado pasa a "Más cercanas".
+    const locate = new maptilersdk.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 10000 }, trackUserLocation: false });
+    map.addControl(locate, 'bottom-right');
+    locate.on('geolocate', (e: any) => {
+      onLocateRef.current?.([e.coords.longitude, e.coords.latitude]);
+      setMoved(true);
+    });
+    locate.on('error', (e: any) => {
+      toastRef.current(e?.code === 1
+        ? 'No pudimos acceder a tu ubicación. Activala en los permisos del navegador.'
+        : 'No pudimos obtener tu ubicación. Intentá de nuevo.', 'err');
+    });
+    // en modo compacto MapLibre arranca con los créditos abiertos hasta que se toca el mapa: se dejan cerrados desde el principio y al cargar
+    const closeCredits = () => {
+      const credits = map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+      credits?.classList.remove('maplibregl-compact-show');
+      credits?.removeAttribute('open');
+    };
+    closeCredits();
+    map.once('load', closeCredits);
+    // un toque fuera del botón cierra los créditos (MapLibre solo los cierra al mover el mapa)
+    const closeOutside = (e: PointerEvent) => {
+      const credits = map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+      if (credits && !credits.contains(e.target as Node)) closeCredits();
+    };
+    document.addEventListener('pointerdown', closeOutside);
     map.on('styleimagemissing', () => {});
-    map.on('load', () => renderMarkersRef.current());
+    map.on('load', () => {
+      renderMarkersRef.current();
+      onViewChangeRef.current?.(toArea(map.getBounds()));
+    });
     map.on('style.load', () => renderMarkersRef.current());
     map.on('styledata', () => renderMarkersRef.current());
     map.on('zoomend', () => renderMarkersRef.current());
-    map.on('moveend', () => renderMarkersRef.current());
+    map.on('moveend', (e) => {
+      renderMarkersRef.current();
+      onViewChangeRef.current?.(toArea(map.getBounds()));
+      if (e.originalEvent) setMoved(true); // solo arrastre, rueda o botones de zoom; los encuadres por código no traen evento
+    });
 
     mapRef.current = map;
 
     return () => {
+      document.removeEventListener('pointerdown', closeOutside);
       try {
         activeMarkersRef.current.forEach((marker) => marker.remove());
         activeMarkersRef.current = [];
@@ -251,7 +303,12 @@ function MapViewComponent({
       return !isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0);
     });
 
-    if (validSpots.length > 0) {
+    // Encuadrar solo si cambian los pines: refrescar los datos de uno (p. ej. lugares libres de la elegida) no debe alejar el mapa
+    const key = validSpots.map((s) => s.id).sort().join(); // sin importar el orden: reordenar el listado no debe volver a encuadrar
+    if (!fit) fittedKeyRef.current = null;
+    if (fit && validSpots.length > 0 && key !== fittedKeyRef.current) {
+      fittedKeyRef.current = key;
+      setMoved(false);
       const bounds = new maptilersdk.LngLatBounds();
       validSpots.forEach((s) => bounds.extend([Number(s.longitude), Number(s.latitude)]));
       map.fitBounds(bounds, {
@@ -260,19 +317,28 @@ function MapViewComponent({
         duration: 800,
       });
     }
-  }, [spots, selectedVehicleType]);
+  }, [spots, selectedVehicleType, fit]);
+
+  const searchArea = () => {
+    const b = mapRef.current?.getBounds();
+    if (!b || !onSearchArea) return;
+    onSearchArea(toArea(b));
+    // shortcut: L-26, elfiltro es local e instantáneo; el spinner dura un mínimo fijo para que se perciba, cuando la búsqueda sea remota atarlo a la carga real
+    setSearching(true);
+    searchTimerRef.current = window.setTimeout(() => {
+      setSearching(false);
+      setMoved(false);
+    }, 500);
+  };
 
   // Actualizar selección activa
   useEffect(() => {
     renderMarkers();
 
-    if (isInternalClickRef.current) {
-      isInternalClickRef.current = false;
-      return;
-    }
-
+    if (!selectedId) centeredIdRef.current = null;
     const map = mapRef.current;
-    if (!map || !selectedId) return;
+    // Centrar solo cuando cambia la selección: si cambian los spots (p. ej. "Buscar en esta zona") el mapa no debe saltar al pin elegido
+    if (!map || !selectedId || centeredIdRef.current === selectedId) return;
 
     const selectedSpot = spots.find((s) => s.id === selectedId);
     if (!selectedSpot) return;
@@ -281,14 +347,27 @@ function MapViewComponent({
     const lng = Number(selectedSpot.longitude);
 
     if (!isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0)) {
-      map.easeTo({
+      centeredIdRef.current = selectedId;
+      // Acercar a la sucursal (desde la lista o su pin); si el usuario ya está más cerca, no alejar
+      map.flyTo({
         center: [lng, lat],
-        duration: 500,
+        zoom: Math.max(map.getZoom(), 16),
+        duration: 800,
       });
     }
   }, [selectedId, spots, renderMarkers]);
 
-  return <div ref={mapContainerRef} className="w-full h-full relative" />;
+  return (
+    <>
+      <div ref={mapContainerRef} className="w-full h-full relative" />
+      {moved && onSearchArea && (
+        <button type="button" className="btn hfloat areabtn" onClick={searchArea} disabled={searching} aria-busy={searching}>
+          {searching ? <Loader2 className="i sm spin" aria-hidden="true" /> : <Search className="i sm" aria-hidden="true" />}
+          {searching ? 'Buscando…' : 'Buscar en esta zona'}
+        </button>
+      )}
+    </>
+  );
 }
 
 export const MapView = memo(MapViewComponent);

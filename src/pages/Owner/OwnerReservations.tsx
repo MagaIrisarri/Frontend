@@ -1,687 +1,311 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
+import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
+import { Presence, Shown } from '../../components/Owner/ui/Presence';
+import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
+import { Input, apiError } from '../../components/Owner/ui/Field';
+import { useToast } from '../../components/Owner/ui/Toasts';
+import { cancelReservation, getReservation } from '../../services/reservation.service';
+import { getRange } from '../../services/shift.service';
+import { Stars } from '../../components/Owner/ui/Stars';
+import { useOwner, type Emp } from './OwnerContext';
 import {
-  FileSpreadsheet,
-  Download,
-  Search,
-  Building2,
-  Calendar,
-  Car,
-  User,
-  ArrowLeft,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  XCircle,
-  Sparkles,
-  RefreshCw,
-  Phone,
-  Trash2,
-  AlertTriangle,
-} from 'lucide-react';
-import { ThemeToggle } from '../../components/Shared/ThemeToggle';
-import { ReservationStatusBadge } from '../../components/Shared/ReservationStatusBadge';
-import { useCurrentUser } from '../../hooks/useCurrentUser';
-import { useTheme } from '../../context/ThemeContext';
-import { getReservationsByOwner, cancelReservation } from '../../services/reservation.service';
-import { getParkingsByOwner } from '../../services/parking.service';
-import type { Reservation } from '../../types/reservation.types';
-import type { Parking } from '../../types/parking.types';
+  RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, normRes, plural, shD, today, type Res, type ResState,
+} from './owner.lib';
 
-export const OwnerReservations: React.FC = () => {
-  const navigate = useNavigate();
-  const currentUser = useCurrentUser();
-  const { theme } = useTheme();
+type StFilter = 'all' | ResState;
+const ST_SEGS: [StFilter, string][] = [['all', 'Todas'], ['curso', 'En curso'], ['reservada', 'Reservadas'], ['finalizada', 'Finalizadas'], ['cancelada', 'Canceladas']];
+const empName = (e?: Emp) => (e ? `${e.name} ${e.last_name}` : '');
 
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [parkings, setParkings] = useState<Parking[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Filtros
-  const [selectedParkingId, setSelectedParkingId] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-
-  // Estados de baja de reserva
-  const [confirmingCancel, setConfirmingCancel] = useState<Reservation | null>(null);
-  const [cancelling, setCancelling] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-
-  const handleCancelReservation = async () => {
-    if (!confirmingCancel || !currentUser?.id) return;
-    try {
-      setCancelling(true);
-      setActionError(null);
-      await cancelReservation(confirmingCancel.id, currentUser.id);
-      setActionSuccess(`Reserva #${confirmingCancel.id.substring(0, 8)} dada de baja con éxito.`);
-      setConfirmingCancel(null);
-      await loadData();
-      setTimeout(() => setActionSuccess(null), 4000);
-    } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Error al dar de baja la reserva';
-      setActionError(msg);
-      setTimeout(() => setActionError(null), 5000);
-    } finally {
-      setCancelling(false);
-    }
-  };
-
-  const loadData = async () => {
-    if (!currentUser?.id) return;
-    try {
-      setLoading(true);
-      const [resData, parkingsData] = await Promise.all([
-        getReservationsByOwner(currentUser.id).catch(() => ({ data: [] })),
-        getParkingsByOwner(currentUser.id).catch(() => ({ data: [] })),
-      ]);
-
-      const resList = Array.isArray(resData) ? resData : (resData?.data || []);
-      const parkList = Array.isArray(parkingsData) ? parkingsData : (parkingsData?.data || []);
-
-      setReservations(resList);
-      setParkings(parkList);
-    } catch (err) {
-      console.error('Error al cargar reporte de reservas:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [currentUser]);
-
-  // Filtrado reactivo
-  const filteredReservations = useMemo(() => {
-    return reservations.filter((r) => {
-      // Filtro por cochera
-      if (selectedParkingId !== 'all' && r.parkingSpace?.parking?.id !== selectedParkingId) {
-        return false;
-      }
-
-      // Filtro por estado
-      if (statusFilter === 'active') {
-        if (!['EN CURSO', 'CONFIRMADA', 'PENDIENTE'].includes(r.status)) return false;
-      } else if (statusFilter === 'completed') {
-        if (r.status !== 'FINALIZADA') return false;
-      } else if (statusFilter === 'cancelled') {
-        if (r.status !== 'CANCELADA') return false;
-      } else if (statusFilter !== 'all' && r.status !== statusFilter) {
-        return false;
-      }
-
-      // Filtro por fechas
-      if (startDate) {
-        const resStart = new Date(r.startTime).toISOString().split('T')[0];
-        if (resStart < startDate) return false;
-      }
-      if (endDate) {
-        const resStart = new Date(r.startTime).toISOString().split('T')[0];
-        if (resStart > endDate) return false;
-      }
-
-      // Filtro de búsqueda por texto (patente, cliente, plaza, ID)
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const plate = r.vehicle?.plate?.toLowerCase() || '';
-        const clientName = `${r.vehicle?.client?.name || ''} ${r.vehicle?.client?.last_name || ''}`.toLowerCase();
-        const clientPhone = r.vehicle?.client?.phone || '';
-        const spaceCode = r.parkingSpace?.spaceCode?.toLowerCase() || '';
-        const parkingName = r.parkingSpace?.parking?.name?.toLowerCase() || '';
-        const resId = r.id?.toLowerCase() || '';
-
-        return (
-          plate.includes(q) ||
-          clientName.includes(q) ||
-          clientPhone.includes(q) ||
-          spaceCode.includes(q) ||
-          parkingName.includes(q) ||
-          resId.includes(q)
-        );
-      }
-
-      return true;
-    });
-  }, [reservations, selectedParkingId, statusFilter, searchQuery, startDate, endDate]);
-
-  // Estadísticas calculadas
-  const stats = useMemo(() => {
-    const total = reservations.length;
-    const active = reservations.filter((r) => ['EN CURSO', 'CONFIRMADA', 'PENDIENTE'].includes(r.status)).length;
-    const completed = reservations.filter((r) => r.status === 'FINALIZADA').length;
-    const cancelled = reservations.filter((r) => r.status === 'CANCELADA').length;
-
-    return { total, active, completed, cancelled };
-  }, [reservations]);
-
-  // Exportar a Excel (CSV con UTF-8 BOM)
-  const exportToCSV = () => {
-    if (filteredReservations.length === 0) {
-      alert('No hay reservas para exportar con los filtros actuales.');
-      return;
-    }
-
-    const headers = [
-      'ID Reserva',
-      'Cochera',
-      'Direccion',
-      'Plaza',
-      'Estado',
-      'Fecha Ingreso',
-      'Hora Entrada',
-      'Hora Salida',
-      'Patente',
-      'Vehiculo',
-      'Tipo',
-      'Cliente',
-      'Telefono / Contacto',
-      'Email',
-      'Servicios Extra',
-    ];
-
-    const rows = filteredReservations.map((r) => {
-      const startDateObj = new Date(r.startTime);
-      const endDateObj = new Date(r.endTime);
-      const formattedDate = startDateObj.toLocaleDateString('es-AR');
-      const entryHour = startDateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-      const exitHour = endDateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-      const clientFullName = `${r.vehicle?.client?.name || ''} ${r.vehicle?.client?.last_name || ''}`.trim() || 'Cliente';
-      const vehicleDesc = `${r.vehicle?.brand?.name || ''} ${r.vehicle?.model?.name || ''}`.trim() || '-';
-      const vehicleType = r.vehicle?.vehicleType?.name || 'Auto';
-      const servicesList = r.services && r.services.length > 0
-        ? r.services.map((s) => `${s.serviceCatalog?.name || 'Servicio'} ($${s.price})`).join(' + ')
-        : 'Ninguno';
-
-      return [
-        `"${r.id}"`,
-        `"${r.parkingSpace?.parking?.name || 'Cochera'}"`,
-        `"${r.parkingSpace?.parking?.address || '-'}"`,
-        `"${r.parkingSpace?.spaceCode || '-'}"`,
-        `"${r.status}"`,
-        `"${formattedDate}"`,
-        `"${entryHour}"`,
-        `"${exitHour}"`,
-        `"${r.vehicle?.plate || '-'}"`,
-        `"${vehicleDesc}"`,
-        `"${vehicleType}"`,
-        `"${clientFullName}"`,
-        `"${r.vehicle?.client?.phone || '-'}"`,
-        `"${r.vehicle?.client?.email || '-'}"`,
-        `"${servicesList}"`,
-      ].join(';');
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const timestamp = new Date().toISOString().split('T')[0];
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', `planilla_reservas_${timestamp}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const shineColors = theme === 'dark'
-    ? ['#2563EB', '#38BDF8', '#818CF8']
-    : ['#93C5FD', '#3B82F6', '#60A5FA'];
+export default function OwnerReservations() {
+  const { reservations, employees, status, refresh } = useOwner();
+  const [params] = useSearchParams();
+  const [mode, setMode] = useState<'day' | 'month'>('day');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = reservations.find(r => r.id === openId);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white p-4 md:p-8 flex flex-col items-center transition-colors">
-      <div className="w-full max-w-7xl space-y-6">
-        
-        {/* Barra Superior */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/owner')}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Volver al Panel de Dueño
-            </button>
-            <span className="text-zinc-300 dark:text-zinc-700">|</span>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline transition-colors cursor-pointer"
-            >
-              <Car className="h-3.5 w-3.5" />
-              Ver Mapa / Reservar
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={loadData}
-              className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-white transition-colors cursor-pointer shadow-sm"
-              title="Refrescar datos"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              type="button"
-              onClick={exportToCSV}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
-            >
-              <Download className="h-4 w-4" />
-              <span>Exportar a Excel (CSV)</span>
-            </button>
-            <ThemeToggle />
-          </div>
-        </div>
-
-        {/* Tarjeta de Métricas Rápidas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block mb-1">
-              Total Registros
-            </span>
-            <span className="text-2xl font-black text-zinc-900 dark:text-white">{stats.total}</span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400 block mb-1">
-              Vigentes / Hoy
-            </span>
-            <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{stats.active}</span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-1">
-              Finalizadas
-            </span>
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{stats.completed}</span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-red-500 block mb-1">
-              Canceladas
-            </span>
-            <span className="text-2xl font-black text-red-500">{stats.cancelled}</span>
-          </div>
-        </div>
-
-        {/* Planilla Principal */}
-        <div
-          className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 md:p-8 shadow-sm rounded-3xl"
-        >
-          {/* Cabecera del Reporte */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-2xl">
-                <FileSpreadsheet className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="text-xl md:text-2xl font-black tracking-tight text-zinc-900 dark:text-white">
-                  Registro y Planilla de Reservas
-                </h1>
-                <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400">
-                  Control en tiempo real e histórico de todas las reservas de tus cocheras
-                </p>
-              </div>
-            </div>
-
-            {/* Pestañas de estado rápido */}
-            <div className="flex p-1 bg-zinc-100 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <button
-                type="button"
-                onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === 'all'
-                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
-                }`}
-              >
-                Todas ({stats.total})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('active')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === 'active'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
-                }`}
-              >
-                Activas ({stats.active})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('completed')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === 'completed'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
-                }`}
-              >
-                Historial ({stats.completed})
-              </button>
-            </div>
-          </div>
-
-          {/* Barra de Filtros estilo Excel */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800">
-            {/* Buscador */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-              <input
-                type="text"
-                placeholder="Buscar patente, cliente, plaza..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            {/* Selector de Cochera */}
-            <div>
-              <select
-                value={selectedParkingId}
-                onChange={(e) => setSelectedParkingId(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-blue-500 outline-none"
-              >
-                <option value="all">Todas las Cocheras ({parkings.length})</option>
-                {parkings.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Fecha Desde */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-zinc-500 shrink-0">Desde:</span>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            {/* Fecha Hasta */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-zinc-500 shrink-0">Hasta:</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-white focus:border-blue-500 outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Alertas de Éxito / Error */}
-          {actionSuccess && (
-            <div className="mb-4 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>{actionSuccess}</span>
-            </div>
-          )}
-          {actionError && (
-            <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{actionError}</span>
-            </div>
-          )}
-
-          {/* Tabla Interactiva Estilo Planilla */}
-          {loading ? (
-            <div className="py-20 text-center text-zinc-400 flex flex-col items-center justify-center gap-3">
-              <div className="h-7 w-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs">Cargando registros de reservas...</p>
-            </div>
-          ) : filteredReservations.length === 0 ? (
-            <div className="py-16 text-center text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-950/40 rounded-2xl border border-zinc-200 dark:border-zinc-800/80 p-8">
-              <FileSpreadsheet className="h-12 w-12 text-zinc-400 dark:text-zinc-600 mx-auto mb-3" />
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">No se encontraron reservas</h3>
-              <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
-                No hay resultados para los filtros o criterios de búsqueda seleccionados.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-50 dark:bg-zinc-950/70 border-b border-zinc-200 dark:border-zinc-800 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sticky top-0">
-                  <tr>
-                    <th className="py-3.5 px-4">Estado</th>
-                    <th className="py-3.5 px-4">Cochera / Plaza</th>
-                    <th className="py-3.5 px-4">Horario</th>
-                    <th className="py-3.5 px-4">Vehículo</th>
-                    <th className="py-3.5 px-4">Cliente</th>
-                    <th className="py-3.5 px-4">Servicios Extra</th>
-                    <th className="py-3.5 px-4 text-center">Acciones</th>
-                    <th className="py-3.5 px-4 text-right">ID Reserva</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/60 font-sans">
-                  {filteredReservations.map((r) => {
-                    const startDateObj = new Date(r.startTime);
-                    const endDateObj = new Date(r.endTime);
-                    const formattedDate = startDateObj.toLocaleDateString('es-AR', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    });
-                    const entryHour = startDateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-                    const exitHour = endDateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-
-                    const clientName = `${r.vehicle?.client?.name || ''} ${r.vehicle?.client?.last_name || ''}`.trim() || 'Cliente';
-                    const canCancel = ['PENDIENTE', 'CONFIRMADA'].includes(r.status);
-
-                    return (
-                      <tr
-                        key={r.id}
-                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors"
-                      >
-                        {/* Estado */}
-                        <td className="py-3.5 px-4">
-                          <ReservationStatusBadge status={r.status} />
-                        </td>
-
-                        {/* Cochera y Plaza */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-zinc-900 dark:text-white">
-                            {r.parkingSpace?.parking?.name || 'Cochera'}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                              Plaza {r.parkingSpace?.spaceCode || '-'}
-                            </span>
-                            <span className="text-[11px] text-zinc-400">({r.parkingSpace?.vehicleType || 'Auto'})</span>
-                          </div>
-                        </td>
-
-                        {/* Horario */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-zinc-800 dark:text-zinc-200">{formattedDate}</div>
-                          <div className="text-[11px] text-zinc-500 font-mono">
-                            {entryHour} - {exitHour} hs
-                          </div>
-                        </td>
-
-                        {/* Vehículo */}
-                        <td className="py-3.5 px-4">
-                          <span className="font-mono font-bold text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white inline-block mb-0.5">
-                            {r.vehicle?.plate || '-'}
-                          </span>
-                          <div className="text-[11px] text-zinc-500">
-                            {r.vehicle?.brand?.name || ''} {r.vehicle?.model?.name || ''}
-                          </div>
-                        </td>
-
-                        {/* Cliente */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-zinc-900 dark:text-white">{clientName}</div>
-                          {r.vehicle?.client?.phone && (
-                            <div className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
-                              <Phone className="h-3 w-3" />
-                              {r.vehicle.client.phone}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Servicios Extra */}
-                        <td className="py-3.5 px-4">
-                          {r.services && r.services.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {r.services.map((s) => (
-                                <span
-                                  key={s.id}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-300 text-[10px] font-semibold border border-purple-500/20"
-                                >
-                                  <Sparkles className="h-2.5 w-2.5" />
-                                  {s.serviceCatalog?.name || 'Servicio'} (${s.price})
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-zinc-400 text-[11px]">-</span>
-                          )}
-                        </td>
-
-                        {/* Acciones */}
-                        <td className="py-3.5 px-4 text-center">
-                          {canCancel ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActionError(null);
-                                setConfirmingCancel(r);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all cursor-pointer"
-                              title="Dar de baja reserva"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              <span>Dar de baja</span>
-                            </button>
-                          ) : (
-                            <span className="text-zinc-400 text-[11px]">-</span>
-                          )}
-                        </td>
-
-                        {/* ID Reserva */}
-                        <td className="py-3.5 px-4 text-right">
-                          <span className="font-mono text-[10px] text-zinc-400" title={r.id}>
-                            #{r.id.substring(0, 8)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+    <>
+      <PageHead title="Reservas" />
+      <div className="seg" role="group" aria-label="Vista de reservas">
+        {([['day', 'Listado por fecha'], ['month', 'Resumen mensual']] as const).map(([k, l]) =>
+          <button type="button" key={k} aria-pressed={mode === k} onClick={() => setMode(k)}>{l}</button>)}
       </div>
+      {status === 'error' ? <ErrorBox what="las reservas" onRetry={refresh} />
+        : status === 'loading' ? <SkeletonRows n={5} />
+          : mode === 'day' ? <DayList reservations={reservations} employees={employees} initial={(params.get('s') as StFilter) || 'all'} onOpen={setOpenId} />
+            : <MonthSummary reservations={reservations} employees={employees} onOpen={setOpenId} />}
+      <Shown when={open}>{r => <ResDetail r={r} onClose={() => setOpenId(null)} />}</Shown>
+    </>
+  );
+}
 
-      {/* Modal de Confirmación de Cancelación para Dueños */}
-      {confirmingCancel && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70  animate-in fade-in">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
-              <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20">
-                <AlertTriangle className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                  ¿Dar de baja esta reserva?
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Reserva #{confirmingCancel.id.substring(0, 8)}
-                </p>
-              </div>
-            </div>
+type SortKey = 'code' | 'desde' | 'hasta' | 'horas' | 'emp' | 'monto';
 
-            <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Cochera:</span>
-                <span className="font-bold text-zinc-900 dark:text-white">
-                  {confirmingCancel.parkingSpace?.parking?.name || 'Cochera'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Cliente:</span>
-                <span className="font-semibold text-zinc-900 dark:text-white">
-                  {`${confirmingCancel.vehicle?.client?.name || ''} ${confirmingCancel.vehicle?.client?.last_name || ''}`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Vehículo:</span>
-                <span className="font-mono font-bold uppercase text-zinc-900 dark:text-white">
-                  {confirmingCancel.vehicle?.plate || '-'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Plaza:</span>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
-                  #{confirmingCancel.parkingSpace?.spaceCode || '-'}
-                </span>
-              </div>
-            </div>
+// Orden por columna, compartido por el listado por fecha y el resumen mensual.
+function useSort(employees: Emp[], init: { k: SortKey; d: 1 | -1 }) {
+  const [sort, setSort] = useState(init);
+  const emp = (id: string | null) => employees.find(e => e.id === id);
+  const KEY: Record<SortKey, (r: Res) => string | number> = {
+    code: r => r.code, desde: r => r.date + r.start, hasta: r => r.endDate + r.end, horas: r => r.hours,
+    emp: r => empName(emp(r.eid)), monto: r => r.amount ?? -1,
+  };
+  const sorted = (list: Res[]) => [...list].sort((a, b) => {
+    const x = KEY[sort.k](a), z = KEY[sort.k](b);
+    return (x < z ? -1 : x > z ? 1 : 0) * sort.d || (a.date + a.start).localeCompare(b.date + b.start);
+  });
+  const th = (k: SortKey, l: string, c = '') => {
+    const on = sort.k === k;
+    return (
+      <th className={c} aria-sort={on ? (sort.d > 0 ? 'ascending' : 'descending') : 'none'}>
+        <button type="button" className={`thb${on ? ' on' : ''}`} onClick={() => setSort({ k, d: on ? (-sort.d as 1 | -1) : 1 })}>
+          {l}<ChevronDown className="i sm" style={{ transform: on && sort.d < 0 ? 'rotate(180deg)' : undefined, opacity: on ? 1 : 0 }} />
+        </button>
+      </th>
+    );
+  };
+  return { emp, sorted, th };
+}
 
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
-              ⚠️ La plaza quedará liberada inmediatamente en el sistema para nuevas reservas.
-            </div>
+function DayList({ reservations, employees, initial, onOpen }: { reservations: Res[]; employees: Emp[]; initial: StFilter; onOpen: (id: string) => void }) {
+  const { parkings } = useOwner();
+  const { emp, sorted, th } = useSort(employees, { k: 'desde', d: -1 });
+  const now = today();
+  const [rd, setRd] = useState(now);
+  const [rs, setRs] = useState<StFilter>(initial);
+  const [rq, setRq] = useState('');
+  const [rp, setRp] = useState('');
+  // Un día pasado no puede tener reservas en curso ni pendientes.
+  const only: StFilter[] | null = rd < now ? ['all', 'finalizada', 'cancelada'] : null;
+  const st = only && !only.includes(rs) ? 'all' : rs;
+  const D = reservations.filter(r => r.date === rd);
+  const q = rq.trim().toLowerCase().replace(/[\s-]/g, '');
+  const list = sorted(D.filter(r => (st === 'all' || r.st === st) && (!rp || r.pid === rp) && (!q || (r.plate + r.code).toLowerCase().replace(/-/g, '').includes(q))));
+  const sum = list.reduce((a, r) => a + (r.amount ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
+  const csv = () => downloadCsv(`reservas-${rd}.csv`, [
+    ['Código', 'Patente', 'Sucursal', 'Plaza', 'Desde', 'Hasta', 'Horas', 'Empleado', 'Estado', 'Importe'],
+    ...list.map(r => [r.code, r.plate, r.pname, r.space, `${r.date} ${r.start}`, `${r.endDate} ${r.end}`, fmtH(r.hours), empName(emp(r.eid)), RS[r.st].l, r.amount]),
+  ]);
 
-            {actionError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{actionError}</span>
-              </div>
-            )}
+  let t;
+  if (!D.length) t = <Empty icon={<CalendarDays className="i" />} title={`Sin reservas el ${fmtD(rd)}`}>Probá con otra fecha. Las reservas de tus sucursales aparecen acá con su código y su importe.</Empty>;
+  else if (!list.length) t = <Empty icon={<Search className="i" />} title="Sin resultados" action={<button type="button" className="btn" onClick={() => { setRs('all'); setRq(''); setRp(''); }}>Limpiar filtros</button>}>Ninguna reserva coincide con los filtros actuales.</Empty>;
+  else t = (
+    <div className="panel tw"><table className="tbl rs">
+      <colgroup><col style={{ width: '15%' }} /><col /><col style={{ width: 80 }} /><col style={{ width: '17%' }} /><col style={{ width: 120 }} /><col style={{ width: 110 }} /><col style={{ width: 120 }} /></colgroup>
+      <thead><tr>{th('code', 'Código')}{th('desde', 'Sucursal')}{th('horas', 'Horas')}{th('emp', 'Empleado')}<th>Estado</th>{th('monto', 'Importe', 'r')}<th><span className="sr">Acciones</span></th></tr></thead>
+      <tbody>{list.map(r => {
+        const e = emp(r.eid);
+        return (
+          <tr key={r.id}>
+            <td><span className="plate">{r.code}</span><div className="ad">{r.plate}</div></td>
+            <td data-label="Sucursal"><span className="nm">{r.pname}</span><div className="ad">Plaza {r.space} · {r.start} – {r.end}{r.endDate !== r.date ? ` (${shD(r.endDate)})` : ''}</div></td>
+            <td data-label="Horas">{fmtH(r.hours)}</td>
+            <td data-label="Empleado">{e ? empName(e) : <span className="na">Sin asignar</span>}</td>
+            <td data-label="Estado"><span className={`st ${RS[r.st].c}`}>{RS[r.st].l}</span></td>
+            <td className="r" data-label="Importe">{r.amount != null ? money(r.amount) : <span className="na">—</span>}</td>
+            <td className="r"><div className="acts"><button type="button" className="btn sm" aria-label={`Ver detalle de la reserva ${r.code}`} onClick={() => onOpen(r.id)}>Ver detalle</button></div></td>
+          </tr>
+        );
+      })}</tbody>
+      <tfoot><tr className="tot"><td colSpan={2}>{plural(list.length, 'reserva', 'reservas')}</td><td>{fmtH(hs)}</td><td colSpan={2} /><td className="r">{money(sum)}</td><td /></tr></tfoot>
+    </table></div>
+  );
 
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                disabled={cancelling}
-                onClick={() => {
-                  setConfirmingCancel(null);
-                  setActionError(null);
-                }}
-                className="flex-1 py-2.5 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-bold transition-all cursor-pointer"
-              >
-                Volver
-              </button>
-              <button
-                type="button"
-                disabled={cancelling}
-                onClick={handleCancelReservation}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {cancelling ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Dando de baja...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4" />
-                    <span>Confirmar baja</span>
-                  </>
-                )}
-              </button>
-            </div>
+  return (
+    <>
+      <p className="ctx" style={{ marginBottom: -4 }}>{cap(fmtD(rd))}{rd === now ? ' · hoy' : ''}</p>
+      <div className="toolbar">
+        <div className="dt" role="group" aria-label="Fecha">
+          <button type="button" className="icon-btn" aria-label="Día anterior" onClick={() => setRd(addD(rd, -1))}><ChevronLeft className="i" /></button>
+          {/* shortcut: L-24, solo hasta hoy como en el prototipo; las reservas futuras se ven el día que corresponden */}
+          <input className="inp" type="date" value={rd} max={now} aria-label="Fecha de las reservas" onChange={e => e.target.value && e.target.value <= now && setRd(e.target.value)} />
+          <button type="button" className="icon-btn" aria-label="Día siguiente" disabled={rd >= now} onClick={() => setRd(addD(rd, 1))}><ChevronRight className="i" /></button>
+          <button type="button" className="btn" disabled={rd === now} onClick={() => setRd(now)}>Hoy</button>
+        </div>
+        <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar por código o patente" aria-label="Buscar por código o patente" value={rq} onChange={e => setRq(e.target.value)} /></div>
+        <select className="sel" aria-label="Filtrar por sucursal" style={{ width: 240 }} value={rp} onChange={e => setRp(e.target.value)}>
+          <option value="">Todas las sucursales</option>{parkings.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <button type="button" className="btn" disabled={!list.length} onClick={csv}><Download className="i sm" />Descargar CSV</button>
+      </div>
+      <div className="seg" role="group" aria-label="Filtrar por estado" style={{ justifySelf: 'start' }}>
+        {ST_SEGS.filter(([k]) => !only || only.includes(k)).map(([k, l]) => (
+          <button type="button" key={k} aria-pressed={st === k} onClick={() => setRs(k)}>{l}<b>{D.filter(r => k === 'all' || r.st === k).length}</b></button>
+        ))}
+      </div>
+      {t}
+    </>
+  );
+}
+
+function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]; employees: Emp[]; onOpen: (id: string) => void }) {
+  const { parkings } = useOwner();
+  const toast = useToast();
+  const now = today();
+  const [rm, setRm] = useState(now.slice(0, 7));
+  const { emp, sorted, th } = useSort(employees, { k: 'desde', d: 1 });
+  const [ms, setMs] = useState<StFilter>('finalizada');
+  const [hours, setHours] = useState<Record<string, { h: number; f: number }> | null>(null);
+  const [y, m] = rm.split('-').map(Number) as [number, number];
+  const label = new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  const shiftMonth = (n: number) => { const d = new Date(y, m - 1 + n, 1); setRm(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); };
+
+  // D-07: horas programadas (semana tipo + fechas especiales) hasta hoy, no asistencia real.
+  // shortcut: L-02, son horas programadas, agregar fichaje o ajuste manual auditado antes de liquidar
+  // L-01: cada fecha se resuelve en el servidor con la semana tipo que regía ese día.
+  useEffect(() => {
+    const from = `${rm}-01`, last = `${rm}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`, to = last < now ? last : now;
+    setHours(null);
+    if (from > now) { setHours({}); return; }
+    Promise.all(parkings.map(p => getRange(p.id, from, to))).then(all => {
+      const acc: Record<string, { h: number; f: number }> = {};
+      all.flat().forEach(d => d.shifts.forEach(s => {
+        const h = (mm(s.to) - mm(s.from)) / 60;
+        const x = (acc[s.employeeId] ??= { h: 0, f: 0 });
+        x.h += h;
+        if (d.holiday) x.f += h;
+      }));
+      setHours(acc);
+    }).catch(() => { setHours({}); toast('No se pudieron calcular las horas por empleado.', 'err'); });
+  }, [rm, parkings, y, m, now, toast]);
+
+  const M = reservations.filter(r => r.date.slice(0, 7) === rm);
+  const list = sorted(M.filter(r => ms === 'all' || r.st === ms));
+  const sum = list.reduce((a, r) => a + (r.amount ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
+  // R-27: valoración promedio del mes por sucursal, con las reservas que la tienen.
+  const rated = new Map<string, number[]>();
+  M.forEach(r => { if (r.rating != null) rated.set(r.pname, [...(rated.get(r.pname) ?? []), r.rating]); });
+  const ratings = [...rated].map(([p, v]) => `${p}: ${(v.reduce((a, b) => a + b, 0) / v.length).toLocaleString('es-AR', { maximumFractionDigits: 1 })} de 5 (${plural(v.length, 'valoración', 'valoraciones')})`);
+
+  const csv = () => downloadCsv(`reservas-${rm}.csv`, [
+    ['Código', 'Desde', 'Hasta', 'Horas', 'Empleado', 'Importe'],
+    ...list.map(r => [r.code, `${r.date} ${r.start}`, `${r.endDate} ${r.end}`, fmtH(r.hours), empName(emp(r.eid)), r.amount]),
+  ]);
+  const staff = employees.filter(e => e.parkingId);
+
+  return (
+    <>
+      <div className="toolbar">
+        <div className="dt" role="group" aria-label="Mes">
+          <button type="button" className="icon-btn" aria-label="Mes anterior" onClick={() => shiftMonth(-1)}><ChevronLeft className="i" /></button>
+          <span style={{ minWidth: 132, textAlign: 'center', fontWeight: 500 }} aria-live="polite">{cap(label)}</span>
+          <button type="button" className="icon-btn" aria-label="Mes siguiente" disabled={rm >= now.slice(0, 7)} onClick={() => shiftMonth(1)}><ChevronRight className="i" /></button>
+        </div>
+        <span className="grow" />
+        <button type="button" className="btn" disabled={!list.length} onClick={csv}><Download className="i sm" />Descargar CSV</button>
+      </div>
+      <div className="seg" role="group" aria-label="Filtrar por estado" style={{ justifySelf: 'start' }}>
+        {ST_SEGS.map(([k, l]) => (
+          <button type="button" key={k} aria-pressed={ms === k} onClick={() => setMs(k)}>{l}<b>{M.filter(r => k === 'all' || r.st === k).length}</b></button>
+        ))}
+      </div>
+      {!M.length ? <Empty icon={<CalendarDays className="i" />} title="Sin reservas">No hay reservas en {label}.</Empty>
+        : !list.length ? <Empty icon={<Search className="i" />} title="Sin resultados" action={<button type="button" className="btn" onClick={() => setMs('all')}>Limpiar filtros</button>}>Ninguna reserva de {label} está en ese estado.</Empty> : (
+        <>
+          <div className="panel tw"><table className="tbl rm">
+            <colgroup><col style={{ width: '14%' }} /><col style={{ width: '15%' }} /><col style={{ width: '15%' }} /><col style={{ width: '10%' }} /><col /><col style={{ width: 120 }} /></colgroup>
+            <thead><tr>{th('code', 'Código')}{th('desde', 'Desde')}{th('hasta', 'Hasta')}{th('horas', 'Horas')}{th('emp', 'Empleado')}{th('monto', 'Importe', 'r')}</tr></thead>
+            <tbody>{list.map(r => {
+              const e = emp(r.eid);
+              return (
+                <tr key={r.id}>
+                  <td data-label="Código"><button type="button" className="nm" aria-label={`Ver detalle de la reserva ${r.code}`} onClick={() => onOpen(r.id)}>{r.code}</button></td>
+                  <td data-label="Desde">{shD(r.date)} {r.start}</td><td data-label="Hasta">{shD(r.endDate)} {r.end}</td>
+                  <td data-label="Horas">{fmtH(r.hours)}</td>
+                  <td data-label="Empleado">{e ? empName(e) : <span className="na">Sin asignar</span>}</td>
+                  <td className="r" data-label="Importe">{r.amount != null ? money(r.amount) : <span className="na">—</span>}</td>
+                </tr>
+              );
+            })}</tbody>
+            <tfoot><tr className="tot"><td colSpan={3}>{plural(list.length, 'reserva', 'reservas')}</td><td>{fmtH(hs)}</td><td /><td className="r">{money(sum)}</td></tr></tfoot>
+          </table></div>
+          <p className="ctx">{ms === 'all' ? 'Todas las reservas del mes' : `Solo reservas en estado ${RS[ms].l.toLowerCase()}`}. Importe: total de la factura; las reservas sin factura no suman. Tocá un encabezado para ordenar.</p>
+        </>
+      )}
+      {ratings.length > 0 && <p className="ctx">Valoración promedio del mes · {ratings.join(' · ')}</p>}
+      <div className="fs" style={{ marginTop: 20 }}>
+        <div className="fh"><h3>Horas trabajadas por empleado</h3></div>
+        <p className="ctx" style={{ margin: '0 0 10px' }}>Horas programadas según la semana tipo y las fechas especiales, hasta hoy.</p>
+        {hours === null ? <SkeletonRows n={2} cols={4} /> : (
+          <div className="panel tw"><table className="tbl">
+            <thead><tr><th>Empleado</th><th>Sucursal</th><th className="r">Horas del mes</th><th className="r">En feriados</th></tr></thead>
+            <tbody>{staff.map(e => {
+              const x = hours[e.id] ?? { h: 0, f: 0 };
+              return (
+                <tr key={e.id}><td data-label="Empleado">{empName(e)}</td><td data-label="Sucursal">{parkings.find(p => p.id === e.parkingId)?.name ?? '—'}</td>
+                  <td className="r" data-label="Horas del mes">{fmtH(x.h)}</td><td className="r" data-label="En feriados">{x.f ? fmtH(x.f) : <span className="na">—</span>}</td></tr>
+              );
+            })}</tbody>
+          </table></div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ResDetail({ r: fromList, onClose }: { r: Res; onClose: () => void }) {
+  const { employees, refresh } = useOwner();
+  const toast = useToast();
+  // El detalle se pide al backend (GET /api/reservations/:id); mientras llega, se ve lo que trajo el listado.
+  const [detail, setDetail] = useState<Res | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setDetail(null);
+    getReservation(fromList.id)
+      .then(res => { if (alive) setDetail(normRes(res.data)); })
+      .catch(x => { if (alive) toast(apiError(x), 'err'); });
+    return () => { alive = false; };
+  }, [fromList.id, toast]);
+  const r = detail ?? fromList;
+  const [confirm, setConfirm] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonErr, setReasonErr] = useState('');
+  const e = employees.find(x => x.id === r.eid);
+  const cin = employees.find(x => x.id === r.cin);
+  // El motivo le llega al cliente. No hay reembolso: se cobra en la salida, así que cancelar una pendiente no mueve dinero.
+  const cancel = async () => {
+    if (!reason.trim()) { setReasonErr('Escribí el motivo: se lo avisamos al cliente.'); return; }
+    try {
+      await cancelReservation(r.id, reason.trim());
+      setConfirm(false);
+      onClose();
+      await refresh();
+      toast(`Reserva ${r.code} cancelada.`, 'info');
+    } catch (x) { setConfirm(false); toast(apiError(x), 'err'); }
+  };
+
+  return (
+    <>
+      <Drawer title={r.code} sub={`${r.pname} · Plaza ${r.space}`} onClose={onClose} focusSel=".dfoot .btn:last-child"
+        footer={<div className="dfoot">{r.st === 'reservada' && <button type="button" className="btn danger" onClick={() => setConfirm(true)}>Cancelar reserva</button>}<button type="button" className="btn" onClick={onClose}>Cerrar</button></div>}>
+        <div className="dbody">
+          <div className="fs"><div className="fh"><h3>Cliente</h3></div>
+            <div className="li" style={{ padding: 0 }}><span className="l"><span className="av lg">{initials(...(r.client.n.split(' ') as [string, string]))}</span>
+              <span><div className="nm">{r.client.n}</div><div className="ad">{[r.client.ph, r.client.em].filter(Boolean).join(' · ')}</div></span></span></div>
+          </div>
+          <div className="fs"><div className="fh"><h3>Reserva</h3><span className={`st ${RS[r.st].c}`}>{RS[r.st].l}</span></div>
+            <dl className="dl" style={{ margin: 0 }}>
+              <dt>Desde</dt><dd>{shD(r.date)} · {r.start}</dd><dt>Hasta</dt><dd>{shD(r.endDate)} · {r.end}</dd>
+              <dt>Vehículo</dt><dd>{r.vtype ? `${r.vtype} · ` : ''}{r.plate}</dd>
+              {/* R-07: la asignación sale de los turnos y se actualiza sola cuando cambian (R-06); no se edita a mano. */}
+              <dt>Asignada a</dt><dd>{e ? empName(e) : <span className="na">Sin asignar</span>}</dd>
+              {r.cin && <><dt>Ingresada por</dt><dd>{cin ? empName(cin) : '—'}</dd></>}
+            </dl>
+          </div>
+          <div className="fs"><div className="fh"><h3>Importe</h3></div>
+            <dl className="dl" style={{ margin: 0 }}>
+              {r.bill && billLines(r.bill, r.services).map(([l, v]) => <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{money(v)}</dd></div>)}
+              <dt>Importe</dt><dd>{r.amount != null ? money(r.amount) : '—'}</dd>
+              {r.st === 'finalizada' && <><dt>Valoración</dt><dd>{r.rating != null ? <><Stars value={r.rating} /> {r.rating} de 5</> : <span className="na">Sin valorar</span>}</dd></>}
+            </dl>
           </div>
         </div>
-      )}
-    </div>
+      </Drawer>
+      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado y recibe un aviso con el motivo." ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)}>
+        <Input label="Motivo" data-first maxLength={300} value={reason} error={reasonErr} onChange={e => { setReason(e.target.value); setReasonErr(''); }} />
+      </ConfirmModal></Presence>
+    </>
   );
-};
-
-export default OwnerReservations;
-
-
-
-
-
+}

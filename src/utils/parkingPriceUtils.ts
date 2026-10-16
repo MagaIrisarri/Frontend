@@ -1,39 +1,10 @@
-﻿import type { Parking } from '../types/parking.types';
+import type { Parking } from '../types/parking.types';
 import type { VehicleFilterType } from '../types/mapFilters.types';
 
-export const matchesVehicleCategory = (
-  typeStr?: string,
-  category?: VehicleFilterType | null
-): boolean => {
-  if (!category || !typeStr) return false;
-  const t = typeStr.trim().toUpperCase();
-  if (category === 'MOTO') {
-    return t.includes('MOTO');
-  }
-  if (category === 'CAMIONETA') {
-    return (
-      t.includes('CAMION') ||
-      t.includes('UTIL') ||
-      t.includes('VAN') ||
-      t.includes('PICK')
-    );
-  }
-  if (category === 'AUTO') {
-    return t.includes('AUTO') || t.includes('CAR');
-  }
-  return false;
-};
+// R-30: tarifas y plazas van por el id del tipo de vehículo (cualquiera del catálogo del administrador).
 
-export const getParkingPriceForCategory = (
-  parking: Parking,
-  category: VehicleFilterType
-): number | null => {
-  if (!parking?.prices || parking.prices.length === 0) return null;
-
-  const match = parking.prices.find((p) =>
-    matchesVehicleCategory(p.vehicleType, category)
-  );
-
+export const getParkingPriceForType = (parking: Parking, typeId: string): number | null => {
+  const match = parking?.prices?.find((p) => p.vehicleTypeId === typeId);
   if (!match) return null;
   const num = Number(match.price);
   return isNaN(num) || num <= 0 ? null : num;
@@ -58,10 +29,10 @@ export interface SpotPriceResult {
 
 export const formatSpotPrice = (
   parking: Parking,
-  category: VehicleFilterType | null
+  type: VehicleFilterType | null
 ): SpotPriceResult => {
   // Caso 1: Sin filtro de vehículo -> Menor precio ("Desde $X/h")
-  if (!category) {
+  if (!type) {
     const min = getParkingMinPrice(parking);
     if (min === null) {
       return {
@@ -77,9 +48,9 @@ export const formatSpotPrice = (
     };
   }
 
-  // Caso 2: Categoría seleccionada (AUTO, MOTO o CAMIONETA)
-  const catPrice = getParkingPriceForCategory(parking, category);
-  if (catPrice === null) {
+  // Caso 2: Tipo seleccionado
+  const typePrice = getParkingPriceForType(parking, type.id);
+  if (typePrice === null) {
     return {
       text: 'No disponible',
       isAvailable: false,
@@ -88,9 +59,24 @@ export const formatSpotPrice = (
   }
 
   return {
-    text: `$${catPrice.toLocaleString('es-AR')}/h`,
+    text: `$${typePrice.toLocaleString('es-AR')}/h`,
     isAvailable: true,
-    price: catPrice,
+    price: typePrice,
   };
 };
 
+// Plazas libres del tipo; si el backend no manda el dato, cae a la capacidad. Sin plazas de ese tipo, 0.
+export const getTypeSpaces = (parking: Parking, typeId: string): number => {
+  const t = parking.spaceTypes?.find((s) => s.vehicleTypeId === typeId);
+  return t ? t.available ?? t.capacity : 0;
+};
+
+/** Por qué una cochera no sirve para el tipo; null si sirve. */
+export const getUnavailableReason = (
+  parking: Parking,
+  typeId: string
+): 'NO_PRICE' | 'NO_SPACE' | null => {
+  if (getParkingPriceForType(parking, typeId) === null) return 'NO_PRICE';
+  if (getTypeSpaces(parking, typeId) <= 0) return 'NO_SPACE';
+  return null;
+};
