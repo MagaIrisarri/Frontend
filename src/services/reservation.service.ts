@@ -19,6 +19,8 @@ export const getReservationsByClientId = getReservationsByClient;
 
 export const getReservationsByOwner =(ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
 export const getReservationsByParking = (parkingId: string) => api.get('/api/reservations/parking/' + parkingId).then(res => res.data);
+// Detalle de una reserva, en cualquier estado, con el importe y la factura.
+export const getReservation = (id: string) => api.get('/api/reservations/' + id).then(res => res.data);
 // El personal manda el motivo (el backend lo exige y se lo avisa al cliente); el cliente cancela sin motivo.
 export const cancelReservation = (reservationId: string, reason?: string) =>
   api.delete(`/api/reservations/${reservationId}`, { data: reason ? { reason } : undefined }).then(res => res.data);

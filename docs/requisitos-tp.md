@@ -8,7 +8,7 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 
 ## Resumen
 
-- **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), con un riesgo de la FAQ: el detalle de reservas no pide datos al backend. Para la entrega faltan las minutas, los links a los PR y el merge a `main` y `master`.
+- **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), también la regla de la FAQ del detalle que pide datos al backend. Para la entrega faltan las minutas, los links a los PR y el merge a `main` y `master`.
 - **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, Backend `a183668`, Frontend `82162df`). Los tests de la cátedra están en `tests-catedra/` de cada repo (listo para commitear): 5 unitarias y 1 de integración del backend, 1 de componente y 1 e2e del frontend. La evidencia está en `Backend/docs/tests.md`. Faltan la documentación de la API, el deploy y el video.
 
 ## Fuentes
@@ -82,7 +82,7 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 
 | Regla | Estado | Evidencia | Qué falta |
 |---|---|---|---|
-| El detalle de un listado pide datos al backend y muestra al menos 2 clases de negocio, o lleva al CRUD | Parcial | Estacionamientos: [ParkingSpaceMap.tsx](../src/pages/ParkingSpace/ParkingSpaceMap.tsx) pide la cochera, las plazas y la disponibilidad. Reservas por fecha: el panel de [OwnerReservations.tsx](../src/pages/Owner/OwnerReservations.tsx) muestra lo que ya trajo el listado y no hace un pedido propio | Que el detalle de la reserva pida `GET /api/reservations/:id`, que ya existe |
+| El detalle de un listado pide datos al backend y muestra al menos 2 clases de negocio, o lleva al CRUD | Cumple | Estacionamientos: [ParkingSpaceMap.tsx](../src/pages/ParkingSpace/ParkingSpaceMap.tsx) pide la cochera, las plazas y la disponibilidad. Reservas por fecha: el panel de [OwnerReservations.tsx](../src/pages/Owner/OwnerReservations.tsx) pide `GET /api/reservations/:id` al abrirse (reserva, cliente, vehículo, plaza, empleados y factura, en cualquier estado). Pendiente de commit | — |
 | Los CRUD mínimos se usan desde la app (front y back) | Cumple (Frontend `82162df`) | TipoVehículo, CRUD simple de regularidad, tiene pantalla en el panel del administrador: [AdminVehicleTypes.tsx](../src/pages/Admin/AdminVehicleTypes.tsx) (`/admin/vehicle-types`, RA-11 en [admin-permisos-notas.md](admin/admin-permisos-notas.md)) | — |
 | Al menos 2 CUU relacionados | Cumple | Reservar → registrar el ingreso (check-in) → registrar el uso de servicios → facturar: cada uno usa lo que registró el anterior. Sin confirmación de reservas desde D-10 (Backend `aa56d66`, Frontend `66e80c5`): el proposal todavía nombra "Registrar confirmación de reserva" y hay que cambiarlo por "Registrar check-in" | — |
 

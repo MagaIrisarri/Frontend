@@ -353,7 +353,7 @@
   .e-who{grid-area:1/1}.e-occ{grid-area:2/1}.e-tb{grid-area:1/2;order:0;justify-self:end}
   .e-new{grid-area:2/2;order:0;justify-self:end;position:static;z-index:auto;box-shadow:none}
   .e-wrap{padding-bottom:40px}
-  .e-chip{flex:initial;width:132px;min-width:auto}
+  .e-chip{flex:initial;min-width:132px} /* crece si el tipo y el conteo no entran (Camionetas 10/12) */
   .e-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 148px 258px;grid-template-areas:"a b s c";height:64px;min-height:auto}
   .e-row>:nth-child(3){justify-self:start}
   .e-acts{grid-template-columns:150px 96px;justify-content:end}

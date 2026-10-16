@@ -6,12 +6,12 @@ import { Presence, Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
 import { Input, apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
-import { cancelReservation } from '../../services/reservation.service';
+import { cancelReservation, getReservation } from '../../services/reservation.service';
 import { getRange } from '../../services/shift.service';
 import { Stars } from '../../components/Owner/ui/Stars';
 import { useOwner, type Emp } from './OwnerContext';
 import {
-  RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, plural, shD, today, type Res, type ResState,
+  RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, normRes, plural, shD, today, type Res, type ResState,
 } from './owner.lib';
 
 type StFilter = 'all' | ResState;
@@ -245,9 +245,20 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
   );
 }
 
-function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
+function ResDetail({ r: fromList, onClose }: { r: Res; onClose: () => void }) {
   const { employees, refresh } = useOwner();
   const toast = useToast();
+  // El detalle se pide al backend (GET /api/reservations/:id); mientras llega, se ve lo que trajo el listado.
+  const [detail, setDetail] = useState<Res | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setDetail(null);
+    getReservation(fromList.id)
+      .then(res => { if (alive) setDetail(normRes(res.data)); })
+      .catch(x => { if (alive) toast(apiError(x), 'err'); });
+    return () => { alive = false; };
+  }, [fromList.id, toast]);
+  const r = detail ?? fromList;
   const [confirm, setConfirm] = useState(false);
   const [reason, setReason] = useState('');
   const [reasonErr, setReasonErr] = useState('');
