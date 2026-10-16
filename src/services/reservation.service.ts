@@ -17,11 +17,6 @@ export const createReservation = (payload: {
 export const getReservationsByClient = (clientId: string) => api.get('/api/reservations/client/' + clientId).then(res => res.data);
 export const getReservationsByClientId = getReservationsByClient;
 
-// R-07: empleado asignado ("Registrada por"), editable mientras la reserva está en curso o reservada.
-// Lo cambia el personal de la sucursal (el usuario del token) y el empleado tiene que ser de esa sucursal.
-export const assignReservationEmployee = (reservationId: string, employeeId: string) =>
-  api.put(`/api/reservations/${reservationId}`, { attendedById: employeeId }).then(res => res.data);
-
 export const getReservationsByOwner =(ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
 export const getReservationsByParking = (parkingId: string) => api.get('/api/reservations/parking/' + parkingId).then(res => res.data);
 // El personal manda el motivo (el backend lo exige y se lo avisa al cliente); el cliente cancela sin motivo.

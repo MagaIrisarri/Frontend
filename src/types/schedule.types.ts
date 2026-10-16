@@ -14,6 +14,7 @@ export interface ResolvedDay {
   holiday: { id: string; name: string; open: boolean } | null;
   shifts: DayShift[];
   closures: DayClosure[];
+  reassigned?: number; // al guardar: reservas que pasaron al empleado de turno (R-06)
 }
 
 export interface Holiday {

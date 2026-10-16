@@ -6,7 +6,7 @@ import { Presence, Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
 import { Input, apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
-import { assignReservationEmployee, cancelReservation } from '../../services/reservation.service';
+import { cancelReservation } from '../../services/reservation.service';
 import { getRange } from '../../services/shift.service';
 import { Stars } from '../../components/Owner/ui/Stars';
 import { useOwner, type Emp } from './OwnerContext';
@@ -34,15 +34,43 @@ export default function OwnerReservations() {
       </div>
       {status === 'error' ? <ErrorBox what="las reservas" onRetry={refresh} />
         : status === 'loading' ? <SkeletonRows n={5} />
-          : mode === 'day' ? <DayList reservations={reservations} initial={(params.get('s') as StFilter) || 'all'} onOpen={setOpenId} />
+          : mode === 'day' ? <DayList reservations={reservations} employees={employees} initial={(params.get('s') as StFilter) || 'all'} onOpen={setOpenId} />
             : <MonthSummary reservations={reservations} employees={employees} onOpen={setOpenId} />}
       <Shown when={open}>{r => <ResDetail r={r} onClose={() => setOpenId(null)} />}</Shown>
     </>
   );
 }
 
-function DayList({ reservations, initial, onOpen }: { reservations: Res[]; initial: StFilter; onOpen: (id: string) => void }) {
+type SortKey = 'code' | 'desde' | 'hasta' | 'horas' | 'emp' | 'monto';
+
+// Orden por columna, compartido por el listado por fecha y el resumen mensual.
+function useSort(employees: Emp[], init: { k: SortKey; d: 1 | -1 }) {
+  const [sort, setSort] = useState(init);
+  const emp = (id: string | null) => employees.find(e => e.id === id);
+  const KEY: Record<SortKey, (r: Res) => string | number> = {
+    code: r => r.code, desde: r => r.date + r.start, hasta: r => r.endDate + r.end, horas: r => r.hours,
+    emp: r => empName(emp(r.eid)), monto: r => r.amount ?? -1,
+  };
+  const sorted = (list: Res[]) => [...list].sort((a, b) => {
+    const x = KEY[sort.k](a), z = KEY[sort.k](b);
+    return (x < z ? -1 : x > z ? 1 : 0) * sort.d || (a.date + a.start).localeCompare(b.date + b.start);
+  });
+  const th = (k: SortKey, l: string, c = '') => {
+    const on = sort.k === k;
+    return (
+      <th className={c} aria-sort={on ? (sort.d > 0 ? 'ascending' : 'descending') : 'none'}>
+        <button type="button" className={`thb${on ? ' on' : ''}`} onClick={() => setSort({ k, d: on ? (-sort.d as 1 | -1) : 1 })}>
+          {l}<ChevronDown className="i sm" style={{ transform: on && sort.d < 0 ? 'rotate(180deg)' : undefined, opacity: on ? 1 : 0 }} />
+        </button>
+      </th>
+    );
+  };
+  return { emp, sorted, th };
+}
+
+function DayList({ reservations, employees, initial, onOpen }: { reservations: Res[]; employees: Emp[]; initial: StFilter; onOpen: (id: string) => void }) {
   const { parkings } = useOwner();
+  const { emp, sorted, th } = useSort(employees, { k: 'desde', d: -1 });
   const now = today();
   const [rd, setRd] = useState(now);
   const [rs, setRs] = useState<StFilter>(initial);
@@ -53,25 +81,35 @@ function DayList({ reservations, initial, onOpen }: { reservations: Res[]; initi
   const st = only && !only.includes(rs) ? 'all' : rs;
   const D = reservations.filter(r => r.date === rd);
   const q = rq.trim().toLowerCase().replace(/[\s-]/g, '');
-  const list = D.filter(r => (st === 'all' || r.st === st) && (!rp || r.pid === rp) && (!q || (r.plate + r.code).toLowerCase().replace(/-/g, '').includes(q)))
-    .sort((a, b) => b.start.localeCompare(a.start));
+  const list = sorted(D.filter(r => (st === 'all' || r.st === st) && (!rp || r.pid === rp) && (!q || (r.plate + r.code).toLowerCase().replace(/-/g, '').includes(q))));
+  const sum = list.reduce((a, r) => a + (r.amount ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
+  const csv = () => downloadCsv(`reservas-${rd}.csv`, [
+    ['Código', 'Patente', 'Sucursal', 'Plaza', 'Desde', 'Hasta', 'Horas', 'Empleado', 'Estado', 'Importe'],
+    ...list.map(r => [r.code, r.plate, r.pname, r.space, `${r.date} ${r.start}`, `${r.endDate} ${r.end}`, fmtH(r.hours), empName(emp(r.eid)), RS[r.st].l, r.amount]),
+  ]);
 
   let t;
   if (!D.length) t = <Empty icon={<CalendarDays className="i" />} title={`Sin reservas el ${fmtD(rd)}`}>Probá con otra fecha. Las reservas de tus sucursales aparecen acá con su código y su importe.</Empty>;
   else if (!list.length) t = <Empty icon={<Search className="i" />} title="Sin resultados" action={<button type="button" className="btn" onClick={() => { setRs('all'); setRq(''); setRp(''); }}>Limpiar filtros</button>}>Ninguna reserva coincide con los filtros actuales.</Empty>;
   else t = (
     <div className="panel tw"><table className="tbl rs">
-      <colgroup><col style={{ width: '22%' }} /><col /><col style={{ width: 140 }} /><col style={{ width: 120 }} /><col style={{ width: 120 }} /></colgroup>
-      <thead><tr><th>Código</th><th>Sucursal</th><th>Estado</th><th className="r">Importe</th><th><span className="sr">Acciones</span></th></tr></thead>
-      <tbody>{list.map(r => (
-        <tr key={r.id}>
-          <td><span className="plate">{r.code}</span><div className="ad">{r.plate}</div></td>
-          <td data-label="Sucursal"><span className="nm">{r.pname}</span><div className="ad">Plaza {r.space} · {r.start} – {r.end}</div></td>
-          <td data-label="Estado"><span className={`st ${RS[r.st].c}`}>{RS[r.st].l}</span></td>
-          <td className="r" data-label="Importe">{r.amount != null ? money(r.amount) : <span className="na">—</span>}</td>
-          <td className="r"><div className="acts"><button type="button" className="btn sm" aria-label={`Ver cliente de la reserva ${r.code}`} onClick={() => onOpen(r.id)}>Ver cliente</button></div></td>
-        </tr>
-      ))}</tbody>
+      <colgroup><col style={{ width: '15%' }} /><col /><col style={{ width: 80 }} /><col style={{ width: '17%' }} /><col style={{ width: 120 }} /><col style={{ width: 110 }} /><col style={{ width: 120 }} /></colgroup>
+      <thead><tr>{th('code', 'Código')}{th('desde', 'Sucursal')}{th('horas', 'Horas')}{th('emp', 'Empleado')}<th>Estado</th>{th('monto', 'Importe', 'r')}<th><span className="sr">Acciones</span></th></tr></thead>
+      <tbody>{list.map(r => {
+        const e = emp(r.eid);
+        return (
+          <tr key={r.id}>
+            <td><span className="plate">{r.code}</span><div className="ad">{r.plate}</div></td>
+            <td data-label="Sucursal"><span className="nm">{r.pname}</span><div className="ad">Plaza {r.space} · {r.start} – {r.end}{r.endDate !== r.date ? ` (${shD(r.endDate)})` : ''}</div></td>
+            <td data-label="Horas">{fmtH(r.hours)}</td>
+            <td data-label="Empleado">{e ? empName(e) : <span className="na">Sin asignar</span>}</td>
+            <td data-label="Estado"><span className={`st ${RS[r.st].c}`}>{RS[r.st].l}</span></td>
+            <td className="r" data-label="Importe">{r.amount != null ? money(r.amount) : <span className="na">—</span>}</td>
+            <td className="r"><div className="acts"><button type="button" className="btn sm" aria-label={`Ver detalle de la reserva ${r.code}`} onClick={() => onOpen(r.id)}>Ver detalle</button></div></td>
+          </tr>
+        );
+      })}</tbody>
+      <tfoot><tr className="tot"><td colSpan={2}>{plural(list.length, 'reserva', 'reservas')}</td><td>{fmtH(hs)}</td><td colSpan={2} /><td className="r">{money(sum)}</td><td /></tr></tfoot>
     </table></div>
   );
 
@@ -90,6 +128,7 @@ function DayList({ reservations, initial, onOpen }: { reservations: Res[]; initi
         <select className="sel" aria-label="Filtrar por sucursal" style={{ width: 240 }} value={rp} onChange={e => setRp(e.target.value)}>
           <option value="">Todas las sucursales</option>{parkings.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
+        <button type="button" className="btn" disabled={!list.length} onClick={csv}><Download className="i sm" />Descargar CSV</button>
       </div>
       <div className="seg" role="group" aria-label="Filtrar por estado" style={{ justifySelf: 'start' }}>
         {ST_SEGS.filter(([k]) => !only || only.includes(k)).map(([k, l]) => (
@@ -101,17 +140,14 @@ function DayList({ reservations, initial, onOpen }: { reservations: Res[]; initi
   );
 }
 
-type SortKey = 'code' | 'desde' | 'hasta' | 'horas' | 'emp' | 'monto';
-
 function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]; employees: Emp[]; onOpen: (id: string) => void }) {
   const { parkings } = useOwner();
   const toast = useToast();
   const now = today();
   const [rm, setRm] = useState(now.slice(0, 7));
-  const [sort, setSort] = useState<{ k: SortKey; d: 1 | -1 }>({ k: 'desde', d: 1 });
+  const { emp, sorted, th } = useSort(employees, { k: 'desde', d: 1 });
   const [ms, setMs] = useState<StFilter>('finalizada');
   const [hours, setHours] = useState<Record<string, { h: number; f: number }> | null>(null);
-  const emp = (id: string | null) => employees.find(e => e.id === id);
   const [y, m] = rm.split('-').map(Number) as [number, number];
   const label = new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
   const shiftMonth = (n: number) => { const d = new Date(y, m - 1 + n, 1); setRm(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); };
@@ -135,31 +171,14 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
     }).catch(() => { setHours({}); toast('No se pudieron calcular las horas por empleado.', 'err'); });
   }, [rm, parkings, y, m, now, toast]);
 
-  const KEY: Record<SortKey, (r: Res) => string | number> = {
-    code: r => r.code, desde: r => r.date + r.start, hasta: r => r.endDate + r.end, horas: r => r.hours,
-    emp: r => empName(emp(r.eid)), monto: r => r.amount ?? -1,
-  };
   const M = reservations.filter(r => r.date.slice(0, 7) === rm);
-  const list = M.filter(r => ms === 'all' || r.st === ms).sort((a, b) => {
-    const x = KEY[sort.k](a), z = KEY[sort.k](b);
-    return (x < z ? -1 : x > z ? 1 : 0) * sort.d || (a.date + a.start).localeCompare(b.date + b.start);
-  });
+  const list = sorted(M.filter(r => ms === 'all' || r.st === ms));
   const sum = list.reduce((a, r) => a + (r.amount ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
   // R-27: valoración promedio del mes por sucursal, con las reservas que la tienen.
   const rated = new Map<string, number[]>();
   M.forEach(r => { if (r.rating != null) rated.set(r.pname, [...(rated.get(r.pname) ?? []), r.rating]); });
   const ratings = [...rated].map(([p, v]) => `${p}: ${(v.reduce((a, b) => a + b, 0) / v.length).toLocaleString('es-AR', { maximumFractionDigits: 1 })} de 5 (${plural(v.length, 'valoración', 'valoraciones')})`);
 
-  const th = (k: SortKey, l: string, c = '') => {
-    const on = sort.k === k;
-    return (
-      <th className={c} aria-sort={on ? (sort.d > 0 ? 'ascending' : 'descending') : 'none'}>
-        <button type="button" className={`thb${on ? ' on' : ''}`} onClick={() => setSort({ k, d: on ? (-sort.d as 1 | -1) : 1 })}>
-          {l}<ChevronDown className="i sm" style={{ transform: on && sort.d < 0 ? 'rotate(180deg)' : undefined, opacity: on ? 1 : 0 }} />
-        </button>
-      </th>
-    );
-  };
   const csv = () => downloadCsv(`reservas-${rm}.csv`, [
     ['Código', 'Desde', 'Hasta', 'Horas', 'Empleado', 'Importe'],
     ...list.map(r => [r.code, `${r.date} ${r.start}`, `${r.endDate} ${r.end}`, fmtH(r.hours), empName(emp(r.eid)), r.amount]),
@@ -232,17 +251,8 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
   const [confirm, setConfirm] = useState(false);
   const [reason, setReason] = useState('');
   const [reasonErr, setReasonErr] = useState('');
-  const staff = employees.filter(e => e.parkingId === r.pid);
   const e = employees.find(x => x.id === r.eid);
-  const editable = r.st === 'curso' || r.st === 'reservada';
-
-  const assign = async (id: string) => {
-    try {
-      await assignReservationEmployee(r.id, id);
-      await refresh();
-      toast(`Reserva ${r.code} asignada a ${empName(employees.find(x => x.id === id))}.`);
-    } catch (x) { toast(apiError(x), 'err'); }
-  };
+  const cin = employees.find(x => x.id === r.cin);
   // El motivo le llega al cliente. No hay reembolso: se cobra en la salida, así que cancelar una pendiente no mueve dinero.
   const cancel = async () => {
     if (!reason.trim()) { setReasonErr('Escribí el motivo: se lo avisamos al cliente.'); return; }
@@ -268,12 +278,9 @@ function ResDetail({ r, onClose }: { r: Res; onClose: () => void }) {
             <dl className="dl" style={{ margin: 0 }}>
               <dt>Desde</dt><dd>{shD(r.date)} · {r.start}</dd><dt>Hasta</dt><dd>{shD(r.endDate)} · {r.end}</dd>
               <dt>Vehículo</dt><dd>{r.vtype ? `${r.vtype} · ` : ''}{r.plate}</dd>
-              <dt>Registrada por</dt><dd>{editable
-                ? <select className="sel" aria-label={`Empleado asignado a ${r.code}`} value={r.eid ?? ''} onChange={ev => ev.target.value && assign(ev.target.value)}>
-                  {!r.eid && <option value="">Sin asignar</option>}
-                  {staff.map(q => <option key={q.id} value={q.id}>{empName(q)}</option>)}
-                </select>
-                : e ? empName(e) : '—'}</dd>
+              {/* R-07: la asignación sale de los turnos y se actualiza sola cuando cambian (R-06); no se edita a mano. */}
+              <dt>Asignada a</dt><dd>{e ? empName(e) : <span className="na">Sin asignar</span>}</dd>
+              {r.cin && <><dt>Ingresada por</dt><dd>{cin ? empName(cin) : '—'}</dd></>}
             </dl>
           </div>
           <div className="fs"><div className="fh"><h3>Importe</h3></div>

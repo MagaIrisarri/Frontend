@@ -176,7 +176,7 @@ h2{font-size:15px;font-weight:600;letter-spacing:-.005em}
 .tbl.tf td:last-child{grid-column:1/-1}
 .tbl.em tr{grid-template-columns:1fr auto}.tbl.em td{grid-column:auto}.tbl.em td:first-child{grid-column:1}
 .tbl.em td.c-wide{grid-column:1/-1}
-.tbl.rm tr{grid-template-columns:1fr 1fr}.tbl.rm td:first-child,.tbl.rm td:last-child{grid-column:1/-1}.tbl.rm tfoot tr{display:flex;justify-content:space-between;padding:12px 16px}
+.tbl.rm tr{grid-template-columns:1fr 1fr}.tbl.rm td:first-child,.tbl.rm td:last-child{grid-column:1/-1}.tbl.rm tfoot tr,.tbl.rs tfoot tr{display:flex;justify-content:space-between;padding:12px 16px}
 .tbl.rs tr{grid-template-columns:1fr 1fr}.tbl.rs td:first-child,.tbl.rs td:last-child{grid-column:1/-1}.tbl.rs td:last-child:has(.acts:empty){display:none}
 .nm{font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;border:0;background:none;padding:0;max-width:100%;text-align:left}
 button.nm:hover{color:var(--ac-tx)}
@@ -374,7 +374,7 @@ tr:hover .pv .del,.pv .del:focus-visible,tr:focus-within .pv .del{opacity:1}
   .addrow{grid-template-columns:1fr 150px auto}
   /* las tarjetas vuelven a ser filas de tabla */
   .tbl{display:table}.tbl thead{display:table-header-group}.tbl tbody{display:table-row-group}.tbl colgroup{display:table-column-group}
-  .tbl tr,.tbl.rm tfoot tr{display:table-row;padding:0;border-top:0}
+  .tbl tr,.tbl.rm tfoot tr,.tbl.rs tfoot tr{display:table-row;padding:0;border-top:0}
   .tbl td{display:table-cell;padding:13px 16px;border-top:1px solid var(--soft)}
   .tbl tbody tr:first-child td{border-top:0}
   .tbl td[data-label]::before{content:none}

@@ -116,12 +116,14 @@ export function gaps(d: Day, s: number, e: number): [number, number][] {
 
 export type DropResult = { day: Day; msg: string } | { error: string };
 
-// R-03: soltar sobre un turno lo divide 50/50 (el nuevo toma la mitad donde se soltó); sobre un hueco, lo cubre entero.
+// R-03: soltar en el tercio del medio de un turno lo reemplaza entero; arriba o abajo lo divide 50/50 (el nuevo toma esa mitad).
+// Sobre un hueco, lo cubre entero.
 export function dropOn(d: Day, who: string, m: number, s: number, e: number, name = 'El empleado'): DropResult {
   const x = d.find(z => z.a <= m && m < z.b);
   if (x) {
     if (x.who === who) return { error: `${name} ya tiene ese horario. Soltalo sobre otro lugar.` };
-    if (x.b - x.a < 2 * SLOT) return { error: 'Ese turno es demasiado corto para dividirlo.' };
+    const third = (x.b - x.a) / 3;
+    if (x.b - x.a < 2 * SLOT || (m >= x.a + third && m < x.b - third)) return { day: place(d, { who, a: x.a, b: x.b }), msg: `${hhmm(x.a)} a ${tm(x.b)}` };
     const mid = x.a + Math.floor((x.b - x.a) / 2 / SLOT) * SLOT;
     const [a, b] = m < mid ? [x.a, mid] : [mid, x.b];
     return { day: place(d, { who, a, b }), msg: `${hhmm(a)} a ${tm(b)}` };
@@ -170,8 +172,6 @@ export function workWarnings(week: (Day | null)[], emps: { id: string; name: str
   return out;
 }
 
-// Quién cubre todo un tramo en un día (para proponer la transferencia de reservas, R-06).
-export const coveredBy = (d: Day, a: number, b: number) => d.find(x => x.who !== CLOSED && x.a <= a && b <= x.b)?.who;
 
 // ---------- sucursales ----------
 export interface ParkingLike {
@@ -248,7 +248,9 @@ export interface Res {
   id: string; code: string; st: ResState; pid: string; pname: string; space: string;
   date: string; endDate: string; start: string; end: string; hours: number;
   plate: string; vtype: string; vtypeId: string; client: { n: string; ph: string; em: string };
-  eid: string | null; amount: number | null;
+  eid: string | null; // R-07: empleado asignado, lo deciden los turnos
+  cin: string | null; // quien registró el ingreso
+  amount: number | null;
   bill: Bill | null; // detalle del cobro; null si no hay factura o es anterior al detalle
   services: Svc[]; // servicios pedidos con la reserva
   rating: number | null; // R-27: valoración del cliente (1 a 5), opcional
@@ -291,6 +293,7 @@ export function normRes(r: any): Res {
     vtypeId: typeof r.vehicle?.vehicleType === 'string' ? r.vehicle.vehicleType : r.vehicle?.vehicleType?.id ?? '', // R-30: plazas y tarifa van por este id
     client: { n: [c.name, c.last_name].filter(Boolean).join(' ') || '—', ph: c.phone ?? '', em: c.email ?? '' },
     eid: r.attendedBy?.id ?? null,
+    cin: r.checkedInBy?.id ?? null,
     amount: r.amount == null ? null : Number(r.amount),
     bill: toBill(r.invoice),
     services: servicesOf(r),

@@ -8,11 +8,11 @@ import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { conflictsOf, getRange, getTemplate, resetDay, saveDay, saveTemplateDay } from '../../services/shift.service';
 import { createHoliday, getHolidays, removeHoliday, setHolidayOpen } from '../../services/holiday.service';
-import type { Holiday, ResolvedDay, ScheduleConflict, Transfer } from '../../types/schedule.types';
+import type { Holiday, ResolvedDay } from '../../types/schedule.types';
 import { useOwner, type Emp } from './OwnerContext';
 import {
-  CLOSED, DAYS, DAYS_LONG, DOW, SLOT, addD, cap, coverage, coveredBy, dropOn, fmtD, fmtH, fromServer, gapGroups, gaps, hhmm, hoursOf,
-  initials, mm, monday, nowMin, place, plural, samePast, span, tm, toServer, today, wdOf, workWarnings, type Block, type Day,
+  CLOSED, DAYS, DAYS_LONG, DOW, SLOT, addD, cap, coverage, dropOn, fmtD, fmtH, fromServer, gapGroups, gaps, hhmm, hoursOf,
+  initials, monday, nowMin, place, plural, samePast, span, tm, toServer, today, wdOf, workWarnings, type Block, type Day,
 } from './owner.lib';
 
 const ROW = 20; // px por franja de 30 min
@@ -27,7 +27,6 @@ interface Drag {
   x0: number; y0: number; pid: number; on: boolean;
   res?: { d: number; a: number; b: number }; out?: boolean; over?: number | null; gx?: number; gy?: number;
 }
-interface Pending { d: number; day: Day; msg: string; conflicts: ScheduleConflict[]; transfers: Transfer[]; text: string }
 
 export default function OwnerShifts() {
   const { parkings, employees, refresh: refreshOwner } = useOwner();
@@ -39,7 +38,6 @@ export default function OwnerShifts() {
   const [week, setWeek] = useState<(Day | null)[] | null>(null);
   const [meta, setMeta] = useState<(ResolvedDay | null)[]>([]);
   const [drag, setDrag] = useState<Drag | null>(null);
-  const [pending, setPending] = useState<Pending | null>(null);
   const [holKey, setHolKey] = useState(0);
   const cols = useRef<(HTMLDivElement | null)[]>([]);
   const calRef = useRef<HTMLDivElement>(null);
@@ -69,8 +67,8 @@ export default function OwnerShifts() {
   const dateOf = (d: number) => addD(wk, d);
   const locked = (d: number) => mode === 'date' && (!meta[d]?.editable || !week?.[d]);
 
-  // Guarda un día. El backend valida R-01/R-02/R-05/R-06; si hay reservas que transferir, pregunta antes de reintentar.
-  const commit = async (d: number, day: Day, msg: string, transfers: Transfer[] = [], undoable = true): Promise<boolean> => {
+  // Guarda un día. El backend valida R-01/R-02/R-05 y reasigna solo las reservas del empleado que pierde horas (R-06, R-07).
+  const commit = async (d: number, day: Day, msg: string, undoable = true): Promise<boolean> => {
     if (!week) return false;
     const prev = week[d]!;
     if (mode === 'date' && dateOf(d) === today() && !samePast(prev, day, nowMin())) {
@@ -78,40 +76,25 @@ export default function OwnerShifts() {
       return false;
     }
     setWeek(w => w && w.map((x, i) => (i === d ? day : x)));
-    const body = { ...toServer(day), transfers };
     try {
+      let moved = 0;
       if (mode === 'tpl') {
-        const r = await saveTemplateDay(p.id, DOW[d], body);
+        const r = await saveTemplateDay(p.id, DOW[d], toServer(day));
         setWeek(w => w && w.map((x, i) => (i === d ? fromServer(r) : x)));
-        refreshOwner(); // panel, personal y reservas leen la semana tipo
+        moved = r.reassigned ?? 0;
       } else {
-        const r = await saveDay(p.id, dateOf(d), body);
+        const r = await saveDay(p.id, dateOf(d), toServer(day));
         setWeek(w => w && w.map((x, i) => (i === d ? fromServer(r) : x)));
         setMeta(m => m.map((x, i) => (i === d ? r : x)));
+        moved = r.reassigned ?? 0;
       }
-      const moved = transfers.length ? ` Reservas transferidas a ${transfers.map(t => name(t.toEmployeeId)).join(', ')}.` : '';
-      const text = `${msg}${moved}`.trim();
-      if (text) toast(text, 'ok', undoable ? () => commit(d, prev, 'Cambio deshecho.', [], false) : undefined);
+      if (mode === 'tpl' || moved) refreshOwner(); // panel, personal y reservas leen la semana tipo y el empleado asignado
+      const text = `${msg}${moved ? ` ${plural(moved, 'reserva pasó', 'reservas pasaron')} al empleado de turno.` : ''}`.trim();
+      if (text) toast(text, 'ok', undoable ? () => commit(d, prev, 'Cambio deshecho.', false) : undefined);
       return true;
     } catch (x) {
       setWeek(w => w && w.map((y, i) => (i === d ? prev : y)));
-      const c = conflictsOf(x);
-      const emp = c.filter(k => k.kind === 'empleado');
-      if (emp.length && emp.length === c.length && !transfers.length) {
-        // R-06: el que ahora cubre el horario se queda con las reservas, en un paso y con confirmación.
-        const t = new Map<string, string | undefined>();
-        for (const k of emp) {
-          const to = coveredBy(day, mm(k.from!), mm(k.to!));
-          if (t.has(k.employeeId!) && t.get(k.employeeId!) !== to) t.set(k.employeeId!, undefined); else t.set(k.employeeId!, to);
-        }
-        if ([...t.values()].every(Boolean)) {
-          const tr = [...t.entries()].map(([f, to]) => ({ fromEmployeeId: f, toEmployeeId: to! }));
-          const who = tr.map(z => name(z.fromEmployeeId)).join(' y ');
-          setPending({ d, day, msg, conflicts: emp, transfers: tr, text: `¿Querés transferir ${emp.length === 1 ? 'la reserva' : 'las reservas'} de ${who} a ${tr.map(z => name(z.toEmployeeId)).join(' y ')} y aplicar el cambio?` });
-          return false;
-        }
-      }
-      toast(c.length ? `${apiError(x)}. Reasigná o cancelá esas reservas desde Reservas.` : apiError(x), 'err');
+      toast(conflictsOf(x).length ? `${apiError(x)}. Reubicá o cancelá esas reservas desde Reservas.` : apiError(x), 'err');
       return false;
     }
   };
@@ -201,7 +184,7 @@ export default function OwnerShifts() {
     const b = week[d0]![i]!, rest = week[d0]!.filter((_, k) => k !== i);
     if (r.d === d0) return commit(d0, place(rest, { who: b.who, a: r.a, b: r.b }), '');
     // Entre días: se guarda primero el destino y después se libera el origen.
-    if (await commit(r.d, place(week[r.d]!, { who: b.who, a: r.a, b: r.b }), '', [], false)) await commit(d0, rest, '');
+    if (await commit(r.d, place(week[r.d]!, { who: b.who, a: r.a, b: r.b }), '', false)) await commit(d0, rest, '');
   };
 
   const onBlockKey = (ev: RKeyboardEvent, d: number, i: number) => {
@@ -348,7 +331,7 @@ export default function OwnerShifts() {
                 onPointerDown={ev => startDrag(ev, { kind: 'new', who: CLOSED, label: 'Cerrado', d0: -1, i: -1, a0: 0, b0: 0 })}
                 onClick={() => kbdAdd(CLOSED)}><Lock className="i sm" />Cerrado</button>
             </div>
-            <p className="ctx" style={{ padding: '8px 0 12px' }}>Soltá un empleado sobre un horario libre para cubrirlo, o sobre un turno para dividirlo en partes iguales. Arrastrá los turnos para moverlos (el que queda debajo se recorta solo) y sus bordes para ajustarlos; arrastralos fuera del calendario para quitarlos. “Cerrado” funciona igual que un empleado y se rechaza si hay reservas activas o pendientes en ese horario.</p>
+            <p className="ctx" style={{ padding: '8px 0 12px' }}>Soltá un empleado sobre un horario libre para cubrirlo. Sobre un turno: en el medio lo reemplaza entero; arriba o abajo lo divide en partes iguales. Las reservas pasan solas al empleado que queda de turno. Arrastrá los turnos para moverlos (el que queda debajo se recorta solo) y sus bordes para ajustarlos; arrastralos fuera del calendario para quitarlos. “Cerrado” funciona igual que un empleado y se rechaza si hay reservas activas o pendientes en ese horario.</p>
             <div className="legend">
               <span><i style={{ background: 'color-mix(in srgb,var(--ac) 24%,var(--surface))', borderLeft: '3px solid var(--ac-h)' }} />Turno</span>
               <span><i className="hatch" />Sin cobertura</span>
@@ -371,10 +354,6 @@ export default function OwnerShifts() {
       </div>
 
       {drag?.on && drag.kind === 'new' && <div className="dgh" style={{ left: drag.gx, top: drag.gy }}>{drag.label}</div>}
-      <Shown when={pending}>{x => (
-        <ConfirmModal title={`${plural(x.conflicts.length, 'reserva', 'reservas')} en este horario`} body={x.text} ok="Transferir y aplicar"
-          onClose={() => setPending(null)} onConfirm={() => { setPending(null); commit(x.d, x.day, x.msg, x.transfers); }} />
-      )}</Shown>
     </>
   );
 }

@@ -20,9 +20,9 @@ export const getRange = (parkingId: string, from: string, to: string): Promise<R
 export const getTemplate = (parkingId: string): Promise<({ dayOfWeek: DayOfWeek } & { shifts: DayShift[]; closures: DayClosure[] })[]> =>
   api.get(`/api/shifts/template/${parkingId}`).then(res => res.data.data);
 
-export const saveTemplateDay = (parkingId: string, dayOfWeek: DayOfWeek, body: { shifts: DayShift[]; closures: DayClosure[]; transfers?: Transfer[] }) =>
+export const saveTemplateDay = (parkingId: string, dayOfWeek: DayOfWeek, body: { shifts: DayShift[]; closures: DayClosure[]; transfers?: Transfer[] }): Promise<{ dayOfWeek: DayOfWeek; shifts: DayShift[]; closures: DayClosure[]; reassigned?: number }> =>
   api.put(`/api/shifts/template/${parkingId}/${dayOfWeek}`, body).then(res => res.data.data);
 
-// Reservas que bloquean un cambio (409), para ofrecer la transferencia (R-06).
+// Reservas que bloquean un cambio (409): horas que quedarían cerradas o sin cobertura (R-01, R-05).
 export const conflictsOf = (err: unknown): ScheduleConflict[] =>
   (axios.isAxiosError(err) && err.response?.status === 409 && err.response.data?.details?.conflicts) || [];
