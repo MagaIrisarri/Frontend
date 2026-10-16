@@ -11,8 +11,7 @@ import { getParkingsByOwner } from '../../services/parking.service';
 import { useAuthStore } from '../../stores/authStore';
 
 const IVA = ['Responsable Inscripto', 'Monotributo', 'Exento'];
-// shortcut: proposal, datos fiscales y preferencias de aviso se guardan en el navegador (el backend no los tiene) y las preferencias no filtran los avisos de /api/notifications, pasarlos al usuario en el servidor
-const store = <T,>(key: string, fallback: T): T => { try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || '{}') }; } catch { return fallback; } };
+// Datos fiscales y avisos apagados se guardan en el usuario (servidor): NotificationService saltea los que apagó.
 
 // "Mi perfil" en panel lateral. Reemplaza a la página /profile; lo abre cualquier rol.
 export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
@@ -27,8 +26,9 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
   const isClient = !isOwner && !type.includes('ADMIN') && !type.includes('EMP');
 
   const [v, setV] = useState({ name: me.name ?? '', last_name: me.last_name ?? '', email: me.email ?? '', phone: me.phone ?? '', dob: me.date_of_birth?.slice(0, 10) ?? '', pw0: '', pw1: '', pw2: '' });
-  const [fiscal, setFiscal] = useState(() => store(`parkflow_fiscal_${id}`, { businessName: '', cuit: '', vatCondition: IVA[0]!, fiscalAddress: '' }));
-  const [prefs, setPrefs] = useState(() => store(`parkflow_prefs_${id}`, { alertFullCapacity: true, alertNewBooking: true }));
+  const [fiscal, setFiscal] = useState({ businessName: me.businessName ?? '', cuit: me.cuit ?? '', vatCondition: me.vatCondition ?? IVA[0]!, fiscalAddress: me.fiscalAddress ?? '' });
+  const muted: string[] = me.mutedNotifications ?? [];
+  const [prefs, setPrefs] = useState({ alertFullCapacity: !muted.includes('SUCURSAL_LLENA'), alertNewBooking: !muted.includes('RESERVA_NUEVA') });
   const [err, setErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -64,14 +64,15 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
       const data = {
         name: v.name.trim(), last_name: v.last_name.trim(), email: v.email.trim(),
         ...(v.phone.trim() && { phone: v.phone.trim() }), ...(v.dob && { date_of_birth: v.dob }),
+        // Vacío borra el dato; el CUIT vuelve del servidor con guiones y el dígito verificado.
+        ...(isOwner && {
+          businessName: fiscal.businessName.trim(), cuit: fiscal.cuit.trim(), vatCondition: fiscal.vatCondition, fiscalAddress: fiscal.fiscalAddress.trim(),
+          mutedNotifications: [...(prefs.alertNewBooking ? [] : ['RESERVA_NUEVA']), ...(prefs.alertFullCapacity ? [] : ['SUCURSAL_LLENA'])],
+        }),
       };
-      await updateUser(id, data as any);
+      const saved = await updateUser(id, data as any);
       if (v.pw1) await changePassword(id, v.pw0, v.pw1);
-      if (isOwner) {
-        localStorage.setItem(`parkflow_fiscal_${id}`, JSON.stringify(fiscal));
-        localStorage.setItem(`parkflow_prefs_${id}`, JSON.stringify(prefs));
-      }
-      setUser({ ...me, ...data, ...(v.pw1 && { mustChangePassword: false }) });
+      setUser({ ...me, ...data, ...(saved?.data ?? {}), ...(v.pw1 && { mustChangePassword: false }) });
       toast(v.pw1 ? 'Perfil guardado y contraseña actualizada.' : 'Perfil guardado.');
       onClose();
     } catch (x) {

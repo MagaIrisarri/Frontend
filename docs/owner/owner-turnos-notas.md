@@ -164,7 +164,7 @@ Sin cambios: estacionamientos por localidad, vehículos por tipo (marca, modelo,
 
 ## Diferencias con el prototipo
 
-- "Mi perfil" es un panel lateral para todos los roles (`src/components/Profile/ProfileDrawer.tsx`, abierto con `useOpenProfile()`); la página `/profile` ya no existe. Los datos fiscales y las preferencias de aviso del dueño se guardan en el navegador, porque el backend no los tiene. Los avisos en sí vienen de `GET /api/notifications` (campana en Home y en la barra de los paneles, `NotificationsProvider`).
+- "Mi perfil" es un panel lateral para todos los roles (`src/components/Profile/ProfileDrawer.tsx`, abierto con `useOpenProfile()`); la página `/profile` ya no existe. Los datos fiscales del dueño (CUIT con dígito verificado) y los avisos que apagó (`mutedNotifications`: reserva nueva y sucursal llena) se guardan en el usuario, en el servidor. Los avisos en sí vienen de `GET /api/notifications` (campana en Home y en la barra de los paneles, `NotificationsProvider`).
 - Alta y edición de sucursal reutilizan las pantallas existentes (`/my-parkings/...`); el prototipo las tenía en un panel lateral.
 - El alta de empleado exige sucursal (el backend la requiere); no existe "Quitar de sucursal".
 - Personal suma "Dados de baja" con "Reactivar", que la app ya tenía.

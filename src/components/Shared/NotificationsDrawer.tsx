@@ -20,7 +20,7 @@ interface NotificationsDrawerProps {
 
 const ICON: Record<NotificationType, typeof Bell> = {
   RESERVA_NUEVA: Calendar, RESERVA_CANCELADA: XCircle, RESERVA_VENCIDA: XCircle,
-  RESERVA_EXTENDIDA: Clock, PLAZA_CAMBIADA: ArrowRightLeft, SALIDA: FileText, RECORDATORIO: Bell, INGRESO: LogIn, RESERVA_TRANSFERIDA: UserCheck,
+  RESERVA_EXTENDIDA: Clock, PLAZA_CAMBIADA: ArrowRightLeft, SALIDA: FileText, RECORDATORIO: Bell, INGRESO: LogIn, RESERVA_TRANSFERIDA: UserCheck, SUCURSAL_LLENA: AlertCircle,
 };
 
 // fmtD (owner.lib) exige 'YYYY-MM-DD'; acá llega la fecha y hora completa.

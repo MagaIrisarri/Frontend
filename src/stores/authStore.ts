@@ -13,6 +13,12 @@ export interface CurrentUser {
   dni?: string;
   mustChangePassword?: boolean; // contraseña temporal: el DNI (cuenta del mostrador, R-29) o la que puso el administrador (DA-02)
   date_of_birth?: string;
+  // Dueño: datos fiscales; cualquiera: avisos que apagó (MUTABLE_NOTIFICATIONS del backend).
+  businessName?: string | null;
+  cuit?: string | null;
+  vatCondition?: string | null;
+  fiscalAddress?: string | null;
+  mutedNotifications?: string[] | null;
   [key: string]: any;
 }
 
@@ -71,10 +77,8 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user: CurrentUser | null, token?: string) => {
         if (!user) {
           localStorage.removeItem('user');
-          localStorage.removeItem('parkflow_user_id');
           localStorage.removeItem('user_id');
           localStorage.removeItem('token');
-          localStorage.removeItem('parkflow_token');
           set({
             user: null,
             isAuthenticated: false,
@@ -94,10 +98,7 @@ export const useAuthStore = create<AuthState>()(
         localStorage.setItem('user', JSON.stringify(enrichedUser));
         if (token) localStorage.setItem('token', token); // lo lee services/api.ts
         const userId = enrichedUser.id || enrichedUser._id;
-        if (userId) {
-          localStorage.setItem('parkflow_user_id', userId);
-          localStorage.setItem('user_id', userId);
-        }
+        if (userId) localStorage.setItem('user_id', userId);
 
         set({
           user: enrichedUser,
@@ -109,10 +110,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         localStorage.removeItem('user');
-        localStorage.removeItem('parkflow_user_id');
         localStorage.removeItem('user_id');
         localStorage.removeItem('token');
-        localStorage.removeItem('parkflow_token');
         set({
           user: null,
           isAuthenticated: false,
@@ -122,7 +121,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'parkflow_auth_session',
+      name: 'auth_session',
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         if (state && state.user) {

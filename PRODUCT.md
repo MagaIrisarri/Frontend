@@ -15,11 +15,11 @@ React (Vite) + Tailwind CSS + TypeScript + React Router
 1. Clientes: Automovilistas que buscan reservar un espacio de estacionamiento por hora.
 2. Dueños: Propietarios o administradores de uno o múltiples estacionamientos.
 3. Empleados: Personal en el estacionamiento encargado del check-in, check-out y validación.
-4. Administradores: Operadores del sistema ParkFlow que gestionan el catálogo global y tarifas.
+4. Administradores: Operadores del sistema ServicioCocheras que gestionan el catálogo global y tarifas.
 
 ## Product Purpose
 
-ParkFlow es una plataforma SaaS B2B2C que permite a los dueños de estacionamientos digitalizar su operación, gestionar reservas, empleados y facturación. Para el usuario final (cliente), permite encontrar y reservar lugares de estacionamiento garantizados por anticipado.
+ServicioCocheras es una plataforma SaaS B2B2C que permite a los dueños de estacionamientos digitalizar su operación, gestionar reservas, empleados y facturación. Para el usuario final (cliente), permite encontrar y reservar lugares de estacionamiento garantizados por anticipado.
 
 ## Positioning
 
