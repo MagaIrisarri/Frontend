@@ -1,5 +1,7 @@
 export interface Parking {
   id: string;
+  createdAt?: string | null; // alta y última modificación (sin dato en las sucursales anteriores a esas columnas)
+  updatedAt?: string | null;
   province?: string | null; // las sucursales previas pueden no tenerla
   locality: string;
   neighborhood?: string | null; // barrio o zona (Centro, Pichincha…)

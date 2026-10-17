@@ -13,9 +13,10 @@ type Values = { name: string; description: string };
 
 // Lista del catálogo general (tipos de vehículo, servicios, seguros, marcas), con los patrones del panel del dueño.
 // Cada acción aparece solo si se pasa su función en `api`: sin create no hay alta, sin update/remove no hay menú.
-// `actions`: acciones propias de la pantalla en el menú de cada fila (también en las bloqueadas); `onCreated`: el ítem recién creado.
+// `actions`: acciones propias de la pantalla en el menú de cada fila (también en las bloqueadas); `onCreated`: el ítem recién creado;
+// `headActions`: botones propios de la pantalla junto al de alta; `details`: contenido propio debajo de cada fila.
 export interface CatalogAction { label: string; icon: ReactNode; onClick: () => void }
-export default function AdminCatalog({ title, sub, noun, icon, withDescription, api, actions, onCreated }: {
+export default function AdminCatalog({ title, sub, noun, icon, withDescription, api, actions, onCreated, headActions, details }: {
   title: string;
   sub: string;
   noun: { one: string; many: string; nuevo: string }; // "tipo de vehículo", "tipos de vehículo", "Nuevo tipo"
@@ -29,6 +30,8 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
   };
   actions?: (item: CatalogItem) => CatalogAction[];
   onCreated?: (created: any) => void;
+  headActions?: ReactNode;
+  details?: (item: CatalogItem) => ReactNode;
 }) {
   const toast = useToast();
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -79,7 +82,7 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
       <thead><tr><th>Nombre</th>{hasMenu && <th><span className="sr">Acciones</span></th>}</tr></thead>
       <tbody>{shown.map(i => (
         <tr key={i.id}>
-          <td><span className="nm">{i.name}</span>{i.description && <div className="ad">{i.description}</div>}</td>
+          <td><span className="nm">{i.name}</span>{i.description && <div className="ad">{i.description}</div>}{details?.(i)}</td>
           {hasMenu && <td className="r"><div className="acts">
             {(!i.locked || !!actions?.(i).length) && <Menu label={`Más acciones de ${i.name}`} button={<MoreVertical className="i" />} items={[
               ...(actions?.(i) ?? []),
@@ -95,7 +98,7 @@ export default function AdminCatalog({ title, sub, noun, icon, withDescription, 
   return (
     <>
       <PageHead title={title} sub={status === 'ready' && items.length ? `${sub} ${plural(items.length, noun.one, noun.many)}.` : sub}
-        actions={status === 'ready' && items.length > 0 && newBtn} />
+        actions={<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{headActions}{status === 'ready' && items.length > 0 && newBtn}</div>} />
       {status === 'ready' && items.length > 0 && (
         <div className="toolbar">
           <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar por nombre" aria-label="Buscar por nombre" value={q} onChange={e => setQ(e.target.value)} /></div>

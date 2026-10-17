@@ -23,6 +23,7 @@ import {
 } from './owner.lib';
 
 import { matchesQuery } from '../../utils/search';
+import { formatStamp } from '../../utils/date';
 import { iconOf } from '../../components/Owner/ui/vehicles';
 type Filter = 'all' | 'ok' | 'alert' | 'paused';
 // Localidad de una sucursal, con su provincia: hay localidades con el mismo nombre en distintas provincias.
@@ -294,6 +295,8 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onCloseB
             <dt>Dirección</dt><dd>{[p.address, p.neighborhood, p.locality].filter(Boolean).join(', ')} ({p.postalCode})</dd>
             <dt>Horario</dt><dd>{hrs(p)}</dd>
             <dt>Reserva</dt><dd>{p.minReservationHours} a {p.maxReservationHours} h · margen entre reservas {p.reservationMargin} min</dd>
+            <dt>Alta</dt><dd>{formatStamp(p.createdAt)}</dd>
+            <dt>Última modificación</dt><dd>{formatStamp(p.updatedAt)}</dd>
           </dl>
         </div>
         <div className="fs"><div className="fh"><h3>Tarifas por hora</h3><button type="button" className="link" onClick={() => navigate(`/owner/tariffs?p=${p.id}`)}>Editar tarifas</button></div>

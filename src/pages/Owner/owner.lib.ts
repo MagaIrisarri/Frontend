@@ -190,6 +190,7 @@ export interface ParkingLike {
   id: string; isActive: boolean; walkInOnly?: boolean; openingTime: string; closingTime: string;
   spaceTypes?: SpaceType[];
   prices?: ParkingPriceRow[];
+  createdAt?: string | null; updatedAt?: string | null; // alta y última modificación (sin dato en las anteriores a esas columnas)
 }
 // R-30: plazas y tarifas van por tipo de vehículo (id); el backend manda capacidad, libres y mantenimiento de cada uno.
 export interface TypeRef { id: string; name: string }

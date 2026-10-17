@@ -17,11 +17,12 @@ import { useAuthStore } from '../../stores/authStore';
 import { usePagedList } from '../../hooks/usePagedList';
 import { useAsync, useDebounced } from '../../hooks/useAsync';
 import { revealOnMobile } from '../../utils/layout';
+import { formatStamp } from '../../utils/date';
 import { iconOf } from '../../components/Owner/ui/vehicles';
 import { RS, initials, normRes, pct, plural, typeLabel } from '../Owner/owner.lib';
 
 type Role = 'CLIENTE' | 'DUEÑO' | 'EMPLEADO' | 'ADMINISTRADOR';
-interface U { id: string; dni: string; name: string; last_name: string; email: string; phone?: string; date_of_birth?: string; type: Role; status: 'ACTIVO' | 'BAJA'; ownerId?: string; parkingId?: string; parkingName?: string | null }
+interface U { id: string; dni: string; name: string; last_name: string; email: string; phone?: string; date_of_birth?: string; type: Role; status: 'ACTIVO' | 'BAJA'; ownerId?: string; parkingId?: string; parkingName?: string | null; createdAt?: string | null; updatedAt?: string | null }
 interface Meta { page: number; limit: number; total: number; counts: { role: Record<Role, number>; status: Record<'ACTIVO' | 'BAJA', number> } }
 
 const ROLE: Record<Role, { l: string; pl: string }> = {
@@ -37,7 +38,6 @@ const ageOf = (iso: string) => {
   return a;
 };
 const birth = (iso?: string) => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)} · ${ageOf(iso)} años` : '—';
-
 // Usuarios del sistema: lista paginada a la izquierda y el detalle del elegido a la derecha, con lo que importa de cada rol.
 // Baja y reactivación (R-20), alta y edición de clientes, dueños y empleados. La búsqueda, los filtros y las páginas los resuelve el servidor.
 export default function AdminUsers() {
@@ -172,6 +172,8 @@ function UserDetail({ u, self, onEdit, onDeactivate, onReactivate, onResetPasswo
           <dt>Email</dt><dd className="t">{u.email}</dd>
           <dt>Teléfono</dt><dd>{u.phone || '—'}</dd>
           <dt>Nacimiento</dt><dd>{birth(u.date_of_birth)}</dd>
+          <dt>Alta</dt><dd>{formatStamp(u.createdAt)}</dd>
+          <dt>Última modificación</dt><dd>{formatStamp(u.updatedAt)}</dd>
         </dl>
       </div>
       {u.type === 'CLIENTE' && <ClientBlocks u={u} />}

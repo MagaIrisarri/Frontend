@@ -10,6 +10,7 @@ import { usePagedList } from '../../hooks/usePagedList';
 import { useAsync, useDebounced } from '../../hooks/useAsync';
 import { revealOnMobile } from '../../utils/layout';
 import { iconOf } from '../../components/Owner/ui/vehicles';
+import { formatStamp } from '../../utils/date';
 import { capOf, hrs, maintOf, money, occOf, pct, priceOf, svcOf, missing, typePlural, typesOf, type ParkingLike } from '../Owner/owner.lib';
 
 interface Parking extends ParkingLike {
@@ -137,6 +138,8 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
           <dt>Horario</dt><dd>{hrs(p)}</dd>
           <dt>Reserva</dt><dd>{p.minReservationHours} a {p.maxReservationHours} h · margen entre reservas {p.reservationMargin} min</dd>
           <dt>Personal</dt><dd>{team.status === 'error' ? '—' : team.status === 'loading' ? 'Cargando…' : crew.length ? crew.map(u => `${u.name} ${u.last_name}`).join(', ') : 'Sin empleados asignados'}</dd>
+          <dt>Alta</dt><dd>{formatStamp(p.createdAt)}</dd>
+          <dt>Última modificación</dt><dd>{formatStamp(p.updatedAt)}</dd>
         </dl>
       </div>
 

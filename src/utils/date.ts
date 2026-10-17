@@ -12,6 +12,15 @@ const partsOf = (d: Date): Record<string, string> | null =>
 export const arDate = (d: Date) => { const p = partsOf(d); return p ? `${p.year}-${p.month}-${p.day}` : ''; };
 export const arTime = (d: Date) => { const p = partsOf(d); return p ? `${p.hour}:${p.minute}` : ''; };
 
+// Alta o última modificación de un registro: 'DD/MM/AAAA · HH:MM' en Argentina. Sin dato (registros anteriores a esas columnas): 'Sin dato'.
+// Una columna de solo día ('AAAA-MM-DD', como el alta de un vehículo) se muestra sin hora.
+export const formatStamp = (value?: string | null) => {
+  if (!value) return 'Sin dato';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}`;
+  const d = new Date(value), day = arDate(d);
+  return day ? `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)} · ${arTime(d)}` : 'Sin dato';
+};
+
 // El instante de una fecha y hora de Argentina (lo que elige el usuario en un formulario).
 // shortcut: L-04, offset fijo -03:00 (Argentina no tiene horario de verano desde 2009); usar la zona de cada sucursal si hay sucursales fuera del país
 export const atAR = (date: string, time: string) => new Date(`${date}T${time.slice(0, 5)}:00-03:00`);
