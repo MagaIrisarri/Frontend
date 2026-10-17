@@ -18,7 +18,7 @@ import {
 
 const ROW = 20; // px por franja de 30 min
 // shortcut: L-10, bloques fijos de 30 minutos, parametrizar por sucursal si se pide
-// shortcut: L-19, mover y estirar turnos funciona con mouse; en táctil solo se arrastran empleados desde la paleta
+// Mover y estirar turnos es con mouse; en táctil (y con teclado) cada turno se edita en su editor (L-19, cerrada).
 
 type Mode = 'tpl' | 'date';
 interface Drag {

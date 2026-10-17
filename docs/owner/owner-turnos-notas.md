@@ -94,7 +94,7 @@ Orden de lectura de un día: excepción de esa fecha si existe; si no, feriado a
 | L-16 | Auditoría | No registra quién cambió qué. | Usuario, fecha, antes y después. | Abierta. |
 | L-17 | Importes | Neto = importe / 1,21. | Neto e IVA de la facturación real. | Resuelta (pendiente de commit): se muestra solo el importe bruto de la factura. Se quitó el neto /1,21 hasta conocer las reglas fiscales de las cocheras. |
 | L-18 | Descargas | CSV en el navegador. | Servidor si crece; XLSX si se pide. | Abierta. |
-| L-19 | Móvil y táctil | Mover y estirar solo con mouse. | Alternativa táctil. | Abierta (en táctil se tocan empleados de la paleta). |
+| L-19 | Móvil y táctil | Mover y estirar solo con mouse. | Alternativa táctil: tocar un turno (o Enter) abre un editor con quién cubre, desde, hasta y quitar. Arrastrar sigue siendo con mouse. | Cerrada (Frontend `fcdcb86`). |
 | L-20 | Accesibilidad | Sin prueba con lector de pantalla. | Auditoría WCAG. | Abierta: hay teclado (flechas, Suprimir, Escape, menús). |
 | L-21 | Modo claro | No revisado en vista por fecha, feriados y resumen. | Revisar contrastes. | Abierta. |
 | L-22 | Datos | Ids de ejemplo en memoria. | Ids del servidor. | Resuelta. |
