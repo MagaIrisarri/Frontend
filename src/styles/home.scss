@@ -63,6 +63,9 @@
 .pin.na{background:var(--raised);color:var(--tx3)}
 .pin.sel{background:var(--ac);color:var(--on-ac);transform:scale(1.05);box-shadow:0 0 0 4px var(--ac-soft),var(--shadow)}
 .pin.sel.na{background:var(--hover);color:var(--tx2)}
+/* L-44: solo presencial: se ve con su precio, en ámbar y con el texto "presencial" */
+.pin.wi{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--warn);box-shadow:0 0 0 1px var(--warn-b),0 4px 12px rgba(0,0,0,.25)}
+.pin.sel.wi{background:var(--warn);color:var(--surface);box-shadow:0 0 0 4px color-mix(in srgb,var(--warn) 30%,transparent),var(--shadow)}
 .pin small{font-size:11px;font-weight:500;opacity:.8}
 .cluster{background:var(--tx);color:var(--bg);cursor:pointer;box-shadow:var(--shadow)}
 .cluster:hover{transform:scale(1.08)}

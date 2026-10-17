@@ -99,17 +99,21 @@ export function FavoritesDrawer({
                     >
                       Ver en el mapa
                     </button>
-                    <button
-                      type="button"
-                      className="btn sm"
-                      onClick={() => {
-                        onClose();
-                        onOpenReservation(p);
-                      }}
-                    >
-                      Reservar
-                      <ChevronRight className="i sm" />
-                    </button>
+                    {p.walkInOnly ? (
+                      <span className="tag warn">Solo presencial</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn sm"
+                        onClick={() => {
+                          onClose();
+                          onOpenReservation(p);
+                        }}
+                      >
+                        Reservar
+                        <ChevronRight className="i sm" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </article>

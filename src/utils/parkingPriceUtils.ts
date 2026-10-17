@@ -71,15 +71,15 @@ export const getTypeSpaces = (parking: Parking, typeId: string): number => {
   return t ? t.available ?? t.capacity : 0;
 };
 
-/** Por qué una cochera no sirve para el tipo; null si sirve. */
-// WALK_IN_ONLY (L-44) no depende del tipo de vehículo: la sucursal atiende solo en el lugar.
+/** Por qué una cochera no sirve para el tipo; null si sirve. No mira isPresential: esa se ve con su precio. */
 export const getUnavailableReason = (
   parking: Parking,
-  typeId?: string
-): 'WALK_IN_ONLY' | 'NO_PRICE' | 'NO_SPACE' | null => {
-  if (parking.walkInOnly) return 'WALK_IN_ONLY';
-  if (!typeId) return null;
+  typeId: string
+): 'NO_PRICE' | 'NO_SPACE' | null => {
   if (getParkingPriceForType(parking, typeId) === null) return 'NO_PRICE';
   if (getTypeSpaces(parking, typeId) <= 0) return 'NO_SPACE';
   return null;
 };
+
+/** L-44: la sucursal pausó las reservas online y atiende solo en el lugar. En el mapa se ve, con su precio, pero no se reserva. */
+export const isPresential = (parking: Pick<Parking, 'walkInOnly'>) => !!parking.walkInOnly;
