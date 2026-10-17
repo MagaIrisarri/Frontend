@@ -38,14 +38,17 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
   });
   const [err, setErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  const set = (k: string) => (e: { target: { value: string } }) => { setV({ ...v, [k]: e.target.value }); setErr({ ...err, [k]: '' }); };
+  const set = (k: string) => (e: { target: { value: string } }) => {
+    const value = e.target.value; // con el estado anterior de cada paso: dos campos cambiados seguidos no se pisan
+    setV(s => ({ ...s, [k]: value })); setErr(x => ({ ...x, [k]: '' }));
+  };
   const num = (k: string) => parseInt((v as any)[k], 10);
   // R-30: plazas iniciales por tipo de vehículo, con los tipos activos del catálogo del administrador.
   const { types } = useVehicleTypes();
   const [counts, setCounts] = useState<Record<string, string>>({});
   const n = (id: string) => Math.max(0, parseInt(counts[id] ?? '0', 10) || 0);
   const total = edit ? parking!.totalCapacity ?? 0 : types.reduce((a, t) => a + n(t.id), 0);
-  const setCount = (id: string, value: string) => { setCounts(c => ({ ...c, [id]: value })); setErr(e => ({ ...e, [id]: '' })); };
+  const setCount = (id: string, value: string) => { setCounts(c => ({ ...c, [id]: value })); setErr(e => ({ ...e, [id]: '', spaces: '' })); };
   const step = (id: string, d: number) => setCount(id, String(Math.max(0, n(id) + d)));
 
   // Provincia, localidad, calle, barrio, código postal y punto: los edita el selector, que los completa desde la búsqueda y el pin.
@@ -63,6 +66,8 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
     if (!/^(\d{4}|[A-Z]\d{4}[A-Z]{3})$/.test(v.postalCode.trim().toUpperCase())) e.postalCode = 'Usá 4 dígitos o formato CPA (S2000ABC).';
     if (!edit) { // las plazas solo se cargan al crear; después se gestionan en Plazas (R-18)
       types.forEach(t => { if (counts[t.id] && !(parseInt(counts[t.id], 10) >= 0)) e[t.id] = 'Número inválido.'; });
+      // Sin plazas quedaría operativa en el mapa sin nada para reservar.
+      if (!total) e.spaces = 'Agregá al menos una plaza para poder recibir reservas.';
     }
     if (!v.is24 && !(v.open && v.close && v.open < v.close)) e.close = 'El cierre debe ser posterior a la apertura.';
     if (!(num('min') >= 1)) e.min = 'Mínimo 1 h.';
@@ -73,6 +78,7 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
 
   const save = async (ev: FormEvent) => {
     ev.preventDefault();
+    if (busy) return; // Enter en un campo vuelve a enviar el formulario
     const e = validate();
     setErr(e);
     if (Object.keys(e).length) return toast('Revisá los campos marcados.', 'err');
@@ -85,7 +91,12 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
     };
     try {
       if (parking) { await putParking(data, parking.id); toast(`Cambios guardados en “${data.name}”.`); }
-      else { await createParking({ ...data, spaces: types.filter(t => n(t.id) > 0).map(t => ({ vehicleTypeId: t.id, quantity: n(t.id) })), ownerId }); toast(`Sucursal “${data.name}” creada con ${plural(total, 'plaza', 'plazas')}. Falta cargar sus tarifas.`); }
+      else {
+        const res = await createParking({ ...data, spaces: types.filter(t => n(t.id) > 0).map(t => ({ vehicleTypeId: t.id, quantity: n(t.id) })), ownerId });
+        const id = res?.data?.id;
+        toast(`Sucursal “${data.name}” creada con ${plural(total, 'plaza', 'plazas')}. Falta cargar sus tarifas.`, 'ok',
+          id ? { label: 'Cargar tarifas', fn: () => navigate(`/owner/tariffs?p=${id}`) } : undefined);
+      }
       await refresh();
       onClose();
     } catch (x) { toast(apiError(x), 'err'); } finally { setBusy(false); }
@@ -93,7 +104,7 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
 
   return (
     <Drawer size="mid" title={edit ? 'Editar sucursal' : 'Nueva sucursal'} sub={edit ? parking!.name : 'Completá los datos para publicar tu cochera.'} onClose={onClose}
-      footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn pri" type="submit" form="pform" aria-busy={busy}>{edit ? 'Guardar cambios' : 'Crear sucursal'}</button></div>}>
+      footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn pri" type="submit" form="pform" disabled={busy} aria-busy={busy}>{edit ? 'Guardar cambios' : 'Crear sucursal'}</button></div>}>
       <form id="pform" noValidate className="dbody" onSubmit={save}>
         <section className="fs"><div className="fh"><h3>Datos generales</h3></div>
           <Input label="Nombre de la sucursal" placeholder="Ej. Estacionamiento Central Pellegrini" autoComplete="off" value={v.name} onChange={set('name')} error={err.name} data-first />
@@ -125,10 +136,11 @@ function ParkingForm({ parking, onClose }: { parking: Parking | null; onClose: (
               </Field>
             );
           })}</div>
+          {err.spaces && <div className="ferr" role="alert">{err.spaces}</div>}
         </section>
         )}
         <section className="fs"><div className="fh"><h3>Horario</h3>
-          <label className="switch"><input type="checkbox" checked={v.is24} onChange={e => setV({ ...v, is24: e.target.checked })} /><span className="t" />Abierto 24 horas</label></div>
+          <label className="switch"><input type="checkbox" checked={v.is24} onChange={e => { const is24 = e.target.checked; setV(s => ({ ...s, is24 })); }} /><span className="t" />Abierto 24 horas</label></div>
           <div className="g2">
             <Input label="Apertura" type="time" disabled={v.is24} value={v.is24 ? '00:00' : v.open} onChange={set('open')} error={err.open} />
             <Input label="Cierre" type="time" disabled={v.is24} value={v.is24 ? '23:59' : v.close} onChange={set('close')} error={err.close} />

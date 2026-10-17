@@ -1,23 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, Building2, CalendarDays, Check, DollarSign, Eye, LayoutGrid, Layers, Lock, MoreVertical,
+  AlertTriangle, Building2, CalendarDays, Check, Circle, DollarSign, Eye, LayoutGrid, Layers, Lock, MoreVertical,
   Pause, Pencil, Plus, Power, Search, Users,
 } from 'lucide-react';
 import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
 import { Shown } from '../../components/Owner/ui/Presence';
 import { Menu } from '../../components/Owner/ui/Menu';
+import { StateChip, operating } from '../../components/Owner/ui/StateChip';
 import { Empty, ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
 import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
-import { deleteParking, reactivateParking } from '../../services/parking.service';
+import { deleteParking, getParkingMetrics, reactivateParking } from '../../services/parking.service';
+import { useAsync } from '../../hooks/useAsync';
 import { getServicePrices } from '../../services/servicePrice.service';
 import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
 import ParkingDrawer from './ParkingDrawer';
 import {
-  capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
-  typeLabel, typePlural, typesAcross, typesOf,
+  CLOSED, cap, capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, missing, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
+  typeLabel, typePlural, typesAcross, typesOf, type Day,
 } from './owner.lib';
 
 import { matchesQuery } from '../../utils/search';
@@ -26,10 +28,11 @@ type Filter = 'all' | 'ok' | 'alert' | 'paused';
 // Localidad de una sucursal, con su provincia: hay localidades con el mismo nombre en distintas provincias.
 const locOf = (p: Parking) => [p.locality, p.province].filter(Boolean).join(', ');
 
-export function WarnBtn({ list }: { list: { l: string; d: string }[] }) {
+// El tooltip resume con el mouse; tocarlo abre el detalle de la sucursal, que lista cada aviso (en el teléfono no hay hover).
+export function WarnBtn({ list, onClick }: { list: { l: string; d: string }[]; onClick?: () => void }) {
   if (!list.length) return null;
   return (
-    <button type="button" className="warnbtn" data-tip={list.map(x => `${x.l}: ${x.d}`).join('\n')}
+    <button type="button" className="warnbtn" onClick={onClick} aria-haspopup={onClick ? 'dialog' : undefined} data-tip={list.map(x => `${x.l}: ${x.d}`).join('\n')}
       aria-label={`${plural(list.length, 'aviso', 'avisos')}: ${list.map(x => x.l).join(', ')}`}>
       <AlertTriangle className="i sm" />{list.length > 1 && <b>{list.length}</b>}
     </button>
@@ -40,15 +43,34 @@ function OccBar({ value, label }: { value: number; label: string }) {
   return <div className={`bar-t ${lvl(value)}`} role="img" aria-label={label}><i style={{ width: `${Math.min(100, value)}%` }} /></div>;
 }
 
-// Operativa: toma reservas online. Pausada: cerrada (isActive false) o solo en el lugar (L-44, walkInOnly).
-const operating = (p: Parking) => p.isActive && !p.walkInOnly;
-function StateChip({ p }: { p: Parking }) {
-  if (operating(p)) return <span className="st ok"><Check className="i sm" />Operativa</span>;
-  return <span className={`st ${p.isActive ? 'warn' : 'mute'}`}><Pause className="i sm" />{p.isActive ? 'Solo en el lugar' : 'Pausada'}</span>;
+
+// Puesta en marcha: lo que le falta a una sucursal para recibir reservas, en el orden en que se configura.
+// `k` es la vista de cada paso (/owner/<k>?p=id).
+type Step = { k: string; l: string; todo: string; done: boolean };
+function setupOf(p: Parking, employees: { parkingId?: string | null }[], week?: Day[]): Step[] {
+  const spaces = tot(p) > 0;
+  return [
+    { k: 'spaces', l: 'Plazas', todo: 'Agregar plazas', done: spaces },
+    { k: 'tariffs', l: 'Tarifas', todo: 'Cargar tarifas', done: spaces && !missing(p).length },
+    { k: 'employees', l: 'Personal', todo: 'Sumar personal', done: employees.some(e => e.parkingId === p.id) },
+    // Un turno de un empleado alcanza para el paso; la cobertura completa ya la avisa issues() (R-01).
+    { k: 'shifts', l: 'Turnos', todo: 'Armar turnos', done: !!week?.some(d => d.some(x => x.who !== CLOSED)) },
+  ];
+}
+
+function SetupSteps({ p, steps }: { p: Parking; steps: Step[] }) {
+  const navigate = useNavigate();
+  return (
+    <ol className="setup" aria-label={`Puesta en marcha de ${p.name}`}>
+      {steps.map(s => <li key={s.k}>{s.done
+        ? <span className="st ok"><Check className="i sm" />{s.l}<span className="sr">: listo</span></span>
+        : <button type="button" className="link" onClick={() => navigate(`/owner/${s.k}?p=${p.id}`)}><Circle className="i sm" />{s.todo}</button>}</li>)}
+    </ol>
+  );
 }
 
 export default function OwnerDashboard() {
-  const { parkings, templates, reservations, employees, me, status, refresh } = useOwner();
+  const { parkings, templates, reservations, employees, status, refresh } = useOwner();
   const navigate = useNavigate();
   const toast = useToast();
   const [q, setQ] = useState('');
@@ -57,9 +79,18 @@ export default function OwnerDashboard() {
   const [detail, setDetail] = useState<Parking | null>(null);
   const [pausing, setPausing] = useState<Parking | null>(null); // L-42: confirmar antes de pausar
   const [walkIn, setWalkIn] = useState(false); // L-44: pausar solo las reservas online
+  const [pausingBusy, setPausingBusy] = useState(false);
   const [params, setParams] = useSearchParams();
   const [pform, setPform] = useState<Parking | 'new' | null>(params.get('new') ? 'new' : null);
   useEffect(() => { if (params.get('new')) setParams({}, { replace: true }); }, [params, setParams]);
+  // Desde una notificación de sucursal (?p=id): abre su detalle cuando ya están cargadas.
+  useEffect(() => {
+    const id = params.get('p');
+    const p = id && parkings.find(x => x.id === id);
+    if (!p) return;
+    setDetail(p);
+    setParams({}, { replace: true });
+  }, [params, setParams, parkings]);
 
   // La localidad elegida limita la lista y también los indicadores (ocupación, facturado hoy y reservas en curso).
   const localities = useMemo(() => [...new Set(parkings.map(locOf))].sort((a, b) => a.localeCompare(b)), [parkings]);
@@ -97,14 +128,18 @@ export default function OwnerDashboard() {
     } catch (x) { toast(apiError(x), 'err'); }
   };
   const pause = async () => {
+    if (pausingBusy) return;
     const p = pausing!;
+    setPausingBusy(true);
     try {
       const { cancelled = 0, inProgress = 0 } = (await deleteParking(p.id, walkIn))?.data ?? {};
-      toast(`${walkIn ? `“${p.name}” atiende solo en el lugar. Sigue en el mapa, sin reservas online.` : `“${p.name}” pausada. Ya no aparece en las búsquedas.`}${cancelled ? ` Se ${cancelled === 1 ? 'canceló' : 'cancelaron'} ${plural(cancelled, 'reserva pendiente', 'reservas pendientes')}.` : ''}${inProgress ? ` ${plural(inProgress, 'en curso sigue', 'en curso siguen')} hasta su salida.` : ''}`, 'info');
+      // Lo que va a pasar ya lo dijo la confirmación: acá solo el resultado.
+      const done = [cancelled && plural(cancelled, 'reserva cancelada', 'reservas canceladas'), inProgress && plural(inProgress, 'en curso sigue', 'en curso siguen')].filter(Boolean);
+      toast(`“${p.name}” ${walkIn ? 'atiende solo en el lugar' : p.walkInOnly ? 'cerrada' : 'pausada'}.${done.length ? ` ${cap(done.join('; '))}.` : ''}`, 'info');
       setPausing(null);
       setDetail(null);
       await refresh();
-    } catch (x) { toast(apiError(x), 'err'); }
+    } catch (x) { toast(apiError(x), 'err'); } finally { setPausingBusy(false); }
   };
   const pauseItems = (p: Parking) => {
     const mine = reservations.filter(r => r.pid === p.id);
@@ -133,7 +168,9 @@ export default function OwnerDashboard() {
   ];
 
   const loading = status === 'loading';
-  const name = `${me.name ?? ''} ${me.last_name ?? ''}`.trim();
+  const pendingSetup = status === 'ready'
+    ? parkings.map(p => ({ p, steps: setupOf(p, employees, templates[p.id]) })).filter(x => x.steps.some(s => !s.done))
+    : [];
   let body;
   if (status === 'error') body = <ErrorBox what="tus sucursales" onRetry={refresh} />;
   else if (loading) body = <SkeletonRows n={4} />;
@@ -160,7 +197,7 @@ export default function OwnerDashboard() {
             <td className="c-occ" data-label="Ocupación en vivo"><div className="occ2"><OccBar value={n} label={`${n}% ocupada`} /><div className="meta"><span>{o} ocupadas · {t - o} libres</span><b>{n}%</b></div></div></td>
             <td className="c-st" data-label="Estado">
               <StateChip p={p} />
-              <WarnBtn list={alerts[p.id]!} />
+              <WarnBtn list={alerts[p.id]!} onClick={() => setDetail(p)} />
             </td>
             <td className="c-act r"><div className="acts">
               <button type="button" className="icon-btn" data-tip="Tarifas" aria-label={`Tarifas de ${p.name}`} onClick={() => navigate(`/owner/tariffs?p=${p.id}`)}><DollarSign className="i" /></button>
@@ -175,11 +212,15 @@ export default function OwnerDashboard() {
 
   return (
     <>
-      <section className="panel mecard" aria-label="Mi perfil">
-        <span className="av lg" aria-hidden="true">{initials(me.name, me.last_name)}</span>
-        <div className="mei"><div className="men"><h2>{name || 'Dueño'}</h2></div><p>{me.email}</p></div>
-        <div className="mec"><span className="ctx">{plural(cnt.ok, 'sucursal activa', 'sucursales activas')}</span></div>
-      </section>
+      {pendingSetup.length > 0 && (
+        <section className="panel setupcard" aria-labelledby="setup-h">
+          <div className="fh"><h2 id="setup-h">Puesta en marcha</h2>
+            <span className="ctx">{plural(pendingSetup.length, 'sucursal sin terminar de configurar', 'sucursales sin terminar de configurar')}</span></div>
+          <div className="list">{pendingSetup.map(({ p, steps }) => (
+            <div className="li" key={p.id}><button type="button" className="nm" onClick={() => setDetail(p)}>{p.name}</button><SetupSteps p={p} steps={steps} /></div>
+          ))}</div>
+        </section>
+      )}
 
       {loading ? <SkeletonRows n={2} cols={2} /> : (
         <div className="kpis">
@@ -223,7 +264,7 @@ export default function OwnerDashboard() {
         onClose={() => setDetail(null)} onToggle={() => toggle(d)} onCloseBranch={() => closeBranch(d)} onEdit={() => { setPform(d); setDetail(null); }} />}</Shown>
       <ParkingDrawer parking={pform} onClose={() => setPform(null)} />
       <Shown when={pausing}>{p => <ConfirmModal title={p.walkInOnly ? `¿Cerrar “${p.name}”?` : `¿Pausar “${p.name}”?`} body={p.walkInOnly ? 'Hoy atiende solo en el lugar. Al cerrarla:' : 'Al pausarla:'}
-        ok={p.walkInOnly ? 'Cerrar sucursal' : 'Pausar sucursal'} back="Volver" danger onConfirm={pause} onClose={() => setPausing(null)}>
+        ok={p.walkInOnly ? 'Cerrar sucursal' : 'Pausar sucursal'} back="Volver" danger busy={pausingBusy} onConfirm={pause} onClose={() => setPausing(null)}>
         {!p.walkInOnly && <div className="seg modal-seg" role="group" aria-label="Cómo pausar">
           <button type="button" aria-pressed={!walkIn} onClick={() => setWalkIn(false)}>Cerrar la sucursal</button>
           <button type="button" aria-pressed={walkIn} onClick={() => setWalkIn(true)}>Solo en el lugar</button>
@@ -231,6 +272,27 @@ export default function OwnerDashboard() {
         <ul className="modal-list">{pauseItems(p).map(t => <li key={t}>{t}</li>)}</ul>
       </ConfirmModal>}</Shown>
     </>
+  );
+}
+
+// Totales de la sucursal desde que abrió (GET /api/parkings/:id/metrics): reemplaza a la vieja pantalla de métricas,
+// que sacaba al dueño del panel. La ocupación en vivo ya está arriba en el detalle, por eso no se repite.
+interface Metrics { totalRevenue?: number; reservations?: Record<string, number> }
+function History({ id }: { id: string }) {
+  const m = useAsync<Metrics>(() => getParkingMetrics(id), [id]);
+  const n = (k: string) => m.data?.reservations?.[k] ?? 0;
+  const rows: [string, string][] = [
+    ['Recaudación', money(m.data?.totalRevenue ?? 0)], ['Finalizadas', String(n('FINALIZADA'))],
+    ['Pendientes', String(n('PENDIENTE'))], ['Canceladas', String(n('CANCELADA'))],
+  ];
+  return (
+    <div className="fs"><div className="fh"><h3>Historial</h3><span className="ctx">desde el alta</span></div>
+      {m.status === 'error'
+        ? <p className="ctx" role="alert">No pudimos cargar el historial. <button type="button" className="link" onClick={m.reload}>Reintentar</button></p>
+        : <dl className="dl" style={{ margin: 0 }}>{rows.map(([l, v]) => (
+          <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{m.data ? v : <span className="sk" style={{ height: 14, width: 64 }} />}</dd></div>
+        ))}</dl>}
+    </div>
   );
 }
 
@@ -244,6 +306,8 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onCloseB
   const n = pct(p), staff = employees.filter(e => e.parkingId === p.id);
   const cov = week?.some(d => d.length) ? coverage(week, ...span(p)) : null;
   const closed = shiftsText(week, '__closed');
+  const steps = setupOf(p, employees, week);
+  const doneSteps = steps.filter(s => s.done).length;
 
   return (
     <Drawer title={p.name} sub={`${p.address}, ${p.locality}`} onClose={onClose} focusSel=".dfoot .btn.pri"
@@ -254,16 +318,20 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onCloseB
         <button type="button" className="btn pri" onClick={onEdit}><Pencil className="i sm" />Editar sucursal</button>
       </div>}>
       <div className="dbody">
+        <div className="fs"><div className="fh"><h3>Puesta en marcha</h3><span className="ctx">{doneSteps} de {steps.length}</span></div>
+          <SetupSteps p={p} steps={steps} />
+        </div>
         {(p.imageUrl || p.image) && <img src={p.imageUrl || p.image} alt={`Fachada de ${p.name}`} style={{ width: '100%', height: 128, objectFit: 'cover', borderRadius: 8, marginTop: 16 }} />}
         <div className="fs"><div className="fh"><h3>Ocupación en vivo</h3>
           <StateChip p={p} /></div>
           {!!alerts.length && <div className="list">{alerts.map(x => <div className="li" key={x.l}><span className="st warn"><AlertTriangle className="i sm" />{x.l}</span><span className="sd">{x.d}</span></div>)}</div>}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}><span style={{ fontSize: 34, fontWeight: 600, letterSpacing: '-.03em' }}>{n}%</span><span className="ctx">{oc(p)} ocupadas · {tot(p) - oc(p)} libres de {tot(p)}</span></div>
+          <div className="bigrow"><span className="bignum">{n}%</span><span className="ctx">{oc(p)} ocupadas · {tot(p) - oc(p)} libres de {tot(p)}</span></div>
           <div style={{ display: 'grid', gap: 12 }}>{typesOf(p).filter(t => capOf(p, t.id)).map(t => {
             const c = svcOf(p, t.id), o = occOf(p, t.id), x = c ? Math.round((o / c) * 100) : 0, I = iconOf(t.name), pl = typePlural(t.name);
             return <div className="trow" key={t.id} style={{ gridTemplateColumns: '104px 1fr 64px' }}><span className="n"><I className="i" />{pl}</span><OccBar value={x} label={`${pl}: ${x}%`} /><span className="v">{o}/{c}</span></div>;
           })}</div>
         </div>
+        <History id={p.id} />
         <div className="fs"><div className="fh"><h3>Datos de la sucursal</h3></div>
           <dl className="dl" style={{ margin: 0 }}>
             <dt>Dirección</dt><dd>{[p.address, p.neighborhood, p.locality].filter(Boolean).join(', ')} ({p.postalCode})</dd>

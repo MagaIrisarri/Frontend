@@ -30,7 +30,6 @@ export const Sidebar: React.FC<any> = (props: any) => {
     handleOpenVehiclesList,
     handleOpenFavorites,
     handleOpenInvoices,
-    handleOpenLogin,
     handleHostClick,
     handleLogout,
     handleOpenSupport,

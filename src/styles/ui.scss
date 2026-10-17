@@ -165,8 +165,8 @@
 .dfoot .fmsg .ferr{align-items:flex-start}.dfoot .fmsg .ferr .i{margin-top:1px}
 
 /* Feedback al presionar (en el instante del toque, no al soltar) */
-.pcard,.opt,.mitem,.bi,.pcta,.sitem,.seg button{transition:background .12s,transform .1s ease-out}
-.pcard:active,.opt:active,.mitem:active,.bi:active,.pcta:active{transform:scale(.985)}
+.pcard,.opt,.bi,.pcta,.sitem,.seg button{transition:background .12s,transform .1s ease-out}
+.pcard:active,.opt:active,.bi:active,.pcta:active{transform:scale(.985)}
 .seg button:active,.sitem:active{transform:scale(.97)}
 
 /* ───── Entrada y salida de paneles y modales (la salida es el espejo de la entrada; ver Presence.tsx) ───── */
@@ -216,7 +216,7 @@
 .mtools .search{flex:1 1 220px;max-width:none}
 /* listas largas dentro del detalle: se desplazan con la página (un solo scroll) y el título de cada grupo queda pegado bajo la barra */
 .mscroll .gh{position:sticky;top:var(--bar-h);z-index:1;box-shadow:0 -8px 0 var(--surface)}
-.nav button{white-space:nowrap;flex:none}
+.nav a{white-space:nowrap;flex:none}
 .lk{font-size:inherit;text-align:left}
 .gh{display:flex;justify-content:space-between;padding:8px 12px;background:var(--raised);border:1px solid var(--soft);border-radius:var(--r-sm);font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
 .mr{padding:11px 12px;border-bottom:1px solid var(--soft);font-weight:500}
@@ -362,5 +362,48 @@
 /* con mouse o trackpad, controles más chicos (táctil sigue en 44 px a cualquier ancho) */
 @media(min-width:$sm + 1) and (pointer:fine){.e-cal button{height:42px}.e-opt{min-height:38px}}
 @media(min-width:$md + 1) and (pointer:fine){.e-acts .btn{height:30px}}
+
+/* Puesta en marcha de una sucursal: pasos hechos (chip) y pendientes (link a la vista del paso) */
+.setup{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0;padding:0;list-style:none}
+.setup .link{display:inline-flex;align-items:center;gap:6px;min-height:32px;font-size:13px;font-weight:500}
+.setupcard{padding:16px 20px;display:grid;gap:4px}
+.setupcard h2{font-size:15px;font-weight:600}
+.setupcard .li{flex-wrap:wrap}
+.setupcard .li .nm{flex:1 1 180px;min-width:0}
+/* selector de la sucursal activa, en las acciones del encabezado de Plazas, Servicios y Turnos */
+.sel.picker{width:auto;min-width:220px;max-width:100%}
+/* acción destructiva del pie, separada de Cancelar y Guardar */
+.dfoot .push{margin-right:auto}
+/* un error dentro de un panel no es otra tarjeta */
+.panel .errbox{box-shadow:none;background:none}
+/* turno presionado: respuesta inmediata al tocar o agarrar, antes de cualquier arrastre */
+.shb:not(.ro):active{background:color-mix(in srgb,var(--ac) 40%,var(--surface))}
+.shb.cl:not(.ro):active{background:var(--line)}
+
+/* Íconos chicos dentro de texto de 12 px (chips de jornada, "Modificado" del calendario) */
+.i.xs{width:12px;height:12px}
+.errchip{display:inline-flex;align-items:center;gap:4px}
+/* "Modificado" en el encabezado del día: se toca en 32 px sin agrandar la fila */
+.ch .bd.mod{position:relative;display:inline-flex;align-items:center;gap:3px}
+.ch .bd.mod::before{content:"";position:absolute;inset:-9px -8px}
+/* Número protagonista del detalle: tracking negativo y leading corto porque es grande */
+.bigrow{display:flex;align-items:baseline;gap:12px}
+.bignum{font-size:34px;font-weight:600;line-height:1.05;letter-spacing:-.02em;font-optical-sizing:auto}
+/* Muestras de la leyenda del calendario: los mismos colores que los bloques */
+.legend .sw-shift{background:color-mix(in srgb,var(--ac) 24%,var(--surface));border-left:3px solid var(--ac-h)}
+.legend .sw-closed{background:var(--hover);border:1px solid var(--line)}
+.legend .sw-hol{background:color-mix(in srgb,var(--err) 14%,var(--surface));border-left:3px solid var(--err)}
+/* Estado vacío dentro de un panel que ya tiene su encabezado */
+.empty.inset{padding:36px 0 20px}
+/* Ayuda del calendario: la primera oración a la vista, el resto plegado */
+.howto{padding:8px 0 12px;display:grid;gap:4px}
+.howto summary{width:max-content;cursor:pointer;color:var(--ac-tx);font-size:12.5px;font-weight:500;min-height:32px;display:flex;align-items:center}
+.howto details p{margin:0}
+/* Cerrar un error: a la derecha y con el color del texto, no el del ícono del aviso */
+.toast .tx{flex:none;margin:-4px -6px -4px 2px}
+.toast .tx .i{color:var(--tx2)}
+/* Filtros segmentados: cada opción entera; si no entran, la fila se desliza */
+.seg{overscroll-behavior-x:contain;scrollbar-width:thin}
+.seg button{flex:none}
 
 }

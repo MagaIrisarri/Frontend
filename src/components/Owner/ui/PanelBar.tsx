@@ -9,11 +9,12 @@ import { useOpenProfile } from '../../../context/ProfileContext';
 import { useNotifications } from '../../../context/NotificationsContext';
 
 // Barra superior de los paneles (dueño, empleado, administrador): marca, secciones, actualizar, tema y cuenta.
-export default function PanelBar({ home, role, views = [], onRefresh }: {
+export default function PanelBar({ home, role, views = [], onRefresh, keep }: {
   home: string;
   role: string; // se muestra en el menú de la cuenta: "Ana · Empleado"
   views?: [string, string][]; // [ruta, etiqueta]
-  onRefresh?: () => Promise<void>;
+  onRefresh?: () => Promise<boolean | void>; // false: no se pudo actualizar
+  keep?: string; // parámetro de la URL que acompaña al cambiar de sección (la sucursal activa del dueño), salvo hacia el inicio
 }) {
   const onProfile = useOpenProfile();
   const { unread, open: openNotifications } = useNotifications();
@@ -21,7 +22,9 @@ export default function PanelBar({ home, role, views = [], onRefresh }: {
   const user = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const kept = keep && new URLSearchParams(search).get(keep);
+  const href = (to: string) => (kept && to !== home ? `${to}?${new URLSearchParams({ [keep!]: kept })}` : to);
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const name = user?.name || role;
@@ -41,16 +44,19 @@ export default function PanelBar({ home, role, views = [], onRefresh }: {
         {views.length > 0 && <>
           <span className="sep" />
           <nav className="nav" ref={navRef} aria-label={`Secciones del panel de ${role.toLowerCase()}`}>
-            {views.map(([to, l]) => (
-              <button key={to} type="button" onClick={() => navigate(to)}
-                aria-current={(to === home ? pathname === to : pathname.startsWith(to)) ? 'page' : undefined}>{l}</button>
-            ))}
+            {views.map(([to, l]) => <NavLink key={to} to={href(to)} end={to === home}>{l}</NavLink>)}
           </nav>
         </>}
         <span className="grow" />
         {onRefresh && (
           <button type="button" className="icon-btn" aria-label="Actualizar datos" disabled={busy}
-            onClick={async () => { setBusy(true); await onRefresh(); setBusy(false); toast('Datos actualizados.'); }}>
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const ok = await onRefresh();
+                if (ok === false) toast('No se pudieron actualizar los datos. Revisá tu conexión.', 'err'); else toast('Datos actualizados.');
+              } catch { toast('No se pudieron actualizar los datos. Revisá tu conexión.', 'err'); } finally { setBusy(false); }
+            }}>
             <RefreshCw className={`i${busy ? ' spin' : ''}`} />
           </button>
         )}

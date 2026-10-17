@@ -96,10 +96,10 @@ button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:tran
 /* la navegación se desliza de costado cuando no entra: sin barra visible y con los bordes fundidos para que se note que sigue */
 .nav{display:flex;order:5;width:calc(100% + 32px);height:44px;margin:0 -16px;padding:0 12px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,transparent,black 12px,black calc(100% - 24px),transparent);mask-image:linear-gradient(to right,transparent,black 12px,black calc(100% - 24px),transparent)}
 .nav::-webkit-scrollbar{display:none}
-.nav button{border:0;background:transparent;color:var(--tx2);padding:0 12px;height:100%;position:relative;font-weight:500}
-.nav button:hover{color:var(--tx)}
-.nav button[aria-current=page]{color:var(--tx)}
-.nav button[aria-current=page]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--focus);border-radius:2px}
+.nav a{display:inline-flex;align-items:center;text-decoration:none;color:var(--tx2);padding:0 12px;height:100%;position:relative;font-weight:500}
+.nav a:hover{color:var(--tx)}
+.nav a[aria-current=page]{color:var(--tx)}
+.nav a[aria-current=page]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--focus);border-radius:2px}
 .grow{flex:1}
 .me{display:flex;align-items:center;gap:8px;height:36px;padding:0 6px 0 4px;border:0;border-radius:var(--r-md);background:transparent}
 .me:hover{background:var(--raised)}
@@ -157,7 +157,7 @@ h2{font-size:15px;font-weight:600;letter-spacing:-.005em}
 .tw{overflow:hidden}
 .tbl{display:block;width:100%;border-collapse:collapse;table-layout:fixed}
 .tbl tbody,.tbl td{display:block}.tbl thead,.tbl colgroup{display:none}
-.cal.dm .ch{height:46px;gap:1px;align-content:center}.ch .bd{font-size:10.5px;font-weight:600;color:var(--tx3);border:0;background:none;padding:0;font-family:inherit;line-height:1.2}.ch .bd.hol{color:var(--err)}.ch .bd.mod,.ch .bd.esp{cursor:pointer;color:var(--ac-tx);text-decoration:underline;text-underline-offset:2px}.ch .bd.esp{color:var(--warn)}.ch .bd.today{color:var(--ac-tx)}.ch.td{color:var(--ac-tx)}
+.cal.dm .ch{height:46px;gap:1px;align-content:center}.ch .bd{font-size:12px;font-weight:600;color:var(--tx3);border:0;background:none;padding:0;font-family:inherit;line-height:1.2}.ch .bd.hol{color:var(--err)}.ch .bd.mod,.ch .bd.esp{cursor:pointer;color:var(--ac-tx);text-decoration:underline;text-underline-offset:2px}.ch .bd.esp{color:var(--warn)}.ch .bd.today{color:var(--ac-tx)}.ch.td{color:var(--ac-tx)}
 .cd.past{background-color:var(--hover)}.cd.hol{background-color:color-mix(in srgb,var(--err) 7%,transparent)}.shb.ro{cursor:default}.cd.past .shb.ro{opacity:.6}.shb.cl.hol{background:color-mix(in srgb,var(--err) 14%,var(--surface));border-left-color:var(--err);color:var(--tx)}.shb.cl.hol b{color:var(--err)}.shb.cl.hol small{white-space:normal}
 .thb{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:inherit;font:inherit;border-radius:4px}.thb:hover,.thb.on{color:var(--tx)}.thb:focus-visible{outline:2px solid var(--ac);outline-offset:2px}.tbl th.r .thb{flex-direction:row-reverse}
 .tbl th{padding:11px 16px;text-align:left;font-size:12px;font-weight:500;color:var(--tx3);border-bottom:1px solid var(--soft)}
@@ -221,13 +221,6 @@ tr:hover .pv .del,.pv .del:focus-visible,tr:focus-within .pv .del{opacity:1}
 .inl .inp{height:30px;width:92px;padding-left:22px;font-weight:600}
 
 /* Maestro-detalle (servicios) */
-.md{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
-.mlist{padding:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2px}
-.mitem{display:flex;justify-content:space-between;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:10px 12px;border-radius:var(--r-md);width:100%}
-.mitem:hover{background:var(--raised)}
-.mitem[aria-current=true]{background:var(--ac-soft)}
-.mitem[aria-current=true] .nm{color:var(--ac-tx)}
-.mitem .badge{font-size:12px;color:var(--tx3)}
 .dpanel{padding:20px 24px}
 .dpanel .head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}
 .addrow{display:grid;grid-template-columns:1fr;gap:10px;align-items:end;padding:16px;background:var(--raised);border-radius:var(--r-md);margin-bottom:8px}
@@ -371,7 +364,7 @@ tr:hover .pv .del,.pv .del:focus-visible,tr:focus-within .pv .del{opacity:1}
   .calwrap{overflow-x:visible}
 }
 @media(min-width:$md + 1){
-  .kpis{grid-template-columns:7fr 5fr}.md{grid-template-columns:300px 1fr}.mlist{grid-template-columns:none}
+  .kpis{grid-template-columns:7fr 5fr}
   .occ{grid-template-columns:auto 1fr;padding:24px 28px}
   .addrow{grid-template-columns:1fr 150px auto}
   /* las tarjetas vuelven a ser filas de tabla */

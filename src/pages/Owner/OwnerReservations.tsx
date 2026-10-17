@@ -251,15 +251,18 @@ function ResDetail({ r: fromList, onClose }: { r: Res; onClose: () => void }) {
   const e = employees.find(x => x.id === r.eid);
   const cin = employees.find(x => x.id === r.cin);
   // El motivo le llega al cliente. No hay reembolso: se cobra en la salida, así que cancelar una pendiente no mueve dinero.
+  const [cancelling, setCancelling] = useState(false);
   const cancel = async () => {
+    if (cancelling) return;
     if (!reason.trim()) { setReasonErr('Escribí el motivo: se lo avisamos al cliente.'); return; }
+    setCancelling(true);
     try {
       await cancelReservation(r.id, reason.trim());
       setConfirm(false);
       onClose();
       await refresh();
       toast(`Reserva ${r.code} cancelada.`, 'info');
-    } catch (x) { setConfirm(false); toast(apiError(x), 'err'); }
+    } catch (x) { setConfirm(false); toast(apiError(x), 'err'); } finally { setCancelling(false); }
   };
 
   return (
@@ -289,7 +292,7 @@ function ResDetail({ r: fromList, onClose }: { r: Res; onClose: () => void }) {
           </div>
         </div>
       </Drawer>
-      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado y recibe un aviso con el motivo." ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)}>
+      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado y recibe un aviso con el motivo." ok="Cancelar reserva" back="Volver" danger busy={cancelling} onConfirm={cancel} onClose={() => setConfirm(false)}>
         <Input label="Motivo" data-first maxLength={300} value={reason} error={reasonErr} onChange={e => { setReason(e.target.value); setReasonErr(''); }} />
       </ConfirmModal></Presence>
     </>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Check, DollarSign, Pause, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, DollarSign, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { StateChip } from '../../components/Owner/ui/StateChip';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
 import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
@@ -8,7 +9,7 @@ import { createParkingPrice, deleteParkingPrice } from '../../services/parking.s
 import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
 import { iconOf } from '../../components/Owner/ui/vehicles';
-import { capOf, missing, money, priceOf, typeLabel, typePlural, typesAcross, type TypeRef } from './owner.lib';
+import { capOf, missing, money, parsePesos, pesosTyping, priceOf, typeLabel, typePlural, typesAcross, type TypeRef } from './owner.lib';
 
 export default function OwnerTariffs() {
   const { parkings, status, refresh } = useOwner();
@@ -34,9 +35,8 @@ export default function OwnerTariffs() {
         <tr key={p.id} className={hl === p.id ? 'hl' : ''}>
           <td><span className="nm">{p.name}</span><div className="ad">{p.address}</div></td>
           {types.map(t => <TariffCell key={t.id} p={p} t={t} />)}
-          <td data-label="Estado">{!p.isActive ? <span className="st mute"><Pause className="i sm" />Pausada</span>
-            : missing(p).length ? <span className="st warn"><AlertTriangle className="i sm" />Falta tarifa</span>
-              : <span className="st ok"><Check className="i sm" />Operativa</span>}</td>
+          {/* Falta tarifa pesa más que el estado mientras atienda, también solo en el lugar: el mostrador cobra con ella */}
+          <td data-label="Estado">{p.isActive && missing(p).length ? <span className="st warn"><AlertTriangle className="i sm" />Falta tarifa</span> : <StateChip p={p} />}</td>
         </tr>
       ))}</tbody>
     </table></div>
@@ -53,7 +53,7 @@ export default function OwnerTariffs() {
 
 // Celda editable en línea: "+ Asignar", precio con lápiz implícito, o input con guardar/cancelar.
 function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
-  const { refresh } = useOwner();
+  const { refreshParkings } = useOwner();
   const toast = useToast();
   const t = { n: typeLabel(type.name), pl: typePlural(type.name) };
   const price = priceOf(p, type.id);
@@ -65,23 +65,31 @@ function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
   if (!capOf(p, type.id)) return <td data-label={t.n}><span className="na" title={`La sucursal no tiene plazas de ${t.pl.toLowerCase()}`}>—<span className="sr"> Sin plazas de este tipo</span></span></td>;
 
   const save = async () => {
-    const n = Number(String(edit).replace(/\D/g, ''));
-    if (!n || n <= 0) return setErr('Ingresá un valor mayor a 0.');
+    const n = parsePesos(edit ?? '');
+    if (typeof n === 'string') return setErr(n);
     if (price && Number(price.price) === n) return setEdit(null); // sin cambios: no hay nada que guardar
     setSaving(true);
     try {
       await createParkingPrice(p.id, { vehicleTypeId: type.id, price: n }); // versiona: expira la tarifa anterior
-      await refresh();
+      await refreshParkings();
       setEdit(null);
       toast(`Tarifa de ${t.pl.toLowerCase()} en ${p.name}: ${money(n)}/h.`);
     } catch (x) { setErr(apiError(x)); } finally { setSaving(false); }
   };
+  // Sin confirmación previa: se deshace volviendo a crear la tarifa con el mismo precio (es versionada, no se pierde historia).
   const del = async () => {
     if (!price) return;
+    const was = Number(price.price);
     try {
       await deleteParkingPrice(price.id);
-      await refresh();
-      toast(`Tarifa de ${t.pl.toLowerCase()} eliminada en ${p.name}.`, 'info');
+      await refreshParkings();
+      toast(`Tarifa de ${t.pl.toLowerCase()} eliminada en ${p.name}. Sus vehículos no pueden reservar ahí.`, 'info', async () => {
+        try {
+          await createParkingPrice(p.id, { vehicleTypeId: type.id, price: was });
+          await refreshParkings();
+          toast(`Tarifa de ${t.pl.toLowerCase()} en ${p.name}: ${money(was)}/h de nuevo.`);
+        } catch (x) { toast(apiError(x), 'err'); }
+      });
     } catch (x) { toast(apiError(x), 'err'); }
   };
 
@@ -92,7 +100,7 @@ function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
       <div className="inl" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) { setEdit(null); setErr(''); } }}>
         <span className="cur">$</span>
         <input className="inp" inputMode="numeric" autoComplete="off" autoFocus aria-label={`Tarifa por hora, ${aria}`} aria-invalid={!!err}
-          value={edit} onChange={e => { setEdit(e.target.value); setErr(''); }}
+          value={edit} onChange={e => { setEdit(e.target.value); setErr(pesosTyping(e.target.value)); }}
           onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEdit(null); }} />
         <button type="button" className="icon-btn sm pri" aria-label="Guardar tarifa" onMouseDown={e => e.preventDefault()} onClick={save}><Check className="i sm" /></button>
         <button type="button" className="icon-btn sm" aria-label="Cancelar" onMouseDown={e => e.preventDefault()} onClick={() => setEdit(null)}><X className="i sm" /></button>

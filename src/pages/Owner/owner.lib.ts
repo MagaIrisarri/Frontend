@@ -18,6 +18,18 @@ export const fmtD = (iso: string) => new Date(iso + 'T12:00').toLocaleDateString
 export const shD = (iso: string) => iso.slice(8) + '/' + iso.slice(5, 7);
 export const fmtH = (h: number) => String(Math.round(h * 10) / 10).replace('.', ',') + ' h';
 
+// Precio en pesos enteros, como se cobra: acepta puntos de miles ("1.500"). Una coma o centavos son un error a la vista,
+// no se descartan en silencio (antes "1500,50" quedaba en 150050). Devuelve el número o el mensaje para el campo.
+export const PESOS_FORMAT = 'Ingresá el precio en pesos, sin centavos.';
+export function parsePesos(s: string): number | string {
+  const t = s.replace(/\s/g, '');
+  if (!/^(\d+|\d{1,3}(\.\d{3})+)?$/.test(t)) return PESOS_FORMAT;
+  const n = Number(t.replace(/\./g, ''));
+  return n > 0 ? n : 'Ingresá un valor mayor a 0.';
+}
+// Mientras se escribe solo se marca lo que ya no puede ser un precio entero (una coma, letras); "1.5" puede seguir hacia "1.500".
+export const pesosTyping = (s: string) => (/[^\d.\s]/.test(s) ? PESOS_FORMAT : '');
+
 export const initials = (name = '', last = '') => ((name[0] ?? '') + (last[0] ?? '')).toUpperCase();
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 

@@ -10,7 +10,7 @@ const VIEWS: [string, string][] = [
 
 function AppBar() {
   const { refresh } = useOwner();
-  return <PanelBar home="/owner" role="Dueño" views={VIEWS} onRefresh={refresh} />;
+  return <PanelBar home="/owner" role="Dueño" views={VIEWS} onRefresh={refresh} keep="p" />;
 }
 
 // Raíz de todas las vistas del dueño.
