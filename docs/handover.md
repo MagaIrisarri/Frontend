@@ -29,7 +29,7 @@ Antes de la demo, en cada base: `pnpm build && pnpm db:drop-legacy --yes` (colum
 
 ## 3. Limitaciones aceptadas (no hace falta tocarlas para la entrega)
 
-Están en el código con `// shortcut: L-xx` y abiertas en las notas: L-04 (offset fijo -03:00), L-08 y L-09 (sin reservas ni turnos que crucen medianoche, fuera de la entrega por D-14), L-10 (bloques de 30 min), L-11 (excepción por fecha como copia), L-14 (topes de jornada fijos), L-15 (deshacer en el navegador), L-18 (CSV en el navegador), L-19 (en táctil no se mueven turnos), L-24 (horizonte fijo), L-25 (empleado de una sola sucursal), L-26 (spinner del mapa), L-27 y R-17 (tareas en memoria del proceso), L-28 (año mínimo 1960), L-31 (polling y últimas 50 notificaciones), L-33 (lista fija de tipos no de pasajeros del DNRPA), L-35 (selector de hasta 100 dueños). L-23 (roles admin y empleado) está parcial.
+Están en el código con `// shortcut: L-xx` y abiertas en las notas: L-04 (offset fijo -03:00), L-08 y L-09 (sin reservas ni turnos que crucen medianoche, fuera de la entrega por D-14), L-10 (bloques de 30 min), L-11 (excepción por fecha como copia), L-14 (topes de jornada fijos), L-15 (deshacer en el navegador), L-18 (CSV en el navegador), L-19 (en táctil no se mueven turnos), L-24 (horizonte fijo), L-25 (empleado de una sola sucursal), L-26 (spinner del mapa), L-27 y R-17 (tareas en memoria del proceso), L-28 (año mínimo 1960), L-45 (notificaciones por polling), L-33 (lista fija de tipos no de pasajeros del DNRPA), L-35 (selector de hasta 100 dueños). L-23 (roles admin y empleado) está parcial.
 
 ## 4. Limpieza de las notas
 
@@ -41,7 +41,7 @@ Estado: completas para la entrega. El mapa de quién recibe cada aviso está en 
 
 - Lo último (L-41, Backend `3e31955`, notas en `8f1b75c`): sacar una plaza de servicio con reubicación confirmada (R-19) avisa `PLAZA_CAMBIADA` al cliente y al empleado asignado de cada reserva movida; el cambio de plaza a mano también avisa al empleado; el cambio de empleado a mano (`assignEmployee`, R-07) avisa `RESERVA_TRANSFERIDA` al que la recibe y al que la deja. Nadie recibe el aviso de su propia acción.
 - `assignEmployee` solo se usa por la API (`PUT /api/reservations/:id`): desde R-07 la interfaz del dueño no cambia el empleado a mano.
-- L-42 y L-43 quedaron cerradas (Backend `b379cb8` y `304c05e`): pausar una sucursal se confirma, cancela las pendientes avisando a cada cliente con el motivo, respeta las en curso y avisa `SUCURSAL_PAUSADA` al personal; la salida cobra la tarifa vigente al reservar, así que un cambio de precio no necesita aviso. En avisos falta L-31 (sección 3). Pausar solo lo online ("Solo en el lugar", L-44) también quedó cerrada (Backend `738542e`).
+- L-42 y L-43 quedaron cerradas (Backend `b379cb8` y `304c05e`): pausar una sucursal se confirma, cancela las pendientes avisando a cada cliente con el motivo, respeta las en curso y avisa `SUCURSAL_PAUSADA` al personal; la salida cobra la tarifa vigente al reservar, así que un cambio de precio no necesita aviso. El historial de avisos (L-31) quedó cerrado (Backend `2effea6`); queda el polling (L-45). Pausar solo lo online ("Solo en el lugar", L-44) también quedó cerrada (Backend `738542e`).
 - Descartados por decisión de producto: aviso de la reserva de mostrador al resto del personal, cambios de servicios de una reserva (`setServices`), eventos de cuenta (reset de contraseña, baja, alta en el mostrador: sin sesión no se ven) y calificación (`rate`).
 
 ## 6. Avisos para quien siga

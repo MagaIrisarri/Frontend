@@ -21,9 +21,17 @@ const empName = (e?: Emp) => (e ? `${e.name} ${e.last_name}` : '');
 
 export default function OwnerReservations() {
   const { reservations, employees, status, refresh } = useOwner();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [mode, setMode] = useState<'day' | 'month'>('day');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(params.get('r'));
+  // Desde una notificación (?r=id): abre el detalle y saca el parámetro, así volver atrás no lo reabre.
+  useEffect(() => {
+    const r = params.get('r');
+    if (!r) return;
+    setOpenId(r);
+    params.delete('r');
+    setParams(params, { replace: true });
+  }, [params, setParams]);
   const open = reservations.find(r => r.id === openId);
 
   return (

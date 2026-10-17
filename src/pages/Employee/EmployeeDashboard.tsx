@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Info, MapPin, Plus, Search } from 'lucide-react';
 import OwnerShell from '../../components/Owner/ui/OwnerShell';
 import PanelBar from '../../components/Owner/ui/PanelBar';
@@ -73,6 +74,15 @@ function Terminal({ reservations, parking, shifts, me, onChange }: { reservation
   const [openId, setOpenId] = useState<string | null>(null);
   const [panel, setPanel] = useState<'walkin' | 'summary' | 'calendar' | null>(null);
   const search = useRef<HTMLInputElement>(null);
+  // Desde una notificación (?r=id): va al día de la reserva y la abre.
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const target = reservations.find(r => r.id === params.get('r'));
+    if (!target) return;
+    setRd(target.date);
+    setOpenId(target.id);
+    setParams({}, { replace: true });
+  }, [params, setParams, reservations]);
   const { run, busy } = useRun(onChange);
   const open = reservations.find(r => r.id === openId);
 

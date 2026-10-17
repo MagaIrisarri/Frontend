@@ -354,7 +354,8 @@ export function useHomePage() {
   const path = location.pathname;
   useEffect(() => {
     if (path === '/invoices') setIsInvoicesOpen(true);
-    else if (path === '/reservations') { setReservationsModalTab('active'); setIsReservationsModalOpen(true); }
+    // Con ?r= (desde una notificación) la pestaña la elige el panel según el estado de esa reserva.
+    else if (path === '/reservations') { if (!new URLSearchParams(location.search).get('r')) setReservationsModalTab('active'); setIsReservationsModalOpen(true); }
     else if (path.startsWith('/vehicles')) { setVehicleModalTab(path === '/vehicles/new' ? 'create' : 'list'); setIsVehicleModalOpen(true); }
   }, [path]);
 

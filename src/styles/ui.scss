@@ -77,6 +77,8 @@
 .grid2.keep{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} /* pares de datos cortos (nombre/apellido, DNI/teléfono) siguen en dos columnas también en el teléfono */
 .btn.errtx{color:var(--err)}
 .rcard{display:grid;gap:10px;padding:14px;border-radius:var(--r-lg);background:var(--raised)}
+.rcard[aria-current=true]{box-shadow:0 0 0 2px var(--focus)} /* la reserva que abrió una notificación */
+.rcard .acts{justify-content:flex-start;flex-wrap:wrap;gap:8px}
 .rcard .rtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .rcard .rn{font-weight:600}
 .rcard .ad{display:flex;gap:4px;align-items:center;color:var(--tx2);font-size:12.5px}

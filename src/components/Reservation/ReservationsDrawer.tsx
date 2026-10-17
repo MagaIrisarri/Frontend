@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Calendar, CheckCircle2, Clock, CircleDot, MapPin, SearchX, Sparkles, XCircle, type LucideIcon } from 'lucide-react';
 import { Stars } from '../Owner/ui/Stars';
 import type { Reservation } from '../../types/reservation.types';
@@ -125,6 +126,22 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
   }).sort(tab === 'active' ? SORTS[sort][1] : byStartDesc);
   const changeTab = (t: 'active' | 'history') => { setStatus('all'); setPeriod('all'); onTabChange(t); };
 
+  // Desde una notificación (?r=id): abre la pestaña de esa reserva, sin filtros, y la resalta.
+  const [params, setParams] = useSearchParams();
+  const [focused, setFocused] = useState<string | null>(null);
+  useEffect(() => {
+    const target = (reservations || []).find((r) => r.id === params.get('r'));
+    if (!target) return;
+    clearFilters();
+    onTabChange(target.status === 'FINALIZADA' || target.status === 'CANCELADA' ? 'history' : 'active');
+    setFocused(target.id);
+    params.delete('r');
+    setParams(params, { replace: true });
+  }, [params, setParams, reservations]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (focused) document.getElementById(`res-${focused}`)?.scrollIntoView({ block: 'center' });
+  }, [focused, tab]);
+
   const confirmCancel = async () => {
     if (!confirming || !onCancelReservation) return;
     setCancelling(true);
@@ -145,7 +162,7 @@ function Content({ onClose, tab, onTabChange, reservations, loading, onExplorePa
     const services = r.services || [];
     const staff = [(r as any).attendedBy?.name, (r as any).attendedBy?.last_name].filter(Boolean).join(' ');
     return (
-      <article key={r.id} className="rcard">
+      <article key={r.id} id={`res-${r.id}`} className="rcard" aria-current={focused === r.id || undefined}>
         <div className="rtop">
           <div>
             <div className="rn">
