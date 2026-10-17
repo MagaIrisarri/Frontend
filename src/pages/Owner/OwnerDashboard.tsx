@@ -40,6 +40,13 @@ function OccBar({ value, label }: { value: number; label: string }) {
   return <div className={`bar-t ${lvl(value)}`} role="img" aria-label={label}><i style={{ width: `${Math.min(100, value)}%` }} /></div>;
 }
 
+// Operativa: toma reservas online. Pausada: cerrada (isActive false) o solo en el lugar (L-44, walkInOnly).
+const operating = (p: Parking) => p.isActive && !p.walkInOnly;
+function StateChip({ p }: { p: Parking }) {
+  if (operating(p)) return <span className="st ok"><Check className="i sm" />Operativa</span>;
+  return <span className={`st ${p.isActive ? 'warn' : 'mute'}`}><Pause className="i sm" />{p.isActive ? 'Solo en el lugar' : 'Pausada'}</span>;
+}
+
 export default function OwnerDashboard() {
   const { parkings, templates, reservations, employees, me, status, refresh } = useOwner();
   const navigate = useNavigate();
@@ -49,6 +56,7 @@ export default function OwnerDashboard() {
   const [loc, setLoc] = useState(''); // '' = todas las localidades
   const [detail, setDetail] = useState<Parking | null>(null);
   const [pausing, setPausing] = useState<Parking | null>(null); // L-42: confirmar antes de pausar
+  const [walkIn, setWalkIn] = useState(false); // L-44: pausar solo las reservas online
   const [params, setParams] = useSearchParams();
   const [pform, setPform] = useState<Parking | 'new' | null>(params.get('new') ? 'new' : null);
   useEffect(() => { if (params.get('new')) setParams({}, { replace: true }); }, [params, setParams]);
@@ -66,19 +74,20 @@ export default function OwnerDashboard() {
   const active = scopedRes.filter(r => r.st === 'curso').length;
   const alerts = useMemo(() => Object.fromEntries(parkings.map(p => [p.id, issues(p, templates[p.id])])), [parkings, templates]);
 
-  const stOf = (p: Parking) => (p.isActive ? 'ok' : 'paused');
+  const stOf = (p: Parking) => (operating(p) ? 'ok' : 'paused');
   const list = scoped.filter(p =>
     (filter === 'all' || (filter === 'ok' && stOf(p) === 'ok') || (filter === 'alert' && alerts[p.id]!.length) || (filter === 'paused' && stOf(p) === 'paused'))
     && matchesQuery(q, p.name, p.address, p.neighborhood, p.locality, p.province));
   const cnt: Record<Filter, number> = {
-    all: scoped.length, ok: scoped.filter(p => p.isActive).length,
-    alert: scoped.filter(p => alerts[p.id]!.length).length, paused: scoped.filter(p => !p.isActive).length,
+    all: scoped.length, ok: scoped.filter(operating).length,
+    alert: scoped.filter(p => alerts[p.id]!.length).length, paused: scoped.filter(p => !operating(p)).length,
   };
 
   // L-42: pausar cancela las pendientes (cada cliente recibe el aviso con el motivo), respeta las que están en curso y no
-  // acepta reservas nuevas, ni online ni en el mostrador. Por eso se confirma antes, con lo que va a pasar.
+  // acepta reservas nuevas. Cerrada no acepta ninguna; solo en el lugar (L-44) sigue en el mapa y atiende en el mostrador.
+  // Se confirma antes, con lo que va a pasar. Habilitar vuelve a tomar reservas online en los dos casos.
   const toggle = async (p: Parking) => {
-    if (p.isActive) { setPausing(p); return; }
+    if (operating(p)) { setWalkIn(false); setPausing(p); return; }
     try {
       await reactivateParking(p.id);
       toast(`“${p.name}” habilitada y visible al público.`);
@@ -89,8 +98,8 @@ export default function OwnerDashboard() {
   const pause = async () => {
     const p = pausing!;
     try {
-      const { cancelled = 0, inProgress = 0 } = (await deleteParking(p.id))?.data ?? {};
-      toast(`“${p.name}” pausada. Ya no aparece en las búsquedas.${cancelled ? ` Se ${cancelled === 1 ? 'canceló' : 'cancelaron'} ${plural(cancelled, 'reserva pendiente', 'reservas pendientes')}.` : ''}${inProgress ? ` ${plural(inProgress, 'en curso sigue', 'en curso siguen')} hasta su salida.` : ''}`, 'info');
+      const { cancelled = 0, inProgress = 0 } = (await deleteParking(p.id, walkIn))?.data ?? {};
+      toast(`${walkIn ? `“${p.name}” atiende solo en el lugar. Sigue en el mapa, sin reservas online.` : `“${p.name}” pausada. Ya no aparece en las búsquedas.`}${cancelled ? ` Se ${cancelled === 1 ? 'canceló' : 'cancelaron'} ${plural(cancelled, 'reserva pendiente', 'reservas pendientes')}.` : ''}${inProgress ? ` ${plural(inProgress, 'en curso sigue', 'en curso siguen')} hasta su salida.` : ''}`, 'info');
       setPausing(null);
       setDetail(null);
       await refresh();
@@ -100,7 +109,7 @@ export default function OwnerDashboard() {
     const mine = reservations.filter(r => r.pid === p.id);
     const pending = mine.filter(r => r.st === 'reservada').length, inside = mine.filter(r => r.st === 'curso').length;
     return [
-      'Se dejarán de aceptar reservas, online y en el mostrador.',
+      walkIn ? 'Se dejarán de aceptar reservas online. Sigue en el mapa y el mostrador atiende.' : 'Se dejarán de aceptar reservas, online y en el mostrador. Sale del mapa.',
       `Se cancelarán las reservas pendientes${pending ? ` (${pending})` : ''} y se avisa a cada cliente.`,
       `Las reservas en curso${inside ? ` (${inside})` : ''} continúan hasta su salida.`,
       'Se notifica al personal.',
@@ -115,7 +124,7 @@ export default function OwnerDashboard() {
     { label: 'Servicios', icon: <Layers className="i" />, onClick: () => navigate(`/owner/services?p=${p.id}`) },
     { label: 'Turnos y cobertura', icon: <CalendarDays className="i" />, onClick: () => navigate(`/owner/shifts?p=${p.id}`) },
     { label: 'Personal', icon: <Users className="i" />, onClick: () => navigate(`/owner/employees?p=${p.id}`) },
-    p.isActive
+    operating(p)
       ? { label: 'Pausar sucursal', icon: <Pause className="i" />, sep: true, onClick: () => toggle(p) }
       : { label: 'Habilitar sucursal', icon: <Power className="i" />, sep: true, onClick: () => toggle(p) },
   ];
@@ -147,7 +156,7 @@ export default function OwnerDashboard() {
             <td className="c-cap" data-label="Plazas"><div className="caps">{typesAcross(list).map(v => { const I = iconOf(v.name), c = capOf(p, v.id); return <span key={v.id} className={`cap ${c ? '' : 'z'}`} title={`${typePlural(v.name)}: ${c}`}><I className="i" />{c}</span>; })}</div></td>
             <td className="c-occ" data-label="Ocupación en vivo"><div className="occ2"><OccBar value={n} label={`${n}% ocupada`} /><div className="meta"><span>{o} ocupadas · {t - o} libres</span><b>{n}%</b></div></div></td>
             <td className="c-st" data-label="Estado">
-              {p.isActive ? <span className="st ok"><Check className="i sm" />Operativa</span> : <span className="st mute"><Pause className="i sm" />Pausada</span>}
+              <StateChip p={p} />
               <WarnBtn list={alerts[p.id]!} />
             </td>
             <td className="c-act r"><div className="acts">
@@ -212,6 +221,10 @@ export default function OwnerDashboard() {
       <ParkingDrawer parking={pform} onClose={() => setPform(null)} />
       <Shown when={pausing}>{p => <ConfirmModal title={`¿Pausar “${p.name}”?`} body="Al pausarla:" ok="Pausar sucursal" back="Volver" danger
         onConfirm={pause} onClose={() => setPausing(null)}>
+        <div className="seg modal-seg" role="group" aria-label="Cómo pausar">
+          <button type="button" aria-pressed={!walkIn} onClick={() => setWalkIn(false)}>Cerrar la sucursal</button>
+          <button type="button" aria-pressed={walkIn} onClick={() => setWalkIn(true)}>Solo en el lugar</button>
+        </div>
         <ul className="modal-list">{pauseItems(p).map(t => <li key={t}>{t}</li>)}</ul>
       </ConfirmModal>}</Shown>
     </>
@@ -232,14 +245,14 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
   return (
     <Drawer title={p.name} sub={`${p.address}, ${p.locality}`} onClose={onClose} focusSel=".dfoot .btn.pri"
       footer={<div className="dfoot">
-        <button type="button" className="btn" onClick={onToggle}><Power className="i sm" />{p.isActive ? 'Pausar' : 'Habilitar'}</button>
+        <button type="button" className="btn" onClick={onToggle}><Power className="i sm" />{operating(p) ? 'Pausar' : 'Habilitar'}</button>
         <button type="button" className="btn" onClick={() => navigate(`/owner/spaces?p=${p.id}`)}><LayoutGrid className="i sm" />Plazas</button>
         <button type="button" className="btn pri" onClick={onEdit}><Pencil className="i sm" />Editar sucursal</button>
       </div>}>
       <div className="dbody">
         {(p.imageUrl || p.image) && <img src={p.imageUrl || p.image} alt={`Fachada de ${p.name}`} style={{ width: '100%', height: 128, objectFit: 'cover', borderRadius: 8, marginTop: 16 }} />}
         <div className="fs"><div className="fh"><h3>Ocupación en vivo</h3>
-          {p.isActive ? <span className="st ok"><Check className="i sm" />Operativa</span> : <span className="st mute"><Pause className="i sm" />Pausada</span>}</div>
+          <StateChip p={p} /></div>
           {!!alerts.length && <div className="list">{alerts.map(x => <div className="li" key={x.l}><span className="st warn"><AlertTriangle className="i sm" />{x.l}</span><span className="sd">{x.d}</span></div>)}</div>}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}><span style={{ fontSize: 34, fontWeight: 600, letterSpacing: '-.03em' }}>{n}%</span><span className="ctx">{oc(p)} ocupadas · {tot(p) - oc(p)} libres de {tot(p)}</span></div>
           <div style={{ display: 'grid', gap: 12 }}>{typesOf(p).filter(t => capOf(p, t.id)).map(t => {

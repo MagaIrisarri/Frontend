@@ -21,7 +21,6 @@ Antes de la demo, en cada base: `pnpm build && pnpm db:drop-legacy --yes` (colum
 
 | Código | Problema | Propuesta |
 |---|---|---|
-| L-44 | Pausar una sucursal corta también el mostrador, aunque siga abierta en persona (`Parking.Service.ts`) | Selector en el modal de pausa: cerrar la sucursal o pausar solo las reservas online |
 | L-36 | La cuenta creada en el mostrador tiene el DNI como contraseña inicial y el email sin verificar (`Reservation.Repository.ts`) | Contraseña temporal al azar mostrada al empleado; verificar por mail cuando haya envío |
 | L-02 | Las horas trabajadas son las programadas, no la asistencia (D-07) | Fichaje o ajuste manual auditado. Se dejó para después de la entrega |
 | L-16 | No hay auditoría de quién cambió turnos | Usuario, fecha, antes y después |
@@ -42,7 +41,7 @@ Estado: completas para la entrega. El mapa de quién recibe cada aviso está en 
 
 - Lo último (L-41, Backend `3e31955`, notas en `8f1b75c`): sacar una plaza de servicio con reubicación confirmada (R-19) avisa `PLAZA_CAMBIADA` al cliente y al empleado asignado de cada reserva movida; el cambio de plaza a mano también avisa al empleado; el cambio de empleado a mano (`assignEmployee`, R-07) avisa `RESERVA_TRANSFERIDA` al que la recibe y al que la deja. Nadie recibe el aviso de su propia acción.
 - `assignEmployee` solo se usa por la API (`PUT /api/reservations/:id`): desde R-07 la interfaz del dueño no cambia el empleado a mano.
-- L-42 y L-43 quedaron cerradas (Backend `b379cb8` y `304c05e`): pausar una sucursal se confirma, cancela las pendientes avisando a cada cliente con el motivo, respeta las en curso y avisa `SUCURSAL_PAUSADA` al personal; la salida cobra la tarifa vigente al reservar, así que un cambio de precio no necesita aviso. En avisos falta L-31 (sección 3). Pausar solo lo online queda como L-44 (sección 2).
+- L-42 y L-43 quedaron cerradas (Backend `b379cb8` y `304c05e`): pausar una sucursal se confirma, cancela las pendientes avisando a cada cliente con el motivo, respeta las en curso y avisa `SUCURSAL_PAUSADA` al personal; la salida cobra la tarifa vigente al reservar, así que un cambio de precio no necesita aviso. En avisos falta L-31 (sección 3). Pausar solo lo online ("Solo en el lugar", L-44) también quedó cerrada (Backend `738542e`).
 - Descartados por decisión de producto: aviso de la reserva de mostrador al resto del personal, cambios de servicios de una reserva (`setServices`), eventos de cuenta (reset de contraseña, baja, alta en el mostrador: sin sesión no se ven) y calificación (`rate`).
 
 ## 6. Avisos para quien siga

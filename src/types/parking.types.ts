@@ -15,6 +15,7 @@ export interface Parking {
   maxReservationHours: number;
   reservationMargin: number; // minutos libres entre reservas de la misma plaza
   isActive: boolean;
+  walkInOnly?: boolean; // L-44: pausada solo para reservas online; sigue en el mapa y atiende en el lugar
   state?: string;
   name: string;
   latitude: number; 

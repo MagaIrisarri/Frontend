@@ -175,7 +175,7 @@ export function workWarnings(week: (Day | null)[], emps: { id: string; name: str
 
 // ---------- sucursales ----------
 export interface ParkingLike {
-  id: string; isActive: boolean; openingTime: string; closingTime: string;
+  id: string; isActive: boolean; walkInOnly?: boolean; openingTime: string; closingTime: string;
   spaceTypes?: SpaceType[];
   prices?: ParkingPriceRow[];
 }

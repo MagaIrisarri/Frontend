@@ -12,7 +12,8 @@ export const getOneParking = (id: string) => api.get(`/api/parkings/${id}`).then
 export const getParkingsByOwner = (idOwner: string) => api.get(`/api/parkings/owner/${idOwner}`).then(res => res.data);
 export const createParking = (data: CreateParkingInput) => api.post(`/api/parkings`, data).then(res => res.data); 
 export const putParking = (data: UpdateParkingInput, id: string) => api.put(`/api/parkings/${id}`, data).then(res => res.data);
-export const deleteParking = (id: string) => api.delete(`/api/parkings/${id}`).then(res => res.data);
+// Pausa la sucursal (L-42); walkInOnly la deja en el mapa y atendiendo en el lugar, sin reservas online (L-44).
+export const deleteParking = (id: string, walkInOnly = false) => api.delete(`/api/parkings/${id}`, { data: walkInOnly ? { walkInOnly } : undefined }).then(res => res.data);
 export const createParkingPrice = (parkingId: string, data: { vehicleTypeId: string; price: number }) => api.post('/api/parkings/' + parkingId + '/prices', data).then(res => res.data);
 export const deleteParkingPrice = (priceId: string) => api.delete('/api/parkings/prices/' + priceId).then(res => res.data);
 export const reactivateParking = (parkingId: string) => api.post('/api/parkings/' + parkingId + '/reactivate').then(res => res.data);

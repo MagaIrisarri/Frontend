@@ -25,7 +25,7 @@ const ownerName = (p: Parking) => [p.owner?.name, p.owner?.last_name].filter(Boo
 const place = (p: { locality: string; province?: string | null }) => `${p.locality}${p.province ? `, ${p.province}` : ''}`;
 const locKey = (l: { province?: string | null; locality: string }) => `${l.province ?? ''}|${l.locality}`;
 // Estado en texto además de color: pausada, activa con tarifas incompletas, o activa.
-const stateOf = (p: Parking) => !p.isActive ? { c: 'mute', l: 'Pausada' } : missing(p).length ? { c: 'warn', l: 'Falta tarifa' } : { c: 'ok', l: 'Activa' };
+const stateOf = (p: Parking) => !p.isActive ? { c: 'mute', l: 'Pausada' } : p.walkInOnly ? { c: 'warn', l: 'Solo en el lugar' } : missing(p).length ? { c: 'warn', l: 'Falta tarifa' } : { c: 'ok', l: 'Activa' };
 
 // Cocheras de todo el sistema, solo lectura: lista paginada a la izquierda (como Marcas) y el detalle de la elegida a la derecha.
 // La edición es del dueño. La búsqueda, los filtros y las páginas los resuelve el servidor; las métricas se piden solo al abrir una cochera.
@@ -121,6 +121,7 @@ function Detail({ p, onOwner }: { p: Parking; onOwner: (ownerId: string) => void
         <span className={`st ${s.c}`}>{s.l}</span>
       </div>
       {!p.isActive && <p className="ctx" role="note">Pausada por su dueño: los clientes no la ven ni reservan en ella.</p>}
+      {p.isActive && p.walkInOnly && <p className="ctx" role="note">Su dueño pausó las reservas online: se ve en el mapa y atiende solo en el lugar.</p>}
       {gone.length > 0 && <p className="st warn" role="note"><AlertTriangle className="i sm" />Sin tarifa para {gone.map(t => typePlural(t.name).toLowerCase()).join(', ')}: esos clientes no pueden reservar.</p>}
 
       <div className="fs"><div className="fh"><h3>Dueño</h3>{p.owner?.id && <button type="button" className="link" onClick={() => onOwner(p.owner!.id)}>Ver usuario</button>}</div>

@@ -58,14 +58,15 @@ function MapViewComponent({
   // Helper para generar el contenido HTML de un pin individual
   const getSingleMarkerHtml = useCallback((spot: Parking, isSelected: boolean) => {
     const spotPrice = formatSpotPrice(spot, selectedVehicleType);
-    const reason = selectedVehicleType ? getUnavailableReason(spot, selectedVehicleType.id) : null;
+    const reason = getUnavailableReason(spot, selectedVehicleType?.id);
     const isUnavailable = !spotPrice.isAvailable || reason !== null;
 
     // Con filtro: ícono de la categoría (los mismos del panel del dueño) y precio de esa categoría; sin filtro: "desde" el menor.
     // Completo / sin tarifa se dicen con texto, no solo con color. Estilos en styles/home.scss (.pin).
     const icon = selectedVehicleType ? renderToStaticMarkup(createElement(iconOf(selectedVehicleType.name), { className: 'i sm', 'aria-hidden': true })) : '';
     const label =
-      reason === 'NO_SPACE' ? 'Completo'
+      reason === 'WALK_IN_ONLY' ? 'Solo en el lugar'
+      : reason === 'NO_SPACE' ? 'Completo'
       : reason === 'NO_PRICE' || spotPrice.price === null ? (selectedVehicleType ? 'Sin tarifa' : 'Consultar')
       : `${selectedVehicleType ? '' : '<small>desde</small> '}$${spotPrice.price.toLocaleString('es-AR')}<small>/h</small>`;
     return `<div class="pin${isSelected ? ' sel' : ''}${isUnavailable ? ' na' : ''}">${icon}<span>${label}</span></div>`;

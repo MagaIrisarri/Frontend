@@ -268,6 +268,7 @@ tr:hover .pv .del,.pv .del:focus-visible,tr:focus-within .pv .del{opacity:1}
 
 .modal{position:relative;width:420px;max-width:100%;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:22px 24px 18px}
 .modal h2{font-size:16px;margin-bottom:6px}.modal p{color:var(--tx2);font-size:13.5px}
+.modal-seg{margin-top:12px;width:100%}.modal-seg button{flex:1}
 .modal-list{color:var(--tx2);font-size:13.5px;margin:6px 0 0;padding-left:18px;display:grid;gap:4px}
 .modal .row{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
 

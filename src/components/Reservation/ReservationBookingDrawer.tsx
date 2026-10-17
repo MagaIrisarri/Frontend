@@ -49,7 +49,7 @@ const vehicleUi = (v: any) => { const t = typeOfVehicle(v); return { label: type
 // Por qué no se reserva con ese vehículo en esta cochera (la misma regla que el listado); null si se puede.
 // Sin tarifa el backend responde 409; sin plazas libres ahora, igual que el listado, se marca no disponible.
 const blockedFor = (parking: any, v: any) => getUnavailableReason(parking, typeOfVehicle(v).id);
-const BLOCKED = { NO_PRICE: 'Sin tarifa en esta cochera', NO_SPACE: 'Sin plazas libres' };
+const BLOCKED = { WALK_IN_ONLY: 'Sin reservas online: atiende solo en el lugar', NO_PRICE: 'Sin tarifa en esta cochera', NO_SPACE: 'Sin plazas libres' };
 
 function generateAllHours(openingTime?: string, closingTime?: string): string[] {
   if (!openingTime || !closingTime) return [];

@@ -120,7 +120,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
 
   const renderCard = (p: Parking) => {
     const isSelected = p.id === selectedParkingId;
-    const reason = category ? getUnavailableReason(p, category.id) : null;
+    const reason = getUnavailableReason(p, category?.id);
     const imgUrl = p.imageUrl || p.image || DEFAULT_PARKING_IMAGE;
     const counts = (p.spaceTypes ?? []).map((t) => ({ Icon: iconOf(t.name), n: t.available ?? t.capacity, label: typeLabel(t.name).toLowerCase() }));
 
@@ -155,7 +155,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
 
           {reason ? (
             <span className="tag mute">
-              {reason === 'NO_SPACE' ? `Sin lugar para ${categoryName}` : `Sin tarifa para ${categoryName}`}
+              {reason === 'WALK_IN_ONLY' ? 'Sin reservas online · atiende en el lugar' : reason === 'NO_SPACE' ? `Sin lugar para ${categoryName}` : `Sin tarifa para ${categoryName}`}
             </span>
           ) : (
             <div className="tags">
