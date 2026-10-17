@@ -10,9 +10,8 @@ Registrar ingreso/salida, cobrar (solo medio de pago), cambiar plaza (R-15), ext
 - Invoice solo guarda `paymentMethod`: no hay efectivo recibido, vuelto ni comprobante.
 
 ## Lo que falta
-1. Reserva en el momento (cliente de mostrador). `POST /api/reservations` exige `vehicleId`, inicio y fin en hora entera y no más de 10 min en el pasado.
-2. Responsables de ingreso y de egreso (ver sección propia).
-3. Ocupación por tipo a la vista, resumen por período, cierre de caja.
+(La reserva de mostrador y los responsables de ingreso y egreso ya están: R-29, `checkedInBy`, `checkedOutBy`.)
+1. Ocupación por tipo a la vista, resumen por período, cierre de caja.
 
 ## Decisiones tomadas en la maqueta
 - **Reasignar empleado no está en la terminal del empleado**: es ABM del dueño (R-07). El empleado no reasigna.
@@ -117,17 +116,17 @@ Prototipo: solo valida contra sus propios datos y solo reservas en curso ("ya es
 - Al registrar la salida se fija la **hora real de salida** y las **horas extra** (cada hora empezada cuenta entera; mínimo lo reservado aunque salga antes). El detalle muestra "Salida real: HH:MM · N h extra" cuando el cliente se pasó; si salió a tiempo o antes, solo la hora real.
 - Antes de registrar la salida, un vehículo pasado de hora muestra el aviso "Si registrás la salida ahora (HH:MM) se cobran N h extra" (se recalcula con el reloj).
 - Después de la salida las horas extra quedan fijas: el importe no cambia con el paso del tiempo.
-- Backend: `checkOut` ya calcula `endTime = new Date()` y guarda `reservedHours`/`extraHours` en la factura. Falta confirmar que la hora real quede persistida y se devuelva al frontend (si `finishWithInvoice` pisa `endTime`, se pierde el horario reservado; conviene un campo aparte `checkedOutAt`).
+- Backend: `checkOut` ya calcula `endTime = new Date()` y guarda `reservedHours`/`extraHours` en la factura. Resuelto: la hora real de salida se guarda aparte en `checkedOutAt` y no pisa `endTime`.
 
 ## Responsable de ingreso y de egreso
 Una reserva puede empezar en un turno y terminar en otro, por eso son dos empleados distintos.
 - `Reservation.checkedInBy` (User, empleado): lo fija el check-in con el usuario que lo ejecuta. En reserva de mostrador se fija en la misma operación del alta.
 - `Reservation.checkedOutBy` (User, empleado): lo fija el check-out con el usuario que lo ejecuta.
 - Reemplazan a `attendedBy` (que hoy se setea solo en el check-in).
-- Validación: el actor debe ser staff de la sucursal (`assertStaffOf`) y su turno debe cubrir el momento de la acción (R-01, `assertCovered`). Si el vehículo entró en un turno y sale en el siguiente, egresa y cobra el empleado del turno nuevo.
+- Validación: el actor debe ser staff de la sucursal (`assertStaffOf`) (hoy no se exige que su turno cubra el momento de la acción: `assertCovered` solo se usa al crear la reserva, R-01). Si el vehículo entró en un turno y sale en el siguiente, egresa y cobra el empleado del turno nuevo.
 - UI: fila "Ingresó X · Salió Y"; detalle "Ingreso: registrado por X" / "Egreso: registrado por Y" (o "Sin registrar").
 - Resumen y cierre de caja pueden agrupar por `checkedOutBy` (quien cobra) y por `checkedInBy`.
-- Pendiente de decidir: bloquear acciones sobre reservas de otro turno (solo lectura con aviso) o permitirlas dejando el rastro en estos campos.
+- Pendiente de decidir: bloquear acciones sobre reservas de otro turno (solo lectura con aviso) o permitirlas dejando el rastro en estos campos (hoy el servidor solo exige ser personal de la sucursal y deja el rastro; ver `pendientes.md` §5).
 
 ## Cliente físico sin cuenta
 Patrón de la industria (JustPark Valet, Ticketless SMS Valet, ParkWhiz Attendant): patente y teléfono identifican al cliente, ticket por SMS/QR.
@@ -171,3 +170,16 @@ Sigue pendiente: cierre de caja (el nombre `ShiftClosure` ya lo usa el cierre de
 - **Detalle:** Ingreso y Egreso con quién los registró, horario reservado, salida real y horas extra, aviso de horas extra si sale ahora (misma cuenta que `checkOut`, con la gracia), cobro con efectivo recibido y vuelto o comprobante.
 - **Resumen:** tabla por período (Hoy / Semana / Mes) con datos reales, copiable a una hoja de cálculo.
 Falta el cierre de caja (necesita backend: `CashClosure`), el "Deshacer" de los avisos (las acciones son del servidor, ver L-15) y la fila "Sin cuenta" de la maqueta (el backend crea una cuenta real, R-29).
+
+## Endurecimiento de la terminal (17/10/2026, Frontend `ac0d8d9`)
+Auditoría de velocidad, claridad y robustez sobre `EmployeeDashboard`, `ResDrawer`, `WalkInDrawer`, `CalendarDrawer` y `SummaryDrawer`. Sin cambios de reglas de negocio ni de backend (D-10, R-01/R-07, L-15 y R-29 siguen igual).
+- **Red:** si el poll falla con datos ya cargados, la pantalla se conserva con la banda "Sin conexión · datos de HH:MM" y "Reintentar"; `ErrorBox` queda para la primera carga. Un contador de secuencia descarta respuestas viejas, y volver a la pestaña actualiza. `useRun` devuelve si la acción salió bien y vuelve a cargar la lista cuando falla.
+- **Salida con horas extra (R-14):** si la reserva se pasó de hora, el botón de la fila dice "Salida · +N h extra" y abre el detalle; el costo se ve antes de registrar la salida. Sin horas extra sigue siendo un toque (D-10).
+- **Cobro:** con una reserva por cobrar, Importe y Cobro van arriba. Es un formulario: Enter en "Efectivo recibido" cobra, y "Faltan $ N para cubrir $ M" es el error del campo (con `fixed`, sin saltos) y se acerca a la vista.
+- **Errores del servidor:** en `.fmsg` del pie (detalle y mostrador), no en toast. El mostrador y la cancelación no se envían dos veces; si cancelar falla, el detalle no se cierra.
+- **Extender (R-23):** solo ofrece horas que no pasan el cierre ni el máximo; sin ninguna, "Sin margen antes del cierre". Las plazas libres ya no se recargan en cada poll.
+- **Reloj:** `useNow` renderiza cada minuto, así "Desde HH:MM", "Se pasó de hora" y las horas extra no esperan al próximo poll (hasta 60 s de atraso). Las fechas usan `atAR`/`AR_TZ`.
+- **Cola:** la búsqueda recorre todos los días; Enter con un solo resultado opera la acción de la fila si es del día visible y, si no, abre el detalle. Botón "Hoy" fuera de hoy; "Limpiar filtros" ya no cambia la fecha; la patente abre el detalle. La lista lleva encabezados de columna ocultos y el ingreso/egreso se lee en dos líneas.
+- **Calendario y resumen:** meses acotados al rango, días con `aria-label` ("…, día con turno"), chevrons de lucide. En el resumen, "Ingresos" pasó a "Entradas" (no son dinero) y el período es `<th scope="row">`.
+- **Estilos:** sin `style` en línea, `:hover` solo con hover, `:active` en opciones, filtros y calendario, y `.e-meter` sin transición con `prefers-reduced-motion`.
+- **Sin resolver:** contraste de `--tx3` bajo sol sin medir; el foco de `Layer.tsx` sin probar en táctil real; el pie del detalle con error y el cobro con teclado abierto, sin ver en un navegador.

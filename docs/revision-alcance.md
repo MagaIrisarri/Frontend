@@ -57,8 +57,7 @@ Los CRUD de Usuario, Estacionamiento, Servicio, TipoVehículo, Vehículo y Ubica
 
 ## Lo que queda
 
-1. **Mergear a `main`** (esfuerzo bajo). Es lo único que bloquea que la cátedra lo vea.
-2. **Autenticación** (hecha, Backend `a183668`, Frontend `82162df`; 3.1.1 la pide para la aprobación, ver [requisitos-tp.md](requisitos-tp.md)):
+1. **Autenticación** (hecha, Backend `a183668`, Frontend `82162df`; 3.1.1 la pide para la aprobación, ver [requisitos-tp.md](requisitos-tp.md)):
    - El login devuelve un JWT, y la identidad sale del token, no de un header ([auth.ts](../../Backend/src/Shared/middlewares/auth.ts)).
    - Cada ruta exige su rol (`auth`) y, cuando recibe el id del propio usuario, que sea el del token (`self`). `PUT /reservations/:id` solo lo usa el personal, y `assertStaffOf` sigue controlando la sucursal.
    - Cada recurso se controla contra su dueño: la cochera, el vehículo, la reserva y la factura (L-37, cerrada). Los feriados nacionales los carga el administrador y cada sucursal elige si cierra (D-09, L-38 cerrada).

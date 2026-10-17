@@ -1,6 +1,6 @@
 # Pendientes del proyecto
 
-Estado al 17/10/2026, revisado contra los docs de los dos repos y contra git. Reemplaza a [handover.md](handover.md) (16/10), que ya no está al día: las minutas y los links a los PR están cargados, y `main` y `master` tienen la entrega de regularidad (Backend #9, Frontend #13).
+Estado al 17/10/2026, revisado contra los docs de los dos repos y contra git. Reemplaza al traspaso del 16/10 (`handover.md`, borrado): las minutas y los links a los PR están cargados, y `main` y `master` tienen la entrega de regularidad (Backend #9, Frontend #13).
 
 Los códigos (R-, L-, D-, RA-, LA-) están en [owner/owner-turnos-notas.md](owner/owner-turnos-notas.md) y [admin/admin-permisos-notas.md](admin/admin-permisos-notas.md). El detalle de cada requisito de la cátedra está en [requisitos-tp.md](requisitos-tp.md).
 
@@ -33,20 +33,14 @@ Los códigos (R-, L-, D-, RA-, LA-) están en [owner/owner-turnos-notas.md](owne
 |---|---|---|
 | `.env` del Frontend | Está versionado aunque `.gitignore` lo excluye. No hay `.env.example` en ningún repo | `git rm --cached .env` y agregar `.env.example`. Restringir la key de MapTiler por dominio |
 | Guía de estilo (Airbnb) | El ESLint del Frontend solo mira `**/*.{js,jsx}`, así que no revisa `src/`. El Backend no tiene linter | Cambiar `files` a `**/*.{ts,tsx}` y activar las reglas de la guía (lista en requisitos-tp.md) |
-| Patrón de diseño OO | Sin relevar (es opcional) | Nombrar uno que ya exista en el código, para la defensa |
+| Patrón de diseño OO | Relevado en [requisitos-tp.md](requisitos-tp.md#patrones-de-diseño-para-la-defensa): Repository + inyección de dependencias (Backend) y Provider/Observer con React Context (Frontend) | Saber explicarlo en la defensa |
 | CRUD de turnos | La UI trabaja por agenda, no sobre `/shifts/:id` | Saber explicarlo en la defensa |
 | CRUD de PrecioServicio | No hay `PUT`: modificar crea una versión nueva | Saber explicarlo en la defensa |
 | Tarifa de la reserva (L-43, D-16) | `Reservation.hourlyRate` copia el precio; el DER no muestra que sale del historial `ParkingPrice`, y un docente puede preguntar para qué sirve el historial | Decidirlo antes del DER de la defensa: dejar la copia y saber explicarlo, o reemplazarla por una FK a `ParkingPrice` como en los servicios (toca alta online y de mostrador, salida, demo y `Reservation.db.test.ts`). No dejar las dos |
 
 ## 4. Limpieza de los docs
 
-- **Filas "pendiente de commit" que ya están commiteadas.** En las notas del dueño: R-05, L-01, L-03, L-04, L-06, L-07, L-17, L-29, L-30, L-39 y D-13. En las del administrador: LA-03 y LA-05. Hay que buscar el hash de cada una (`git log -S`) y reemplazar el texto.
-- **D-16 (tarifa de la reserva)** se agregó el 17/10 sin commit, igual que la línea nueva en el `CLAUDE.md` del Backend. Confirmar la fecha de la decisión (¿la de `b379cb8`?) y commitear los dos.
-- **requisitos-tp.md:** las filas de tests dicen "listo para commitear" (líneas 12, 53, 54, 74 y 75), pero `tests-catedra/` y `docs/tests.md` ya están en `main` y en `master`. La regla del detalle de la FAQ (línea 85) dice "Pendiente de commit". La fecha de revisión es el 14/10.
-- **revision-alcance.md:** "Lo que queda" todavía pide mergear a `main`, y ya está hecho.
-- **diseno-empleado-mostrador.md:** "Lo que falta" lista la reserva de mostrador y los responsables de ingreso y egreso, que ya están (R-29, `checkedInBy`, `checkedOutBy`).
-- **Frontend `docs/README.md`:** enlaza la lista de PR. El del Backend ya enlaza #9 y #13: copiar esos links.
-- **handover.md:** borrarlo cuando se confirme que este archivo lo cubre.
+No queda nada abierto.
 
 ## 5. Funcionalidad que falta (no bloquea la entrega)
 
@@ -55,10 +49,11 @@ Los códigos (R-, L-, D-, RA-, LA-) están en [owner/owner-turnos-notas.md](owne
 | L-36 | La cuenta creada en el mostrador tiene el DNI como contraseña inicial y el email sin verificar | Contraseña temporal al azar mostrada al empleado; verificar por mail cuando haya envío |
 | Empleado | Cierre de caja y arqueo | Entidad nueva (`CashClosure`: `ShiftClosure` ya es el cierre de horarios) con lo esperado por medio de pago, lo contado y la diferencia. Arqueo ciego |
 | Empleado | Validar que el actor esté de turno al registrar ingreso y salida | Pendiente de decidir |
+| Empleado | El "Deshacer" de los avisos del panel del empleado no existe: las acciones son del servidor (L-15) | Acciones compensatorias en el servidor, o dejarlo fuera y aclararlo en la defensa |
 | L-02, D-07, D-03 | Las horas trabajadas son las programadas, no la asistencia, y las fechas pasadas no se corrigen | Fichaje o ajuste manual auditado |
 | L-16 | No hay auditoría de quién cambió los turnos | Guardar usuario, fecha, antes y después |
 | L-20, L-21 | Sin prueba con lector de pantalla, y el modo claro sin revisar en la vista por fecha, los feriados y el resumen | Auditoría WCAG y revisión de contrastes |
-| L-12, D-08 | Feriados: solo 2026, cargados a mano | Cargar 2027 y los puentes desde la fuente oficial |
+| L-12, D-08 | Feriados: la fuente (argentinadatos.com) no es el Boletín Oficial; la sincronización diaria corre en memoria del proceso | Cambiar de fuente si hay una API oficial; pasar a un job si el backend corre en varias instancias |
 | L-35, LA-09 | El selector de dueños del alta de empleado trae hasta 100 | Pasar a un buscador si hay más |
 | L-23, L-25 | Roles de administrador y empleado parciales; un empleado es de una sola sucursal | Confirmar el alcance con el grupo |
 
@@ -73,3 +68,16 @@ Están detalladas en [revision-alcance.md](revision-alcance.md#próximas-mejoras
 3. Agregar un comentario opcional a la reseña.
 4. Que "Buscar en esta zona" reemplace a los filtros de texto y localidad.
 5. Agregar una nota del cliente para la cochera al reservar.
+
+## 7. Notificaciones en la app (estado)
+
+Completas para la entrega. El mapa de quién recibe cada aviso está en el `CLAUDE.md` del Backend ("Notificaciones en la app"); queda abierto el polling (L-45).
+
+- La prueba es `tests-catedra/integration/Notification.db.test.ts` (versionada; la corre también `pnpm test:integration`): `DB_NAME=parkingdb_notif_test npx tsx tests-catedra/integration/Notification.db.test.ts`. El `ER_NO_REFERENCED_ROW_2` de la salida es esperado (el último paso prueba que un aviso fallido no lanza). Pasó el 17/10/2026 sobre `ec7588f`.
+- `assignEmployee` solo se usa por la API (`PUT /api/reservations/:id`): desde R-07 la interfaz del dueño no cambia el empleado a mano.
+- Descartados por decisión de producto: aviso de la reserva de mostrador al resto del personal, cambios de servicios de una reserva (`setServices`), eventos de cuenta (reset de contraseña, baja, alta en el mostrador: sin sesión no se ven) y calificación (`rate`).
+
+## 8. Avisos para quien siga
+
+- Puede haber más de una sesión de Claude trabajando sobre los mismos repos: commitear solo los archivos propios y revisar `git status` antes.
+- Las pruebas que esperaban el 409 de R-06 o la transferencia a mano hay que actualizarlas a la regla nueva, citando su código (ver sección 2).

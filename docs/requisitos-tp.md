@@ -69,7 +69,7 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Reg. | Eventos, errores amigables, reactividad, input y output property | Cumple | Por ejemplo, `LocationPicker` recibe un `PlaceValue` (input) y devuelve `onChange` (output); los errores se muestran con `useToast` y `ErrorBox` | — |
 | Reg. | Al menos un servicio | Cumple | `src/services/*.service.ts` | — |
 | Reg. | Modelos con clases, interfaces o tipos propios | Cumple | `src/types/*.types.ts` | — |
-| Reg. | Patrón de diseño OO, si es posible | Sin relevar | — | Es opcional |
+| Reg. | Patrón de diseño OO, si es posible | Relevado | Ver "Patrones de diseño para la defensa" abajo | Cumple (opcional) |
 | Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple | `package.json`: `@playwright/test`, `vitest`, `@testing-library/react`, `@testing-library/dom` y `jsdom` | |
 | Apr. | 1 test unitario de un componente | Cumple (en `main` y `master`) | `tests-catedra/unit/Pager.test.tsx` (Vitest y Testing Library): rango visible, anterior y siguiente, bordes, estado ocupado y sin paginador con una sola página. `pnpm test` | |
 | Apr. | 1 test end-to-end | Cumple (en `main` y `master`) | `tests-catedra/e2e/search.spec.ts` con `playwright.config.ts`: abre la app en el navegador, busca por ciudad o barrio, filtra el listado y encuadra el mapa, con la API simulada dentro de la spec. `pnpm test:e2e` | Las 16 specs de `tests/e2e/` siguen locales |
@@ -102,7 +102,7 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 | Minutas de reunión y avance | X | X | **Vacío**: la tabla del `docs/README.md` del Backend solo tiene el encabezado | Cargar las minutas |
 | Seguimiento de features, bugs e issues | X | X | Cumple: tablero de Notion enlazado en el `docs/README.md` del Backend | — |
 | Documentación de la API | | X | No hay (ni OpenAPI ni un listado de endpoints) | Documentar los endpoints |
-| Evidencia de los tests automáticos | | X | [Backend `docs/tests.md`](https://github.com/MagaIrisarri/Backend/blob/main/docs/tests.md): tabla con autor, comandos y la salida de las 4 corridas (16/10/2026) | Commitear `docs/tests.md` y `tests-catedra/` |
+| Evidencia de los tests automáticos | | X | [Backend `docs/tests.md`](https://github.com/MagaIrisarri/Backend/blob/main/docs/tests.md): tabla con autor, comandos y la salida de las 4 corridas (16/10/2026) | Hecho (`d74f2bb`) |
 | Video de demostración | TBD | X | No hay | Grabarlo |
 | Deploy, con links y credenciales | TBD | X | No hay configuración de deploy | Deploy con un MySQL hospedado. Las credenciales pueden ser las de la siembra (`password123`) |
 | Contacto para coordinar la defensa | | X | — | Va en el form |
@@ -141,3 +141,13 @@ Donde el proyecto se aparta de Airbnb, manda su convención:
 3. **Documentación nueva:** en markdown, dentro de `docs/` y enlazada desde `docs/README.md`. Los diagramas, en Mermaid.
 4. **Git es evidencia**, porque se evalúan la participación y el uso de git. Cada commit lleva a su autor real, y no se reescribe historia compartida ni se aplastan aportes de otros.
 5. La entrega de regularidad (merge a `main` y `master`, minutas y links a los PR) ya se hizo; lo que bloquea ahora está en [pendientes.md](pendientes.md).
+
+## Patrones de diseño para la defensa
+
+**Backend: Repository + inyección de dependencias.** Cada módulo separa `Route → Controller → Service → Repository`. Las reglas de negocio viven en el servicio, que no toca la base: pide todo al repositorio (MikroORM). Las dependencias no se crean dentro de las clases, se pasan por el constructor. El ejemplo es `ReservationService`:
+- `Reservation.Route.ts` instancia `ReservationRepository`, `InvoiceRepository`, `ParkingPriceRepository` y `ParkingSpaceRepository` con `orm.em`, y se los pasa al servicio junto con `scheduleService`, `notificationService` y `parkingService`. Después le pasa el servicio al `ReservationController`.
+- Ventaja para explicar: el servicio se prueba y se reemplaza sin cambiar el acceso a datos (las pruebas de `tests-catedra/` usan el mismo `reservationService`), y las reglas compartidas (`scheduleService`) tienen una sola instancia.
+
+**Frontend: Provider (React Context) con observadores.** El estado compartido vive en un proveedor y los componentes lo consumen con un hook, sin pasarlo por props. Cuando el estado cambia, React vuelve a dibujar a quienes lo consumen, que es la idea del Observer. Ejemplos: `NotificationsContext` (cuenta de no leídas y panel de avisos, con polling), `ProfileContext` y `ThemeContext` en `src/context/`.
+- No existe un `AuthContext`: la sesión no vive en un contexto propio. Al nombrar los ejemplos en la defensa, usar solo los tres de arriba.
+
