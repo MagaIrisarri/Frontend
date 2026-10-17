@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, Plus, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, MapPin, Plus, Search } from 'lucide-react';
 import OwnerShell from '../../components/Owner/ui/OwnerShell';
 import PanelBar from '../../components/Owner/ui/PanelBar';
 import { Shown } from '../../components/Owner/ui/Presence';
@@ -131,6 +131,7 @@ function Terminal({ reservations, parking, shifts, me, onChange }: { reservation
         <div className="e-tb"><button type="button" className="btn sm" onClick={() => setPanel('summary')}>Resumen</button></div>
         <button type="button" className="btn pri lg e-new" title="Atajo: N" onClick={() => { setRd(now); setPanel('walkin'); }}><Plus className="i" aria-hidden="true" />Nuevo ingreso</button>
       </header>
+      {parking.walkInOnly && <div className="e-note" role="note"><Info className="i" aria-hidden="true" /><span><b>Solo en el lugar.</b> La sucursal no toma reservas online por ahora. Registrá a los clientes con “Nuevo ingreso”; las reservas en curso siguen igual.</span></div>}
 
       <div className="e-tools">
         <div className="e-day" role="group" aria-label="Día">

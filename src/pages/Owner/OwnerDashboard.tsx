@@ -86,8 +86,9 @@ export default function OwnerDashboard() {
   // L-42: pausar cancela las pendientes (cada cliente recibe el aviso con el motivo), respeta las que están en curso y no
   // acepta reservas nuevas. Cerrada no acepta ninguna; solo en el lugar (L-44) sigue en el mapa y atiende en el mostrador.
   // Se confirma antes, con lo que va a pasar. Habilitar vuelve a tomar reservas online en los dos casos.
+  const closeBranch = (p: Parking) => { setWalkIn(false); setPausing(p); };
   const toggle = async (p: Parking) => {
-    if (operating(p)) { setWalkIn(false); setPausing(p); return; }
+    if (operating(p)) { closeBranch(p); return; }
     try {
       await reactivateParking(p.id);
       toast(`“${p.name}” habilitada y visible al público.`);
@@ -127,6 +128,8 @@ export default function OwnerDashboard() {
     operating(p)
       ? { label: 'Pausar sucursal', icon: <Pause className="i" />, sep: true, onClick: () => toggle(p) }
       : { label: 'Habilitar sucursal', icon: <Power className="i" />, sep: true, onClick: () => toggle(p) },
+    // Desde "Solo en el lugar" se cierra en un paso, sin habilitarla antes.
+    ...(p.isActive && p.walkInOnly ? [{ label: 'Cerrar sucursal', icon: <Pause className="i" />, onClick: () => closeBranch(p) }] : []),
   ];
 
   const loading = status === 'loading';
@@ -217,23 +220,23 @@ export default function OwnerDashboard() {
       </section>
 
       <Shown when={detail}>{d => <ParkingDetail p={parkings.find(x => x.id === d.id) ?? d} employees={employees} week={templates[d.id]} alerts={alerts[d.id] ?? []}
-        onClose={() => setDetail(null)} onToggle={() => toggle(d)} onEdit={() => { setPform(d); setDetail(null); }} />}</Shown>
+        onClose={() => setDetail(null)} onToggle={() => toggle(d)} onCloseBranch={() => closeBranch(d)} onEdit={() => { setPform(d); setDetail(null); }} />}</Shown>
       <ParkingDrawer parking={pform} onClose={() => setPform(null)} />
-      <Shown when={pausing}>{p => <ConfirmModal title={`¿Pausar “${p.name}”?`} body="Al pausarla:" ok="Pausar sucursal" back="Volver" danger
-        onConfirm={pause} onClose={() => setPausing(null)}>
-        <div className="seg modal-seg" role="group" aria-label="Cómo pausar">
+      <Shown when={pausing}>{p => <ConfirmModal title={p.walkInOnly ? `¿Cerrar “${p.name}”?` : `¿Pausar “${p.name}”?`} body={p.walkInOnly ? 'Hoy atiende solo en el lugar. Al cerrarla:' : 'Al pausarla:'}
+        ok={p.walkInOnly ? 'Cerrar sucursal' : 'Pausar sucursal'} back="Volver" danger onConfirm={pause} onClose={() => setPausing(null)}>
+        {!p.walkInOnly && <div className="seg modal-seg" role="group" aria-label="Cómo pausar">
           <button type="button" aria-pressed={!walkIn} onClick={() => setWalkIn(false)}>Cerrar la sucursal</button>
           <button type="button" aria-pressed={walkIn} onClick={() => setWalkIn(true)}>Solo en el lugar</button>
-        </div>
+        </div>}
         <ul className="modal-list">{pauseItems(p).map(t => <li key={t}>{t}</li>)}</ul>
       </ConfirmModal>}</Shown>
     </>
   );
 }
 
-function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }: {
+function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onCloseBranch, onEdit }: {
   p: Parking; employees: { id: string; name: string; last_name: string; parkingId?: string | null }[]; week?: ReturnType<typeof useOwner>['templates'][string];
-  alerts: { l: string; d: string }[]; onClose: () => void; onToggle: () => void; onEdit: () => void;
+  alerts: { l: string; d: string }[]; onClose: () => void; onToggle: () => void; onCloseBranch: () => void; onEdit: () => void;
 }) {
   const navigate = useNavigate();
   const [services, setServices] = useState<any[] | null>(null);
@@ -246,6 +249,7 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
     <Drawer title={p.name} sub={`${p.address}, ${p.locality}`} onClose={onClose} focusSel=".dfoot .btn.pri"
       footer={<div className="dfoot">
         <button type="button" className="btn" onClick={onToggle}><Power className="i sm" />{operating(p) ? 'Pausar' : 'Habilitar'}</button>
+        {p.isActive && p.walkInOnly && <button type="button" className="btn" onClick={onCloseBranch}><Pause className="i sm" />Cerrar</button>}
         <button type="button" className="btn" onClick={() => navigate(`/owner/spaces?p=${p.id}`)}><LayoutGrid className="i sm" />Plazas</button>
         <button type="button" className="btn pri" onClick={onEdit}><Pencil className="i sm" />Editar sucursal</button>
       </div>}>
