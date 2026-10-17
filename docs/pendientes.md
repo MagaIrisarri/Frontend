@@ -59,7 +59,6 @@ Los códigos (R-, L-, D-, RA-, LA-) están en [owner/owner-turnos-notas.md](owne
 | L-16 | No hay auditoría de quién cambió los turnos | Guardar usuario, fecha, antes y después |
 | L-20, L-21 | Sin prueba con lector de pantalla, y el modo claro sin revisar en la vista por fecha, los feriados y el resumen | Auditoría WCAG y revisión de contrastes |
 | L-12, D-08 | Feriados: solo 2026, cargados a mano | Cargar 2027 y los puentes desde la fuente oficial |
-| L-33, LA-08 | `vehiculos.json` sembró como AUTO algunos tipos que no son de pasajeros | Limpiar el catálogo sembrado |
 | L-35, LA-09 | El selector de dueños del alta de empleado trae hasta 100 | Pasar a un buscador si hay más |
 | L-23, L-25 | Roles de administrador y empleado parciales; un empleado es de una sola sucursal | Confirmar el alcance con el grupo |
 

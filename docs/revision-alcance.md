@@ -42,7 +42,7 @@ Los CRUD de Usuario, Estacionamiento, Servicio, TipoVehículo, Vehículo y Ubica
 
 | Requisito | Estado | Evidencia | Qué falta |
 |---|---|---|---|
-| Vehículos por tipo (patente, marca, modelo, seguro) → detalle del cliente | Cumple | [AdminVehicles.tsx](../src/pages/Admin/AdminVehicles.tsx): filtro por tipo, columnas y drawer del cliente | — |
+| Vehículos por tipo (patente, marca, modelo, seguro) → detalle del cliente | Cumple | [AdminVehicles.tsx](../src/pages/Admin/AdminVehicles.tsx): filtro por tipo, columnas ordenables (patente, marca y modelo, tipo, seguro, cliente y alta, RA-28) y drawer del cliente | — |
 | Resumen mensual por estado | Cumple, con matiz | [OwnerReservations.tsx:142, 180](../src/pages/Owner/OwnerReservations.tsx#L180): filtro por estado (finalizadas por defecto), código, desde, hasta y monto neto, con CSV | No muestra `tipo_reserva`, que no existe en el modelo (ver abajo) |
 | Cancelación de reserva | Cumple | `DELETE /:id` → [Service.remove:170](../../Backend/src/Reservation/Reservation.Service.ts#L170): permisos (cliente, administrador o personal de esa sucursal), reglas por estado y anula la factura pendiente. Frontend: cliente, dueño y empleado. También se cancelan solas las vencidas sin ingreso (R-17) | — |
 | Recordatorio de reserva | Cumple | `Service.sendReminders` ([Reservation.Service.ts](../../Backend/src/Reservation/Reservation.Service.ts)): deja una notificación en la app 2 horas antes del inicio, una sola vez, y reintenta si falla (R-28). El sistema no envía mails | Corre en memoria del proceso (L-27) |
