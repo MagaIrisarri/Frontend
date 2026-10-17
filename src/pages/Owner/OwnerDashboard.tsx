@@ -96,10 +96,15 @@ export default function OwnerDashboard() {
       await refresh();
     } catch (x) { toast(apiError(x), 'err'); }
   };
-  const pauseBody = (p: Parking) => {
+  const pauseItems = (p: Parking) => {
     const mine = reservations.filter(r => r.pid === p.id);
     const pending = mine.filter(r => r.st === 'reservada').length, inside = mine.filter(r => r.st === 'curso').length;
-    return `Deja de aparecer en el mapa y no acepta reservas nuevas, ni online ni en el mostrador.${pending ? ` Se ${pending === 1 ? 'cancela' : 'cancelan'} ${plural(pending, 'reserva pendiente', 'reservas pendientes')} y cada cliente recibe un aviso con el motivo.` : ''}${inside ? ` ${plural(inside, 'reserva en curso sigue', 'reservas en curso siguen')} hasta su salida.` : ''} El personal de la sucursal recibe un aviso.`;
+    return [
+      'Se dejarán de aceptar reservas, online y en el mostrador.',
+      `Se cancelarán las reservas pendientes${pending ? ` (${pending})` : ''} y se avisa a cada cliente.`,
+      `Las reservas en curso${inside ? ` (${inside})` : ''} continúan hasta su salida.`,
+      'Se notifica al personal.',
+    ];
   };
 
   const menuFor = (p: Parking) => [
@@ -205,8 +210,10 @@ export default function OwnerDashboard() {
       <Shown when={detail}>{d => <ParkingDetail p={parkings.find(x => x.id === d.id) ?? d} employees={employees} week={templates[d.id]} alerts={alerts[d.id] ?? []}
         onClose={() => setDetail(null)} onToggle={() => toggle(d)} onEdit={() => { setPform(d); setDetail(null); }} />}</Shown>
       <ParkingDrawer parking={pform} onClose={() => setPform(null)} />
-      <Shown when={pausing}>{p => <ConfirmModal title={`¿Pausar “${p.name}”?`} body={pauseBody(p)} ok="Pausar sucursal" back="Volver" danger
-        onConfirm={pause} onClose={() => setPausing(null)} />}</Shown>
+      <Shown when={pausing}>{p => <ConfirmModal title={`¿Pausar “${p.name}”?`} body="Al pausarla:" ok="Pausar sucursal" back="Volver" danger
+        onConfirm={pause} onClose={() => setPausing(null)}>
+        <ul className="modal-list">{pauseItems(p).map(t => <li key={t}>{t}</li>)}</ul>
+      </ConfirmModal>}</Shown>
     </>
   );
 }
