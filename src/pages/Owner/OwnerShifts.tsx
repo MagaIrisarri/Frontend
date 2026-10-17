@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Clock, Lock, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
@@ -46,29 +46,45 @@ export default function OwnerShifts() {
   const calRef = useRef<HTMLDivElement>(null);
 
   // Solo la última carga escribe: al cambiar rápido de sucursal, de modo o de semana, una respuesta atrasada se descarta.
+  // Cada vista ya vista (sucursal + semana tipo o semana por fecha) queda en memoria: volver a ella es instantáneo, sin esqueleto,
+  // y se revalida en segundo plano. La otra vista se precarga para que el primer cambio también lo sea.
   const req = useRef(0);
+  const cache = useRef(new Map<string, { week: (Day | null)[]; meta: (ResolvedDay | null)[] }>());
+  const shown = useRef('');
+  const keyOf = (m: Mode) => `${p?.id}|${m === 'tpl' ? 'tpl' : wk}`;
+  const fetchView = async (m: Mode) => {
+    if (!p) return;
+    if (m === 'tpl') return { week: (await getTemplate(p.id)).map(fromServer), meta: [] };
+    const days = await getRange(p.id, wk, addD(wk, 6));
+    return { meta: days, week: days.map(d => (d.source === 'holiday-closed' ? null : fromServer(d))) };
+  };
+  const prefetch = (m: Mode) => { const k = keyOf(m); fetchView(m).then(v => v && cache.current.set(k, v)).catch(() => {}); };
+  // La semana tipo cambia lo que resuelve cada fecha: tras editarla (o un feriado) las fechas en memoria se descartan y se vuelven a precargar.
+  const dropDates = () => {
+    cache.current.forEach((_, k) => { if (!k.endsWith('|tpl')) cache.current.delete(k); });
+    if (mode === 'tpl') prefetch('date');
+  };
   const load = useCallback(async () => {
     if (!p) return;
-    const n = ++req.current;
-    setWeek(null); setLoadErr(false); setEditing(null);
+    const n = ++req.current, k = keyOf(mode), hit = cache.current.get(k);
+    shown.current = k;
+    setWeek(hit?.week ?? null); setMeta(hit?.meta ?? []); setLoadErr(false); setEditing(null);
     try {
-      if (mode === 'tpl') {
-        const w = (await getTemplate(p.id)).map(fromServer);
-        if (n !== req.current) return;
-        setWeek(w);
-        setMeta([]);
-      } else {
-        const days = await getRange(p.id, wk, addD(wk, 6));
-        if (n !== req.current) return;
-        setMeta(days);
-        setWeek(days.map(d => (d.source === 'holiday-closed' ? null : fromServer(d))));
-      }
+      const v = (await fetchView(mode))!;
+      if (n !== req.current) return;
+      setWeek(v.week);
+      setMeta(v.meta);
+      const other: Mode = mode === 'tpl' ? 'date' : 'tpl';
+      if (!cache.current.has(keyOf(other))) prefetch(other);
     } catch {
       // Sin los turnos reales no se muestra un calendario vacío: guardar un día lo reemplazaría entero.
-      if (n === req.current) setLoadErr(true);
+      if (n === req.current && !hit) setLoadErr(true);
     }
   }, [p?.id, mode, wk]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [load]);
+  // Los cambios locales (guardar, deshacer, restablecer) también quedan en memoria para la vista que se está mostrando.
+  useEffect(() => { if (week && shown.current) cache.current.set(shown.current, { week, meta }); }, [week, meta]);
+  // Antes de pintar: así el cambio de vista nunca muestra un cuadro con el modo nuevo y los datos viejos.
+  useLayoutEffect(() => { load(); }, [load]);
 
   if (status === 'loading') return <><PageHead title="Turnos" /><span className="sk" style={{ height: 320 }} /></>;
   if (status === 'error') return <><PageHead title="Turnos" /><ErrorBox what="tus sucursales" onRetry={refreshOwner} /></>;
@@ -95,6 +111,7 @@ export default function OwnerShifts() {
       toast(`No se pueden cambiar los turnos de hoy anteriores a las ${hhmm(nowMin())}.`, 'err');
       return false;
     }
+    req.current++; // una revalidación en vuelo no pisa esta edición
     setWeek(w => w && w.map((x, i) => (i === d ? day : x)));
     try {
       let moved = 0;
@@ -108,6 +125,7 @@ export default function OwnerShifts() {
         setMeta(m => m.map((x, i) => (i === d ? r : x)));
         moved = r.reassigned ?? 0;
       }
+      if (mode === 'tpl') dropDates();
       if (mode === 'tpl' || moved) refreshOwner(); // panel, personal y reservas leen la semana tipo y el empleado asignado
       const text = `${msg}${moved ? ` ${plural(moved, 'reserva pasó', 'reservas pasaron')} al empleado de turno.` : ''}`.trim();
       if (text) toast(text, 'ok', undoable ? () => commit(d, prev, 'Cambio deshecho.', false) : undefined);
@@ -401,7 +419,7 @@ export default function OwnerShifts() {
       </div>
 
       <div className="panel" style={{ padding: 16, marginTop: 16 }}>
-        <Holidays key={`${p.id}-${holKey}`} parkingId={p.id} parkingName={p.name} onChange={() => date && load()} />
+        <Holidays key={`${p.id}-${holKey}`} parkingId={p.id} parkingName={p.name} onChange={() => { dropDates(); if (date) load(); }} />
       </div>
 
       {drag?.on && drag.kind === 'new' && <div className="dgh" style={{ left: drag.gx, top: drag.gy }}>{drag.label}</div>}
