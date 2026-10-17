@@ -134,7 +134,7 @@ export default function AdminUsers() {
         </section>
       </div>
       <Shown when={del}>{del => <ConfirmModal title={`¿Dar de baja a ${fullName(del)}?`}
-        body={`No va a poder iniciar sesión hasta que lo reactives. ${del.type === 'CLIENTE' ? 'Si tiene reservas activas, no se puede.' : del.type === 'DUEÑO' ? 'Si tiene sucursales activas, primero tiene que pausarlas.' : del.type === 'EMPLEADO' ? 'Si tiene turnos o reservas asignadas, primero hay que sacarlo de los turnos y reasignarlas.' : ''}`}
+        body={`No va a poder iniciar sesión hasta que lo reactives. ${del.type === 'CLIENTE' ? 'Si tiene reservas activas, no se puede.' : del.type === 'DUEÑO' ? 'Si tiene sucursales activas, primero tiene que pausarlas, y las reservas en curso tienen que terminar.' : del.type === 'EMPLEADO' ? 'Si tiene turnos o reservas asignadas, primero hay que sacarlo de los turnos y reasignarlas.' : ''}`}
         ok="Dar de baja" back="Volver" danger onConfirm={deactivate} onClose={() => setDel(null)} />}</Shown>
       <Shown when={reset}>{u => <ConfirmModal title={`Restablecer la contraseña de ${fullName(u)}`}
         body="Elegí una contraseña temporal y pasásela. Al iniciar sesión se le pide una nueva." ok="Restablecer" back="Volver" onConfirm={resetPassword} onClose={() => setReset(null)}>

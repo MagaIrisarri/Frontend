@@ -4,7 +4,7 @@ import {
   AlertTriangle, Building2, CalendarDays, Check, DollarSign, Eye, LayoutGrid, Layers, Lock, MoreVertical,
   Pause, Pencil, Plus, Power, Search, Users,
 } from 'lucide-react';
-import { Drawer } from '../../components/Owner/ui/Layer';
+import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
 import { Shown } from '../../components/Owner/ui/Presence';
 import { Menu } from '../../components/Owner/ui/Menu';
 import { Empty, ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
@@ -48,6 +48,7 @@ export default function OwnerDashboard() {
   const [filter, setFilter] = useState<Filter>('all');
   const [loc, setLoc] = useState(''); // '' = todas las localidades
   const [detail, setDetail] = useState<Parking | null>(null);
+  const [pausing, setPausing] = useState<Parking | null>(null); // L-42: confirmar antes de pausar
   const [params, setParams] = useSearchParams();
   const [pform, setPform] = useState<Parking | 'new' | null>(params.get('new') ? 'new' : null);
   useEffect(() => { if (params.get('new')) setParams({}, { replace: true }); }, [params, setParams]);
@@ -74,17 +75,31 @@ export default function OwnerDashboard() {
     alert: scoped.filter(p => alerts[p.id]!.length).length, paused: scoped.filter(p => !p.isActive).length,
   };
 
+  // L-42: pausar cancela las pendientes (cada cliente recibe el aviso con el motivo), respeta las que están en curso y no
+  // acepta reservas nuevas, ni online ni en el mostrador. Por eso se confirma antes, con lo que va a pasar.
   const toggle = async (p: Parking) => {
+    if (p.isActive) { setPausing(p); return; }
     try {
-      if (p.isActive) {
-        // L-42: pausar corta las reservas nuevas; las que ya tenía siguen en pie.
-        const n: number = (await deleteParking(p.id))?.data?.activeReservations ?? 0;
-        toast(`“${p.name}” pausada. Ya no aparece en las búsquedas.${n ? ` ${plural(n, 'reserva pendiente o en curso sigue', 'reservas pendientes o en curso siguen')} en pie: atendelas o cancelalas desde Reservas.` : ''}`, 'info');
-      }
-      else { await reactivateParking(p.id); toast(`“${p.name}” habilitada y visible al público.`); }
+      await reactivateParking(p.id);
+      toast(`“${p.name}” habilitada y visible al público.`);
       setDetail(null);
       await refresh();
     } catch (x) { toast(apiError(x), 'err'); }
+  };
+  const pause = async () => {
+    const p = pausing!;
+    try {
+      const { cancelled = 0, inProgress = 0 } = (await deleteParking(p.id))?.data ?? {};
+      toast(`“${p.name}” pausada. Ya no aparece en las búsquedas.${cancelled ? ` Se ${cancelled === 1 ? 'canceló' : 'cancelaron'} ${plural(cancelled, 'reserva pendiente', 'reservas pendientes')}.` : ''}${inProgress ? ` ${plural(inProgress, 'en curso sigue', 'en curso siguen')} hasta su salida.` : ''}`, 'info');
+      setPausing(null);
+      setDetail(null);
+      await refresh();
+    } catch (x) { toast(apiError(x), 'err'); }
+  };
+  const pauseBody = (p: Parking) => {
+    const mine = reservations.filter(r => r.pid === p.id);
+    const pending = mine.filter(r => r.st === 'reservada').length, inside = mine.filter(r => r.st === 'curso').length;
+    return `Deja de aparecer en el mapa y no acepta reservas nuevas, ni online ni en el mostrador.${pending ? ` Se ${pending === 1 ? 'cancela' : 'cancelan'} ${plural(pending, 'reserva pendiente', 'reservas pendientes')} y cada cliente recibe un aviso con el motivo.` : ''}${inside ? ` ${plural(inside, 'reserva en curso sigue', 'reservas en curso siguen')} hasta su salida.` : ''} El personal de la sucursal recibe un aviso.`;
   };
 
   const menuFor = (p: Parking) => [
@@ -190,6 +205,8 @@ export default function OwnerDashboard() {
       <Shown when={detail}>{d => <ParkingDetail p={parkings.find(x => x.id === d.id) ?? d} employees={employees} week={templates[d.id]} alerts={alerts[d.id] ?? []}
         onClose={() => setDetail(null)} onToggle={() => toggle(d)} onEdit={() => { setPform(d); setDetail(null); }} />}</Shown>
       <ParkingDrawer parking={pform} onClose={() => setPform(null)} />
+      <Shown when={pausing}>{p => <ConfirmModal title={`¿Pausar “${p.name}”?`} body={pauseBody(p)} ok="Pausar sucursal" back="Volver" danger
+        onConfirm={pause} onClose={() => setPausing(null)} />}</Shown>
     </>
   );
 }
