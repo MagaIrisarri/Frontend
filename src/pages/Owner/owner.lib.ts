@@ -18,6 +18,18 @@ export const fmtD = (iso: string) => new Date(iso + 'T12:00').toLocaleDateString
 export const shD = (iso: string) => iso.slice(8) + '/' + iso.slice(5, 7);
 export const fmtH = (h: number) => String(Math.round(h * 10) / 10).replace('.', ',') + ' h';
 
+// Precio en pesos enteros, como se cobra: acepta puntos de miles ("1.500"). Una coma o centavos son un error a la vista,
+// no se descartan en silencio (antes "1500,50" quedaba en 150050). Devuelve el número o el mensaje para el campo.
+export const PESOS_FORMAT = 'Ingresá el precio en pesos, sin centavos.';
+export function parsePesos(s: string): number | string {
+  const t = s.replace(/\s/g, '');
+  if (!/^(\d+|\d{1,3}(\.\d{3})+)?$/.test(t)) return PESOS_FORMAT;
+  const n = Number(t.replace(/\./g, ''));
+  return n > 0 ? n : 'Ingresá un valor mayor a 0.';
+}
+// Mientras se escribe solo se marca lo que ya no puede ser un precio entero (una coma, letras); "1.5" puede seguir hacia "1.500".
+export const pesosTyping = (s: string) => (/[^\d.\s]/.test(s) ? PESOS_FORMAT : '');
+
 export const initials = (name = '', last = '') => ((name[0] ?? '') + (last[0] ?? '')).toUpperCase();
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -175,9 +187,10 @@ export function workWarnings(week: (Day | null)[], emps: { id: string; name: str
 
 // ---------- sucursales ----------
 export interface ParkingLike {
-  id: string; isActive: boolean; openingTime: string; closingTime: string;
+  id: string; isActive: boolean; walkInOnly?: boolean; openingTime: string; closingTime: string;
   spaceTypes?: SpaceType[];
   prices?: ParkingPriceRow[];
+  createdAt?: string | null; updatedAt?: string | null; // alta y última modificación (sin dato en las anteriores a esas columnas)
 }
 // R-30: plazas y tarifas van por tipo de vehículo (id); el backend manda capacidad, libres y mantenimiento de cada uno.
 export interface TypeRef { id: string; name: string }
@@ -251,6 +264,7 @@ export interface Res {
   eid: string | null; // R-07: empleado asignado, lo deciden los turnos
   cin: string | null; // quien registró el ingreso
   amount: number | null;
+  rate: number | null; // L-43: precio por hora vigente al reservar, el que cobra la salida; null en las reservas anteriores
   bill: Bill | null; // detalle del cobro; null si no hay factura o es anterior al detalle
   services: Svc[]; // servicios pedidos con la reserva
   rating: number | null; // R-27: valoración del cliente (1 a 5), opcional
@@ -295,6 +309,7 @@ export function normRes(r: any): Res {
     eid: r.attendedBy?.id ?? null,
     cin: r.checkedInBy?.id ?? null,
     amount: r.amount == null ? null : Number(r.amount),
+    rate: r.hourlyRate == null ? null : Number(r.hourlyRate),
     bill: toBill(r.invoice),
     services: servicesOf(r),
     rating: r.rating ?? null,

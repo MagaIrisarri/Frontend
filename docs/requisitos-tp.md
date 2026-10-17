@@ -50,8 +50,8 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Reg. | Capas | Cumple | Route → Controller → Service → Repository en cada módulo | — |
 | Reg. | Validar entradas e informar errores por la API | Cumple | zod con `validateSchema`; `AppError` y `errorHandler` (409 por datos únicos, 500 sin stack en producción) | — |
 | Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple | `package.json` y `pnpm-lock.yaml`; `tsx` corre las pruebas | `pnpm test` (unitarias) y `pnpm test:integration` (con `DB_NAME=<base>_test`) |
-| Apr. | 1 test automatizado por integrante (4) | Cumple | 5 unitarias sin base en `Backend/tests-catedra/unit/`: `Schedule.test.ts` (turnos), `billing.test.ts` (cobro de la salida: mínimo 1 h, gracia de 10 min y horas extra, R-14), `vehicleTypes.test.ts` (tipo base y prefijo de plaza), `plate.test.ts` (patente y año) y `search.test.ts` (nombres y búsqueda). `pnpm test` | Repartir la autoría: un integrante por archivo |
-| Apr. | 1 test de integración | Cumple | `Backend/tests-catedra/integration/Reservation.db.test.ts`: reserva, ingreso, extender, servicios y salida con factura contra MySQL. `DB_NAME=<base>_test pnpm test:integration` | |
+| Apr. | 1 test automatizado por integrante (4) | Cumple (en `main` y `master`) | 5 unitarias sin base en `Backend/tests-catedra/unit/`: `Schedule.test.ts` (turnos), `billing.test.ts` (cobro de la salida: mínimo 1 h, gracia de 10 min y horas extra, R-14), `vehicleTypes.test.ts` (tipo base y prefijo de plaza), `plate.test.ts` (patente y año) y `search.test.ts` (nombres y búsqueda). `pnpm test` | Repartir la autoría: un integrante por archivo |
+| Apr. | 1 test de integración | Cumple (en `main` y `master`) | `Backend/tests-catedra/integration/Reservation.db.test.ts`: reserva, ingreso, extender, servicios y salida con factura contra MySQL. `DB_NAME=<base>_test pnpm test:integration` | |
 | Apr. | Login con autenticación propia o de terceros, con 2 niveles de acceso o más | Cumple (Backend `a183668`, Frontend `82162df`) | `POST /api/users/login` verifica la contraseña (argon2) y devuelve un JWT firmado con `JWT_SECRET`, vigente 8 h (`signToken` en `src/Shared/middlewares/auth.ts`). 4 roles. El frontend lo manda en `Authorization: Bearer` desde una sola instancia de axios (`src/services/api.ts`) | — |
 | Apr. | Proteger las rutas según el nivel de acceso | Cumple (Backend `a183668`, Frontend `82162df`) | `auth(...roles)` en cada ruta protegida: 401 sin token o con uno inválido o de un usuario dado de baja, 403 con otro rol. `self(campo)` exige que el id del propio usuario en la ruta o el body sea el del token, salvo el administrador. Pertenencia (L-37): `ownParking`, `ownVehicle`, `ownReservation` y `staffOfInvoice` exigen que la cochera, el vehículo, la reserva o la factura sean del usuario. Públicas: registro, login y las lecturas del mapa. Lo prueban `src/Shared/middlewares/auth.db.test.ts` (token vencido, adulterado y de un usuario dado de baja) y `e2e/audit.api.spec.ts` (test 26), las dos locales | — |
 | Apr. | Ambientes (environment del framework o `.env`) | Cumple, con matiz | Variables de entorno con valores por defecto y `NODE_ENV`, documentadas en el README de `main` | No hay `.env.example` ni se carga un `.env` (Node 22 lo trae con `--env-file`) |
@@ -69,10 +69,10 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Reg. | Eventos, errores amigables, reactividad, input y output property | Cumple | Por ejemplo, `LocationPicker` recibe un `PlaceValue` (input) y devuelve `onChange` (output); los errores se muestran con `useToast` y `ErrorBox` | — |
 | Reg. | Al menos un servicio | Cumple | `src/services/*.service.ts` | — |
 | Reg. | Modelos con clases, interfaces o tipos propios | Cumple | `src/types/*.types.ts` | — |
-| Reg. | Patrón de diseño OO, si es posible | Sin relevar | — | Es opcional |
+| Reg. | Patrón de diseño OO, si es posible | Relevado | Ver "Patrones de diseño para la defensa" abajo | Cumple (opcional) |
 | Reg. | Dependencias de ejecución, desarrollo y test registradas | Cumple | `package.json`: `@playwright/test`, `vitest`, `@testing-library/react`, `@testing-library/dom` y `jsdom` | |
-| Apr. | 1 test unitario de un componente | Cumple | `tests-catedra/unit/Pager.test.tsx` (Vitest y Testing Library): rango visible, anterior y siguiente, bordes, estado ocupado y sin paginador con una sola página. `pnpm test` | |
-| Apr. | 1 test end-to-end | Cumple | `tests-catedra/e2e/search.spec.ts` con `playwright.config.ts`: abre la app en el navegador, busca por ciudad o barrio, filtra el listado y encuadra el mapa, con la API simulada dentro de la spec. `pnpm test:e2e` | Las 16 specs de `tests/e2e/` siguen locales |
+| Apr. | 1 test unitario de un componente | Cumple (en `main` y `master`) | `tests-catedra/unit/Pager.test.tsx` (Vitest y Testing Library): rango visible, anterior y siguiente, bordes, estado ocupado y sin paginador con una sola página. `pnpm test` | |
+| Apr. | 1 test end-to-end | Cumple (en `main` y `master`) | `tests-catedra/e2e/search.spec.ts` con `playwright.config.ts`: abre la app en el navegador, busca por ciudad o barrio, filtra el listado y encuadra el mapa, con la API simulada dentro de la spec. `pnpm test:e2e` | Las 16 specs de `tests/e2e/` siguen locales |
 | Apr. | Login y acceso según el nivel de usuario | Cumple | `ProtectedRoute allowedRoles` en [App.tsx](../src/App.tsx): CLIENTE, DUEÑO, EMPLEADO y ADMINISTRADOR | Protege la navegación; el backend controla lo mismo en cada ruta (ver la tabla anterior) |
 | Apr. | Ambientes | Cumple, con matiz | `.env` con `VITE_API_URL` y `VITE_MAPTILER_API_KEY` | El `.env` está versionado (en `master`) aunque `.gitignore` lo excluye, y no hay `.env.example`. La key de MapTiler es de navegador: conviene restringirla por dominio |
 
@@ -82,7 +82,7 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 
 | Regla | Estado | Evidencia | Qué falta |
 |---|---|---|---|
-| El detalle de un listado pide datos al backend y muestra al menos 2 clases de negocio, o lleva al CRUD | Cumple | Estacionamientos: [ParkingSpaceMap.tsx](../src/pages/ParkingSpace/ParkingSpaceMap.tsx) pide la cochera, las plazas y la disponibilidad. Reservas por fecha: el panel de [OwnerReservations.tsx](../src/pages/Owner/OwnerReservations.tsx) pide `GET /api/reservations/:id` al abrirse (reserva, cliente, vehículo, plaza, empleados y factura, en cualquier estado). (Backend `b9ed4f9`, Frontend `1ddad85`) | — |
+| El detalle de un listado pide datos al backend y muestra al menos 2 clases de negocio, o lleva al CRUD | Cumple | Estacionamientos: [ParkingSpaceMap.tsx](../src/pages/ParkingSpace/ParkingSpaceMap.tsx) pide la cochera, las plazas y la disponibilidad. Reservas por fecha: el panel de [OwnerReservations.tsx](../src/pages/Owner/OwnerReservations.tsx) pide `GET /api/reservations/:id` al abrirse (reserva, cliente, vehículo, plaza, empleados y factura, en cualquier estado). Ya commiteado | — |
 | Los CRUD mínimos se usan desde la app (front y back) | Cumple (Frontend `82162df`) | TipoVehículo, CRUD simple de regularidad, tiene pantalla en el panel del administrador: [AdminVehicleTypes.tsx](../src/pages/Admin/AdminVehicleTypes.tsx) (`/admin/vehicle-types`, RA-11 en [admin-permisos-notas.md](admin/admin-permisos-notas.md)) | — |
 | Al menos 2 CUU relacionados | Cumple | Reservar → registrar el ingreso (check-in) → registrar el uso de servicios → facturar: cada uno usa lo que registró el anterior. Sin confirmación de reservas desde D-10 (Backend `aa56d66`, Frontend `66e80c5`): el proposal todavía nombra "Registrar confirmación de reserva" y hay que cambiarlo por "Registrar check-in" | — |
 
@@ -102,8 +102,8 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 | Minutas de reunión y avance | X | X | Cumple: 8 minutas, del 18/04 al 14/10, en el `docs/README.md` del Backend | — |
 | Seguimiento de features, bugs e issues | X | X | Cumple: tablero de Notion enlazado en el `docs/README.md` del Backend | — |
 | Documentación de la API | | X | No hay (ni OpenAPI ni un listado de endpoints) | Documentar los endpoints |
-| Evidencia de los tests automáticos | | X | [Backend `docs/tests.md`](https://github.com/MagaIrisarri/Backend/blob/main/docs/tests.md): tabla con autor, comandos y la salida de las 4 corridas (16/10/2026) | — |
-| Video de demostración | | X | No hay. Solo para la aprobación directa | Grabarlo |
+| Evidencia de los tests automáticos | | X | [Backend `docs/tests.md`](https://github.com/MagaIrisarri/Backend/blob/main/docs/tests.md): tabla con autor, comandos y la salida de las 4 corridas (16/10/2026) | Hecho (`d74f2bb`) |
+| Video de demostración | TBD | X | No hay | Grabarlo |
 | Deploy, con links y credenciales | TBD | X | No hay configuración de deploy | Deploy con un MySQL hospedado. Las credenciales pueden ser las de la siembra (`password123`) |
 | Contacto para coordinar la defensa | | X | — | Va en el form |
 
@@ -140,4 +140,14 @@ Donde el proyecto se aparta de Airbnb, manda su convención:
 2. **Antes de dar algo por cumplido**, se verifica en el código y en la sección citada. Al cerrar una fila, se actualiza con el hash.
 3. **Documentación nueva:** en markdown, dentro de `docs/` y enlazada desde `docs/README.md`. Los diagramas, en Mermaid.
 4. **Git es evidencia**, porque se evalúan la participación y el uso de git. Cada commit lleva a su autor real, y no se reescribe historia compartida ni se aplastan aportes de otros.
+5. La entrega de regularidad (merge a `main` y `master`, minutas y links a los PR) ya se hizo; lo que bloquea ahora está en [pendientes.md](pendientes.md).
+
+## Patrones de diseño para la defensa
+
+**Backend: Repository + inyección de dependencias.** Cada módulo separa `Route → Controller → Service → Repository`. Las reglas de negocio viven en el servicio, que no toca la base: pide todo al repositorio (MikroORM). Las dependencias no se crean dentro de las clases, se pasan por el constructor. El ejemplo es `ReservationService`:
+- `Reservation.Route.ts` instancia `ReservationRepository`, `InvoiceRepository`, `ParkingPriceRepository` y `ParkingSpaceRepository` con `orm.em`, y se los pasa al servicio junto con `scheduleService`, `notificationService` y `parkingService`. Después le pasa el servicio al `ReservationController`.
+- Ventaja para explicar: el servicio se prueba y se reemplaza sin cambiar el acceso a datos (las pruebas de `tests-catedra/` usan el mismo `reservationService`), y las reglas compartidas (`scheduleService`) tienen una sola instancia.
+
+**Frontend: Provider (React Context) con observadores.** El estado compartido vive en un proveedor y los componentes lo consumen con un hook, sin pasarlo por props. Cuando el estado cambia, React vuelve a dibujar a quienes lo consumen, que es la idea del Observer. Ejemplos: `NotificationsContext` (cuenta de no leídas y panel de avisos, con polling), `ProfileContext` y `ThemeContext` en `src/context/`.
+- No existe un `AuthContext`: la sesión no vive en un contexto propio. Al nombrar los ejemplos en la defensa, usar solo los tres de arriba.
 

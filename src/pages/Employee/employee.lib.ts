@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { checkInReservation, checkOutReservation } from '../../services/reservation.service';
@@ -6,6 +6,15 @@ import { normRes, type ParkingLike, type Res } from '../Owner/owner.lib';
 import { arTime } from '../../utils/date';
 
 export const list = (x: any) => (Array.isArray(x) ? x : x?.data ?? []);
+
+// Reloj que fuerza actualización cada minuto para que "Desde HH:MM", "Se pasó de hora" y las horas extra no dependan del poll.
+export function useNow(ms = 60_000) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+}
 
 export type Status = 'PENDIENTE' | 'EN CURSO' | 'FINALIZADA' | 'CANCELADA';
 export const ST: Record<Status, { l: string; c: string }> = {
@@ -63,7 +72,7 @@ export const stateOf = (r: ERes): { l: string; c: string } =>
   overdue(r) ? { l: 'Se pasó de hora', c: 'err' } : noShow(r) ? { l: 'No se presentó', c: 'err' } : r.status === 'FINALIZADA' && toPay(r) ? { l: 'Por cobrar', c: 'warn' } : ST[r.status];
 
 // Acción principal de una reserva según su estado; la usan la fila y el detalle. El cobro no tiene llamada: pide el medio en el detalle.
-export interface Action { key: 'in' | 'out' | 'pay'; label: string; disabled?: boolean; call?: () => Promise<any>; ok?: string | ((res: any) => string) }
+export interface Action { key: 'in' | 'out' | 'pay'; label: string; extra?: number; disabled?: boolean; call?: () => Promise<any>; ok?: string | ((res: any) => string) }
 export function primaryOf(r: ERes, marginMin: number): Action | null {
   if (r.status === 'PENDIENTE') {
     if (noShow(r)) return { key: 'in', label: 'Vencida', disabled: true };
@@ -76,23 +85,36 @@ export function primaryOf(r: ERes, marginMin: number): Action | null {
     };
     return { key: 'in', label: early ? `Desde ${hhmm(from)}` : 'Registrar ingreso', disabled: early, call: () => checkInReservation(r.id), ok };
   }
-  if (r.status === 'EN CURSO') return { key: 'out', label: 'Registrar salida', call: () => checkOutReservation(r.id), ok: `Salida de ${r.plate} registrada. Falta cobrar la estadía.` };
+  if (r.status === 'EN CURSO') {
+    const extra = overdue(r) ? extraAt(r, new Date()) : 0;
+    return { key: 'out', label: 'Registrar salida', extra, call: () => checkOutReservation(r.id), ok: `Salida de ${r.plate} registrada. Falta cobrar la estadía.` };
+  }
   if (r.status === 'FINALIZADA' && toPay(r)) return { key: 'pay', label: 'Cobrar' };
   return null;
 }
 
 // Corre una acción, recarga la lista y avisa con el mensaje del servidor si falla.
-export function useRun(onChange: () => Promise<void>) {
+export function useRun(onChange: () => Promise<any>, inlineErr = false) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const run = async <T>(fn: () => Promise<T>, ok: string | ((res: T) => string), type: 'ok' | 'info' = 'ok') => {
+  const [err, setErr] = useState('');
+  const run = async <T>(fn: () => Promise<T>, ok: string | ((res: T) => string), type: 'ok' | 'info' = 'ok'): Promise<boolean> => {
     setBusy(true);
+    setErr('');
     try {
       const res = await fn();
       await onChange();
       toast(typeof ok === 'function' ? ok(res) : ok, type);
-    } catch (x) { toast(apiError(x, 'No se pudo completar la acción. Intentá de nuevo.'), 'err'); }
-    setBusy(false);
+      return true;
+    } catch (x) {
+      const msg = apiError(x, 'No se pudo completar la acción. Intentá de nuevo.');
+      if (inlineErr) setErr(msg);
+      else toast(msg, 'err');
+      onChange().catch(() => {});
+      return false;
+    } finally {
+      setBusy(false);
+    }
   };
-  return { run, busy };
+  return { run, busy, err, setErr };
 }

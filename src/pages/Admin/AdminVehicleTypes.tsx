@@ -1,6 +1,6 @@
 import { AR_TZ } from '../../utils/date';
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Check, ListChecks, Search } from 'lucide-react';
+import { AlertTriangle, Ban, Check, ListChecks, Search } from 'lucide-react';
 import AdminCatalog from './AdminCatalog';
 import { VICON } from '../../components/Owner/ui/vehicles';
 import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
@@ -37,23 +37,61 @@ const API = {
   remove: (id: string) => changed(removeVehicleType(id)),
 };
 
-type Target = { id: string; name: string; fresh: boolean }; // fresh: recién creado, con las sugeridas ya tildadas
+// fresh: recién creado, con las sugeridas ya tildadas. id null (L-33): el grupo de las descripciones no admitidas.
+type Target = { id: string | null; name: string; fresh: boolean };
 
 export default function AdminVehicleTypes() {
+  const toast = useToast();
   const [target, setTarget] = useState<Target | null>(null);
+  // Todas las descripciones de la tabla con su tipo (la lista del grupo de no admitidas las trae todas): se agrupan por tipo.
+  const [rows, setRows] = useState<TypeDescription[] | null>(null);
+  const loadRows = () => { getTypeDescriptions(null).then(setRows).catch(() => setRows(null)); };
+  useEffect(loadRows, []);
+
+  // L-33: "No admitir" desde la lista de un tipo. Solo cambia la fila: sus modelos ya cargados siguen en el catálogo.
+  const reject = async (d: TypeDescription) => {
+    const current = (rows ?? []).filter(r => !r.vehicleType).map(r => r.key);
+    try {
+      await setTypeDescriptions(null, [...current, d.key], false);
+      toast(`${d.description} quedó no admitida: la importación del CSV ya no agrega sus modelos.${d.models ? ` Los ${d.models} ya cargados siguen.` : ''}`);
+      loadRows();
+    } catch (x) { toast(apiError(x, 'No se pudo guardar. Intentá de nuevo.'), 'err'); }
+  };
+
+  const details = (i: { id: string }) => {
+    if (!rows) return null;
+    const own = rows.filter(r => r.vehicleType?.id === i.id);
+    if (!own.length) return <div className="ad">Sin descripciones del DNRPA</div>;
+    return (
+      <details>
+        <summary className="ad">{plural(own.length, 'descripción del DNRPA', 'descripciones del DNRPA')}</summary>
+        <div className="list">{own.map(d => (
+          <div className="li" key={d.key}>
+            <span>{d.description} <span className="ad">· {plural(d.models, 'modelo', 'modelos')}</span></span>
+            <button type="button" className="btn ghost sm" onClick={() => reject(d)}><Ban className="i sm" />No admitir</button>
+          </div>
+        ))}</div>
+      </details>
+    );
+  };
+
   return (
     <>
       <AdminCatalog title="Tipos de vehículo" sub="Cada tipo tiene sus propias plazas y tarifas, que carga el dueño de cada cochera, y sus modelos salen de las descripciones del DNRPA que se le asignan. Un tipo con plazas, tarifas, modelos o vehículos no se da de baja."
         noun={{ one: 'tipo de vehículo', many: 'tipos de vehículo', nuevo: 'Nuevo tipo' }} icon={<Icon className="i" />} api={API}
         actions={i => [{ label: 'Descripciones del DNRPA', icon: <ListChecks className="i" />, onClick: () => setTarget({ id: i.id, name: i.name, fresh: false }) }]}
-        onCreated={res => res?.data?.id && setTarget({ id: res.data.id, name: res.data.name, fresh: true })} />
-      <Shown when={target}>{t => <DescriptionsDrawer target={t} onClose={() => setTarget(null)} />}</Shown>
+        onCreated={res => res?.data?.id && setTarget({ id: res.data.id, name: res.data.name, fresh: true })}
+        details={details}
+        headActions={<button type="button" className="btn" onClick={() => setTarget({ id: null, name: 'No admitidas', fresh: false })}><Ban className="i sm" />Descripciones no admitidas</button>} />
+      <Shown when={target}>{t => <DescriptionsDrawer target={t} onClose={() => { setTarget(null); loadRows(); }} />}</Shown>
     </>
   );
 }
 
 // RA-26: qué descripciones del DNRPA van a este tipo. Al guardar se reasignan sus modelos y la copia del tipo en sus vehículos;
 // las que se destildan vuelven a la sugerencia automática. Con reservas activas de esos vehículos no se puede (409).
+// L-33: con target.id null, solo las no admitidas; las que se destildan vuelven a admitirse (al tipo sugerido, con sus modelos).
+// Para no admitir otra: "No admitir" en la lista de su tipo, o en la vista previa del CSV.
 function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () => void }) {
   const toast = useToast();
   const [list, setList] = useState<TypeDescription[] | null>(null);
@@ -63,11 +101,12 @@ function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () =
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState<DescriptionChange['reservations'] | null>(null);
   const [review, setReview] = useState<DescriptionChange | null>(null);
+  const none = target.id === null;
 
   const load = () => {
     setLoadErr(false);
     getTypeDescriptions(target.id)
-      .then(l => { setList(l); setSel(new Set(l.filter(d => d.assigned || (target.fresh && d.suggested)).map(d => d.key))); })
+      .then(all => { const l = none ? all.filter(d => d.assigned) : all; setList(l); setSel(new Set(l.filter(d => d.assigned || (target.fresh && d.suggested)).map(d => d.key))); })
       .catch(() => setLoadErr(true));
   };
   useEffect(load, [target.id]);
@@ -92,7 +131,9 @@ function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () =
     try {
       const done = await setTypeDescriptions(target.id, [...sel], false);
       invalidateVehicleTypes();
-      toast(`Descripciones de ${target.name} guardadas: ${plural(done.models, 'modelo reasignado', 'modelos reasignados')}.`);
+      toast(none
+        ? `Descripciones no admitidas guardadas${done.models ? `: ${plural(done.models, 'modelo reasignado', 'modelos reasignados')}` : ''}.`
+        : `Descripciones de ${target.name} guardadas: ${plural(done.models, 'modelo reasignado', 'modelos reasignados')}.`);
       onClose();
     } catch (x) { fail(x); } finally { setBusy(false); }
   };
@@ -104,7 +145,7 @@ function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () =
   let body;
   if (loadErr) body = <ErrorBox what="las descripciones" onRetry={load} />;
   else if (!list) body = <SkeletonRows n={4} cols={1} />;
-  else if (!list.length) body = <p className="ctx">Todavía no hay descripciones del DNRPA: se cargan al actualizar el catálogo con el CSV.</p>;
+  else if (!list.length) body = <p className="ctx">{none ? 'No hay descripciones no admitidas.' : 'Todavía no hay descripciones del DNRPA: se cargan al actualizar el catálogo con el CSV.'}</p>;
   else body = (<>
     <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar descripción (PICK-UP, FURGON…)" aria-label="Buscar descripción" value={q} onChange={e => setQ(e.target.value)} data-first /></div>
     {!shown.length ? <p className="ctx">Ninguna descripción coincide con “{q}”.</p> : (
@@ -115,7 +156,7 @@ function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () =
             <button key={d.key} type="button" role="checkbox" aria-checked={checked} className="opt" onClick={() => toggle(d.key)}>
               <span className="grow">
                 {d.description}
-                <small>{plural(d.models, 'modelo', 'modelos')} · hoy: {typeLabel(d.vehicleType.name)}</small>
+                <small>{plural(d.models, 'modelo', 'modelos')} · hoy: {d.vehicleType ? typeLabel(d.vehicleType.name) : 'no admitida'}</small>
               </span>
               {d.suggested && <span className="tag">Sugerida</span>}
               {checked && <Check className="i" aria-hidden="true" />}
@@ -128,12 +169,14 @@ function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () =
 
   return (
     <>
-      <Drawer title="Descripciones del DNRPA" sub={target.name} onClose={onClose} focusSel="[data-first]"
+      <Drawer title={none ? 'Descripciones no admitidas' : 'Descripciones del DNRPA'} sub={none ? 'Camiones, remolques y lo que no entra en una cochera' : target.name} onClose={onClose} focusSel="[data-first]"
         footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button>
           <button type="button" className="btn pri" onClick={save} aria-busy={busy} disabled={busy || !list}>Guardar</button></div>}>
         <div className="dbody">
           <section className="fs">
-            <p className="ctx" style={{ margin: 0 }}>Los modelos de las descripciones tildadas pasan a {target.name}, y también sus vehículos. Las que destildes vuelven al tipo sugerido.{target.fresh && ' Tildamos las que contienen el nombre del tipo.'}</p>
+            <p className="ctx" style={{ margin: 0 }}>{none
+              ? 'Al actualizar el catálogo con el CSV, los modelos de estas descripciones no se agregan. Destildá las que quieras volver a admitir: pasan al tipo sugerido, con sus modelos. Para no admitir otra, usá “No admitir” en la lista de su tipo.'
+              : <>Los modelos de las descripciones tildadas pasan a {target.name}, y también sus vehículos. Las que destildes vuelven al tipo sugerido.{target.fresh && ' Tildamos las que contienen el nombre del tipo.'}</>}</p>
             {blocked && (
               <div className="list" role="alert">
                 <div className="li"><span className="st warn"><AlertTriangle className="i sm" />Todavía no se puede cambiar</span></div>
@@ -145,8 +188,8 @@ function DescriptionsDrawer({ target, onClose }: { target: Target; onClose: () =
           </section>
         </div>
       </Drawer>
-      <Shown when={review}>{review => <ConfirmModal title={`¿Guardar las descripciones de ${target.name}?`}
-        body={`Cambian de tipo ${plural(review.descriptions, 'descripción', 'descripciones')}: ${plural(review.models, 'modelo', 'modelos')} y ${plural(review.vehicles, 'vehículo registrado', 'vehículos registrados')}.`}
+      <Shown when={review}>{review => <ConfirmModal title={none ? '¿Guardar las descripciones no admitidas?' : `¿Guardar las descripciones de ${target.name}?`}
+        body={`Cambian ${plural(review.descriptions, 'descripción', 'descripciones')}: ${plural(review.models, 'modelo', 'modelos')} y ${plural(review.vehicles, 'vehículo registrado', 'vehículos registrados')} pasan de tipo.`}
         ok="Guardar" back="Volver" onConfirm={apply} onClose={() => setReview(null)} />}</Shown>
     </>
   );

@@ -4,32 +4,36 @@ import {
   AlertTriangle, Building2, CalendarDays, Check, DollarSign, Eye, LayoutGrid, Layers, Lock, MoreVertical,
   Pause, Pencil, Plus, Power, Search, Users,
 } from 'lucide-react';
-import { Drawer } from '../../components/Owner/ui/Layer';
+import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
 import { Shown } from '../../components/Owner/ui/Presence';
 import { Menu } from '../../components/Owner/ui/Menu';
+import { StateChip, operating } from '../../components/Owner/ui/StateChip';
 import { Empty, ErrorBox, SkeletonRows } from '../../components/Owner/ui/Page';
 import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
-import { deleteParking, reactivateParking } from '../../services/parking.service';
+import { deleteParking, getParkingMetrics, reactivateParking } from '../../services/parking.service';
+import { useAsync } from '../../hooks/useAsync';
 import { getServicePrices } from '../../services/servicePrice.service';
 import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
 import ParkingDrawer from './ParkingDrawer';
 import {
-  capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
+  cap, capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
   typeLabel, typePlural, typesAcross, typesOf,
 } from './owner.lib';
 
 import { matchesQuery } from '../../utils/search';
+import { formatStamp } from '../../utils/date';
 import { iconOf } from '../../components/Owner/ui/vehicles';
 type Filter = 'all' | 'ok' | 'alert' | 'paused';
 // Localidad de una sucursal, con su provincia: hay localidades con el mismo nombre en distintas provincias.
 const locOf = (p: Parking) => [p.locality, p.province].filter(Boolean).join(', ');
 
-export function WarnBtn({ list }: { list: { l: string; d: string }[] }) {
+// El tooltip resume con el mouse; tocarlo abre el detalle de la sucursal, que lista cada aviso (en el teléfono no hay hover).
+export function WarnBtn({ list, onClick }: { list: { l: string; d: string }[]; onClick?: () => void }) {
   if (!list.length) return null;
   return (
-    <button type="button" className="warnbtn" data-tip={list.map(x => `${x.l}: ${x.d}`).join('\n')}
+    <button type="button" className="warnbtn" onClick={onClick} aria-haspopup={onClick ? 'dialog' : undefined} data-tip={list.map(x => `${x.l}: ${x.d}`).join('\n')}
       aria-label={`${plural(list.length, 'aviso', 'avisos')}: ${list.map(x => x.l).join(', ')}`}>
       <AlertTriangle className="i sm" />{list.length > 1 && <b>{list.length}</b>}
     </button>
@@ -40,17 +44,29 @@ function OccBar({ value, label }: { value: number; label: string }) {
   return <div className={`bar-t ${lvl(value)}`} role="img" aria-label={label}><i style={{ width: `${Math.min(100, value)}%` }} /></div>;
 }
 
+
 export default function OwnerDashboard() {
-  const { parkings, templates, reservations, employees, me, status, refresh } = useOwner();
+  const { parkings, templates, reservations, employees, status, refresh } = useOwner();
   const navigate = useNavigate();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [loc, setLoc] = useState(''); // '' = todas las localidades
   const [detail, setDetail] = useState<Parking | null>(null);
+  const [pausing, setPausing] = useState<Parking | null>(null); // L-42: confirmar antes de pausar
+  const [walkIn, setWalkIn] = useState(false); // L-44: pausar solo las reservas online
+  const [pausingBusy, setPausingBusy] = useState(false);
   const [params, setParams] = useSearchParams();
   const [pform, setPform] = useState<Parking | 'new' | null>(params.get('new') ? 'new' : null);
   useEffect(() => { if (params.get('new')) setParams({}, { replace: true }); }, [params, setParams]);
+  // Desde una notificación de sucursal (?p=id): abre su detalle cuando ya están cargadas.
+  useEffect(() => {
+    const id = params.get('p');
+    const p = id && parkings.find(x => x.id === id);
+    if (!p) return;
+    setDetail(p);
+    setParams({}, { replace: true });
+  }, [params, setParams, parkings]);
 
   // La localidad elegida limita la lista y también los indicadores (ocupación, facturado hoy y reservas en curso).
   const localities = useMemo(() => [...new Set(parkings.map(locOf))].sort((a, b) => a.localeCompare(b)), [parkings]);
@@ -65,22 +81,51 @@ export default function OwnerDashboard() {
   const active = scopedRes.filter(r => r.st === 'curso').length;
   const alerts = useMemo(() => Object.fromEntries(parkings.map(p => [p.id, issues(p, templates[p.id])])), [parkings, templates]);
 
-  const stOf = (p: Parking) => (p.isActive ? 'ok' : 'paused');
+  const stOf = (p: Parking) => (operating(p) ? 'ok' : 'paused');
   const list = scoped.filter(p =>
     (filter === 'all' || (filter === 'ok' && stOf(p) === 'ok') || (filter === 'alert' && alerts[p.id]!.length) || (filter === 'paused' && stOf(p) === 'paused'))
     && matchesQuery(q, p.name, p.address, p.neighborhood, p.locality, p.province));
   const cnt: Record<Filter, number> = {
-    all: scoped.length, ok: scoped.filter(p => p.isActive).length,
-    alert: scoped.filter(p => alerts[p.id]!.length).length, paused: scoped.filter(p => !p.isActive).length,
+    all: scoped.length, ok: scoped.filter(operating).length,
+    alert: scoped.filter(p => alerts[p.id]!.length).length, paused: scoped.filter(p => !operating(p)).length,
   };
 
+  // L-42: pausar cancela las pendientes (cada cliente recibe el aviso con el motivo), respeta las que están en curso y no
+  // acepta reservas nuevas. Cerrada no acepta ninguna; solo en el lugar (L-44) sigue en el mapa y atiende en el mostrador.
+  // Se confirma antes, con lo que va a pasar. Habilitar vuelve a tomar reservas online en los dos casos.
+  const closeBranch = (p: Parking) => { setWalkIn(false); setPausing(p); };
   const toggle = async (p: Parking) => {
+    if (operating(p)) { closeBranch(p); return; }
     try {
-      if (p.isActive) { await deleteParking(p.id); toast(`“${p.name}” pausada. Ya no aparece en las búsquedas.`, 'info'); }
-      else { await reactivateParking(p.id); toast(`“${p.name}” habilitada y visible al público.`); }
+      await reactivateParking(p.id);
+      toast(`“${p.name}” habilitada y visible al público.`);
       setDetail(null);
       await refresh();
     } catch (x) { toast(apiError(x), 'err'); }
+  };
+  const pause = async () => {
+    if (pausingBusy) return;
+    const p = pausing!;
+    setPausingBusy(true);
+    try {
+      const { cancelled = 0, inProgress = 0 } = (await deleteParking(p.id, walkIn))?.data ?? {};
+      // Lo que va a pasar ya lo dijo la confirmación: acá solo el resultado.
+      const done = [cancelled && plural(cancelled, 'reserva cancelada', 'reservas canceladas'), inProgress && plural(inProgress, 'en curso sigue', 'en curso siguen')].filter(Boolean);
+      toast(`“${p.name}” ${walkIn ? 'atiende solo en el lugar' : p.walkInOnly ? 'cerrada' : 'pausada'}.${done.length ? ` ${cap(done.join('; '))}.` : ''}`, 'info');
+      setPausing(null);
+      setDetail(null);
+      await refresh();
+    } catch (x) { toast(apiError(x), 'err'); } finally { setPausingBusy(false); }
+  };
+  const pauseItems = (p: Parking) => {
+    const mine = reservations.filter(r => r.pid === p.id);
+    const pending = mine.filter(r => r.st === 'reservada').length, inside = mine.filter(r => r.st === 'curso').length;
+    return [
+      walkIn ? 'Se dejarán de aceptar reservas online. Sigue en el mapa y el mostrador atiende.' : 'Se dejarán de aceptar reservas, online y en el mostrador. Sale del mapa.',
+      `Se cancelarán las reservas pendientes${pending ? ` (${pending})` : ''} y se avisa a cada cliente.`,
+      `Las reservas en curso${inside ? ` (${inside})` : ''} continúan hasta su salida.`,
+      'Se notifica al personal.',
+    ];
   };
 
   const menuFor = (p: Parking) => [
@@ -91,13 +136,14 @@ export default function OwnerDashboard() {
     { label: 'Servicios', icon: <Layers className="i" />, onClick: () => navigate(`/owner/services?p=${p.id}`) },
     { label: 'Turnos y cobertura', icon: <CalendarDays className="i" />, onClick: () => navigate(`/owner/shifts?p=${p.id}`) },
     { label: 'Personal', icon: <Users className="i" />, onClick: () => navigate(`/owner/employees?p=${p.id}`) },
-    p.isActive
+    operating(p)
       ? { label: 'Pausar sucursal', icon: <Pause className="i" />, sep: true, onClick: () => toggle(p) }
       : { label: 'Habilitar sucursal', icon: <Power className="i" />, sep: true, onClick: () => toggle(p) },
+    // Desde "Solo en el lugar" se cierra en un paso, sin habilitarla antes.
+    ...(p.isActive && p.walkInOnly ? [{ label: 'Cerrar sucursal', icon: <Pause className="i" />, onClick: () => closeBranch(p) }] : []),
   ];
 
   const loading = status === 'loading';
-  const name = `${me.name ?? ''} ${me.last_name ?? ''}`.trim();
   let body;
   if (status === 'error') body = <ErrorBox what="tus sucursales" onRetry={refresh} />;
   else if (loading) body = <SkeletonRows n={4} />;
@@ -123,8 +169,8 @@ export default function OwnerDashboard() {
             <td className="c-cap" data-label="Plazas"><div className="caps">{typesAcross(list).map(v => { const I = iconOf(v.name), c = capOf(p, v.id); return <span key={v.id} className={`cap ${c ? '' : 'z'}`} title={`${typePlural(v.name)}: ${c}`}><I className="i" />{c}</span>; })}</div></td>
             <td className="c-occ" data-label="Ocupación en vivo"><div className="occ2"><OccBar value={n} label={`${n}% ocupada`} /><div className="meta"><span>{o} ocupadas · {t - o} libres</span><b>{n}%</b></div></div></td>
             <td className="c-st" data-label="Estado">
-              {p.isActive ? <span className="st ok"><Check className="i sm" />Operativa</span> : <span className="st mute"><Pause className="i sm" />Pausada</span>}
-              <WarnBtn list={alerts[p.id]!} />
+              <StateChip p={p} />
+              <WarnBtn list={alerts[p.id]!} onClick={() => setDetail(p)} />
             </td>
             <td className="c-act r"><div className="acts">
               <button type="button" className="icon-btn" data-tip="Tarifas" aria-label={`Tarifas de ${p.name}`} onClick={() => navigate(`/owner/tariffs?p=${p.id}`)}><DollarSign className="i" /></button>
@@ -139,12 +185,6 @@ export default function OwnerDashboard() {
 
   return (
     <>
-      <section className="panel mecard" aria-label="Mi perfil">
-        <span className="av lg" aria-hidden="true">{initials(me.name, me.last_name)}</span>
-        <div className="mei"><div className="men"><h2>{name || 'Dueño'}</h2></div><p>{me.email}</p></div>
-        <div className="mec"><span className="ctx">{plural(cnt.ok, 'sucursal activa', 'sucursales activas')}</span></div>
-      </section>
-
       {loading ? <SkeletonRows n={2} cols={2} /> : (
         <div className="kpis">
           <section className="panel occ" aria-label="Ocupación actual">
@@ -184,15 +224,44 @@ export default function OwnerDashboard() {
       </section>
 
       <Shown when={detail}>{d => <ParkingDetail p={parkings.find(x => x.id === d.id) ?? d} employees={employees} week={templates[d.id]} alerts={alerts[d.id] ?? []}
-        onClose={() => setDetail(null)} onToggle={() => toggle(d)} onEdit={() => { setPform(d); setDetail(null); }} />}</Shown>
+        onClose={() => setDetail(null)} onToggle={() => toggle(d)} onCloseBranch={() => closeBranch(d)} onEdit={() => { setPform(d); setDetail(null); }} />}</Shown>
       <ParkingDrawer parking={pform} onClose={() => setPform(null)} />
+      <Shown when={pausing}>{p => <ConfirmModal title={p.walkInOnly ? `¿Cerrar “${p.name}”?` : `¿Pausar “${p.name}”?`} body={p.walkInOnly ? 'Hoy atiende solo en el lugar. Al cerrarla:' : 'Al pausarla:'}
+        ok={p.walkInOnly ? 'Cerrar sucursal' : 'Pausar sucursal'} back="Volver" danger busy={pausingBusy} onConfirm={pause} onClose={() => setPausing(null)}>
+        {!p.walkInOnly && <div className="seg modal-seg" role="group" aria-label="Cómo pausar">
+          <button type="button" aria-pressed={!walkIn} onClick={() => setWalkIn(false)}>Cerrar la sucursal</button>
+          <button type="button" aria-pressed={walkIn} onClick={() => setWalkIn(true)}>Solo en el lugar</button>
+        </div>}
+        <ul className="modal-list">{pauseItems(p).map(t => <li key={t}>{t}</li>)}</ul>
+      </ConfirmModal>}</Shown>
     </>
   );
 }
 
-function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }: {
+// Totales de la sucursal desde que abrió (GET /api/parkings/:id/metrics): reemplaza a la vieja pantalla de métricas,
+// que sacaba al dueño del panel. La ocupación en vivo ya está arriba en el detalle, por eso no se repite.
+interface Metrics { totalRevenue?: number; reservations?: Record<string, number> }
+function History({ id }: { id: string }) {
+  const m = useAsync<Metrics>(() => getParkingMetrics(id), [id]);
+  const n = (k: string) => m.data?.reservations?.[k] ?? 0;
+  const rows: [string, string][] = [
+    ['Recaudación', money(m.data?.totalRevenue ?? 0)], ['Finalizadas', String(n('FINALIZADA'))],
+    ['Pendientes', String(n('PENDIENTE'))], ['Canceladas', String(n('CANCELADA'))],
+  ];
+  return (
+    <div className="fs"><div className="fh"><h3>Historial</h3><span className="ctx">desde el alta</span></div>
+      {m.status === 'error'
+        ? <p className="ctx" role="alert">No pudimos cargar el historial. <button type="button" className="link" onClick={m.reload}>Reintentar</button></p>
+        : <dl className="dl" style={{ margin: 0 }}>{rows.map(([l, v]) => (
+          <div key={l} style={{ display: 'contents' }}><dt>{l}</dt><dd>{m.data ? v : <span className="sk" style={{ height: 14, width: 64 }} />}</dd></div>
+        ))}</dl>}
+    </div>
+  );
+}
+
+function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onCloseBranch, onEdit }: {
   p: Parking; employees: { id: string; name: string; last_name: string; parkingId?: string | null }[]; week?: ReturnType<typeof useOwner>['templates'][string];
-  alerts: { l: string; d: string }[]; onClose: () => void; onToggle: () => void; onEdit: () => void;
+  alerts: { l: string; d: string }[]; onClose: () => void; onToggle: () => void; onCloseBranch: () => void; onEdit: () => void;
 }) {
   const navigate = useNavigate();
   const [services, setServices] = useState<any[] | null>(null);
@@ -204,26 +273,30 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onEdit }
   return (
     <Drawer title={p.name} sub={`${p.address}, ${p.locality}`} onClose={onClose} focusSel=".dfoot .btn.pri"
       footer={<div className="dfoot">
-        <button type="button" className="btn" onClick={onToggle}><Power className="i sm" />{p.isActive ? 'Pausar' : 'Habilitar'}</button>
+        <button type="button" className="btn" onClick={onToggle}><Power className="i sm" />{operating(p) ? 'Pausar' : 'Habilitar'}</button>
+        {p.isActive && p.walkInOnly && <button type="button" className="btn" onClick={onCloseBranch}><Pause className="i sm" />Cerrar</button>}
         <button type="button" className="btn" onClick={() => navigate(`/owner/spaces?p=${p.id}`)}><LayoutGrid className="i sm" />Plazas</button>
         <button type="button" className="btn pri" onClick={onEdit}><Pencil className="i sm" />Editar sucursal</button>
       </div>}>
       <div className="dbody">
         {(p.imageUrl || p.image) && <img src={p.imageUrl || p.image} alt={`Fachada de ${p.name}`} style={{ width: '100%', height: 128, objectFit: 'cover', borderRadius: 8, marginTop: 16 }} />}
         <div className="fs"><div className="fh"><h3>Ocupación en vivo</h3>
-          {p.isActive ? <span className="st ok"><Check className="i sm" />Operativa</span> : <span className="st mute"><Pause className="i sm" />Pausada</span>}</div>
+          <StateChip p={p} /></div>
           {!!alerts.length && <div className="list">{alerts.map(x => <div className="li" key={x.l}><span className="st warn"><AlertTriangle className="i sm" />{x.l}</span><span className="sd">{x.d}</span></div>)}</div>}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}><span style={{ fontSize: 34, fontWeight: 600, letterSpacing: '-.03em' }}>{n}%</span><span className="ctx">{oc(p)} ocupadas · {tot(p) - oc(p)} libres de {tot(p)}</span></div>
+          <div className="bigrow"><span className="bignum">{n}%</span><span className="ctx">{oc(p)} ocupadas · {tot(p) - oc(p)} libres de {tot(p)}</span></div>
           <div style={{ display: 'grid', gap: 12 }}>{typesOf(p).filter(t => capOf(p, t.id)).map(t => {
             const c = svcOf(p, t.id), o = occOf(p, t.id), x = c ? Math.round((o / c) * 100) : 0, I = iconOf(t.name), pl = typePlural(t.name);
             return <div className="trow" key={t.id} style={{ gridTemplateColumns: '104px 1fr 64px' }}><span className="n"><I className="i" />{pl}</span><OccBar value={x} label={`${pl}: ${x}%`} /><span className="v">{o}/{c}</span></div>;
           })}</div>
         </div>
+        <History id={p.id} />
         <div className="fs"><div className="fh"><h3>Datos de la sucursal</h3></div>
           <dl className="dl" style={{ margin: 0 }}>
             <dt>Dirección</dt><dd>{[p.address, p.neighborhood, p.locality].filter(Boolean).join(', ')} ({p.postalCode})</dd>
             <dt>Horario</dt><dd>{hrs(p)}</dd>
             <dt>Reserva</dt><dd>{p.minReservationHours} a {p.maxReservationHours} h · margen entre reservas {p.reservationMargin} min</dd>
+            <dt>Alta</dt><dd>{formatStamp(p.createdAt)}</dd>
+            <dt>Última modificación</dt><dd>{formatStamp(p.updatedAt)}</dd>
           </dl>
         </div>
         <div className="fs"><div className="fh"><h3>Tarifas por hora</h3><button type="button" className="link" onClick={() => navigate(`/owner/tariffs?p=${p.id}`)}>Editar tarifas</button></div>

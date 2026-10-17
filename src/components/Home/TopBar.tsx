@@ -32,8 +32,8 @@ export const TopBar: React.FC<any> = (props: any) => {
 
   const accountItems = user
     ? [
-        { label: 'Mi perfil y configuración', icon: <User className="i" />, onClick: openProfile },
-        { label: 'Cerrar sesión', icon: <LogOut className="i" />, danger: true, sep: true, onClick: handleLogout },
+        { label: 'Mi perfil', icon: <User className="i" />, onClick: openProfile },
+        { label: 'Cerrar sesión', icon: <LogOut className="i" />, sep: true, onClick: handleLogout },
       ]
     : [
         { label: 'Iniciar sesión', icon: <User className="i" />, onClick: handleOpenLogin },

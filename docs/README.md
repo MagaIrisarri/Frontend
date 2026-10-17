@@ -25,6 +25,7 @@ Las de los dos repos, cómo se corren y la salida de consola: [docs/tests.md del
 
 ## Alcance
 
+- [pendientes.md](pendientes.md): lo que falta para la entrega de aprobación y después.
 - [revision-alcance.md](revision-alcance.md): cada requisito de la propuesta y el código que lo cumple.
 - [requisitos-tp.md](requisitos-tp.md): requisitos técnicos, entregas, documentación y guía de estilo de la cátedra, con su estado.
 

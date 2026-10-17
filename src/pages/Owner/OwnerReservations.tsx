@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
 import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
 import { Presence, Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
@@ -9,6 +9,7 @@ import { useToast } from '../../components/Owner/ui/Toasts';
 import { cancelReservation, getReservation } from '../../services/reservation.service';
 import { getRange } from '../../services/shift.service';
 import { Stars } from '../../components/Owner/ui/Stars';
+import { useSortable } from '../../components/Owner/ui/Sortable';
 import { useOwner, type Emp } from './OwnerContext';
 import {
   RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, normRes, plural, shD, today, type Res, type ResState,
@@ -20,9 +21,17 @@ const empName = (e?: Emp) => (e ? `${e.name} ${e.last_name}` : '');
 
 export default function OwnerReservations() {
   const { reservations, employees, status, refresh } = useOwner();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [mode, setMode] = useState<'day' | 'month'>('day');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(params.get('r'));
+  // Desde una notificación (?r=id): abre el detalle y saca el parámetro, así volver atrás no lo reabre.
+  useEffect(() => {
+    const r = params.get('r');
+    if (!r) return;
+    setOpenId(r);
+    params.delete('r');
+    setParams(params, { replace: true });
+  }, [params, setParams]);
   const open = reservations.find(r => r.id === openId);
 
   return (
@@ -43,28 +52,13 @@ export default function OwnerReservations() {
 
 type SortKey = 'code' | 'desde' | 'hasta' | 'horas' | 'emp' | 'monto';
 
-// Orden por columna, compartido por el listado por fecha y el resumen mensual.
+// Orden por columna, compartido por el listado por fecha y el resumen mensual (useSortable, como Personal).
 function useSort(employees: Emp[], init: { k: SortKey; d: 1 | -1 }) {
-  const [sort, setSort] = useState(init);
   const emp = (id: string | null) => employees.find(e => e.id === id);
-  const KEY: Record<SortKey, (r: Res) => string | number> = {
+  const { sorted, th } = useSortable<Res, SortKey>({
     code: r => r.code, desde: r => r.date + r.start, hasta: r => r.endDate + r.end, horas: r => r.hours,
     emp: r => empName(emp(r.eid)), monto: r => r.amount ?? -1,
-  };
-  const sorted = (list: Res[]) => [...list].sort((a, b) => {
-    const x = KEY[sort.k](a), z = KEY[sort.k](b);
-    return (x < z ? -1 : x > z ? 1 : 0) * sort.d || (a.date + a.start).localeCompare(b.date + b.start);
-  });
-  const th = (k: SortKey, l: string, c = '') => {
-    const on = sort.k === k;
-    return (
-      <th className={c} aria-sort={on ? (sort.d > 0 ? 'ascending' : 'descending') : 'none'}>
-        <button type="button" className={`thb${on ? ' on' : ''}`} onClick={() => setSort({ k, d: on ? (-sort.d as 1 | -1) : 1 })}>
-          {l}<ChevronDown className="i sm" style={{ transform: on && sort.d < 0 ? 'rotate(180deg)' : undefined, opacity: on ? 1 : 0 }} />
-        </button>
-      </th>
-    );
-  };
+  }, init, (a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   return { emp, sorted, th };
 }
 
@@ -265,15 +259,18 @@ function ResDetail({ r: fromList, onClose }: { r: Res; onClose: () => void }) {
   const e = employees.find(x => x.id === r.eid);
   const cin = employees.find(x => x.id === r.cin);
   // El motivo le llega al cliente. No hay reembolso: se cobra en la salida, así que cancelar una pendiente no mueve dinero.
+  const [cancelling, setCancelling] = useState(false);
   const cancel = async () => {
+    if (cancelling) return;
     if (!reason.trim()) { setReasonErr('Escribí el motivo: se lo avisamos al cliente.'); return; }
+    setCancelling(true);
     try {
       await cancelReservation(r.id, reason.trim());
       setConfirm(false);
       onClose();
       await refresh();
       toast(`Reserva ${r.code} cancelada.`, 'info');
-    } catch (x) { setConfirm(false); toast(apiError(x), 'err'); }
+    } catch (x) { setConfirm(false); toast(apiError(x), 'err'); } finally { setCancelling(false); }
   };
 
   return (
@@ -303,7 +300,7 @@ function ResDetail({ r: fromList, onClose }: { r: Res; onClose: () => void }) {
           </div>
         </div>
       </Drawer>
-      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado y recibe un aviso con el motivo." ok="Cancelar reserva" back="Volver" danger onConfirm={cancel} onClose={() => setConfirm(false)}>
+      <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body="El cliente pierde el lugar reservado y recibe un aviso con el motivo." ok="Cancelar reserva" back="Volver" danger busy={cancelling} onConfirm={cancel} onClose={() => setConfirm(false)}>
         <Input label="Motivo" data-first maxLength={300} value={reason} error={reasonErr} onChange={e => { setReason(e.target.value); setReasonErr(''); }} />
       </ConfirmModal></Presence>
     </>

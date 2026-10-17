@@ -4,13 +4,13 @@ import { Drawer } from '../../components/Owner/ui/Layer';
 import { Presence } from '../../components/Owner/ui/Presence';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { addD, isoD, money, monday, plural, shD, today } from '../Owner/owner.lib';
-import { arDate } from '../../utils/date';
+import { AR_TZ, arDate, atAR } from '../../utils/date';
 import type { ERes } from './employee.lib';
 
 type Per = 'Hoy' | 'Semana' | 'Mes';
 type Bucket = [label: string, from: string, to: string];
-const dm = (iso: string) => new Date(iso + 'T12:00').toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '') + ' ' + shD(iso);
-const COLS = ['Período', 'Ingresos', 'Horas', 'Servicios', 'Efectivo', 'Tarjetas', 'M. Pago', 'Transf.', 'Total'];
+const dm = (iso: string) => atAR(iso, '12:00').toLocaleDateString('es-AR', { timeZone: AR_TZ, weekday: 'short' }).replace('.', '') + ' ' + shD(iso);
+const COLS = ['Período', 'Entradas', 'Horas', 'Servicios', 'Efectivo', 'Tarjetas', 'M. Pago', 'Transf.', 'Total'];
 
 // Tramos del período: Hoy es uno, Semana un día cada uno (los últimos 7), Mes una semana cada uno dentro del mes.
 function buckets(per: Per, now: string): Bucket[] {
@@ -22,7 +22,7 @@ function buckets(per: Per, now: string): Bucket[] {
   return out;
 }
 
-// Reporte de solo lectura de la sucursal: cuenta las estadías finalizadas por fecha de salida y los ingresos por fecha de inicio.
+// Reporte de solo lectura de la sucursal: cuenta las estadías finalizadas por fecha de salida y las entradas por fecha de inicio.
 export default function SummaryDrawer({ open, ...p }: SummaryProps & { open: boolean }) { return <Presence open={open}><Summary {...p} /></Presence>; }
 type SummaryProps = { reservations: ERes[]; onClose: () => void };
 function Summary({ reservations, onClose }: SummaryProps) {
@@ -68,12 +68,12 @@ function Summary({ reservations, onClose }: SummaryProps) {
         <div className="e-tw">
           <table>
             <thead><tr>{COLS.map(c => <th key={c} scope="col">{c}</th>)}</tr></thead>
-            <tbody>{data.map(([l, v]) => <tr key={l}><td>{l}</td>{keys.map(k => <td key={k}>{k === 'total' ? <b>{cell(k, v[k])}</b> : cell(k, v[k])}</td>)}</tr>)}</tbody>
-            <tfoot><tr><td>Total</td>{keys.map(k => <td key={k}>{cell(k, tot[k])}</td>)}</tr></tfoot>
+            <tbody>{data.map(([l, v]) => <tr key={l}><th scope="row">{l}</th>{keys.map(k => <td key={k}>{k === 'total' ? <b>{cell(k, v[k])}</b> : cell(k, v[k])}</td>)}</tr>)}</tbody>
+            <tfoot><tr><th scope="row">Total</th>{keys.map(k => <td key={k}>{cell(k, tot[k])}</td>)}</tr></tfoot>
           </table>
         </div>
         {dueN > 0 && <div className="e-note warn"><span>Hay {plural(dueN, 'salida', 'salidas')} sin cobrar en el período: {money(due)}. No se suman al total hasta que se cobren.</span></div>}
-        <span className="dim">Cuenta las estadías finalizadas de la sucursal por fecha de salida, y los ingresos por fecha de inicio. «Total» es lo cobrado.</span>
+        <span className="dim">Cuenta las estadías finalizadas de la sucursal por fecha de salida, y las entradas por fecha de inicio. «Total» es lo cobrado.</span>
       </div>
     </Drawer>
   );

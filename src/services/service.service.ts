@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Service, ServiceInput } from '../types/service.types';
+import type { ServiceInput } from '../types/service.types';
 
 export const getService = (serviceId: string) =>
   api.get(`/api/service-catalog/${serviceId}`).then(res => res.data);

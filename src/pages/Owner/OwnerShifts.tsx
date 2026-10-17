@@ -1,23 +1,24 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Check, ChevronLeft, ChevronRight, Clock, Lock, Plus, Trash2 } from 'lucide-react';
-import { ConfirmModal } from '../../components/Owner/ui/Layer';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, Clock, Lock, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
 import { Shown } from '../../components/Owner/ui/Presence';
-import { Empty, PageHead } from '../../components/Owner/ui/Page';
-import { apiError } from '../../components/Owner/ui/Field';
+import { Empty, ErrorBox, PageHead } from '../../components/Owner/ui/Page';
+import { Field, apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { conflictsOf, getRange, getTemplate, resetDay, saveDay, saveTemplateDay } from '../../services/shift.service';
 import { createHoliday, getHolidays, removeHoliday, setHolidayOpen } from '../../services/holiday.service';
 import type { Holiday, ResolvedDay } from '../../types/schedule.types';
-import { useOwner, type Emp } from './OwnerContext';
+import { useActiveParking, useOwner, type Emp } from './OwnerContext';
+import { ParkingPicker } from '../../components/Owner/ui/ParkingPicker';
 import {
   CLOSED, DAYS, DAYS_LONG, DOW, SLOT, addD, cap, coverage, dropOn, fmtD, fmtH, fromServer, gapGroups, gaps, hhmm, hoursOf,
-  initials, monday, nowMin, place, plural, samePast, span, tm, toServer, today, wdOf, workWarnings, type Block, type Day,
+  initials, monday, nowMin, place, plural, samePast, shD, span, tm, toServer, today, wdOf, workWarnings, type Block, type Day,
 } from './owner.lib';
 
 const ROW = 20; // px por franja de 30 min
 // shortcut: L-10, bloques fijos de 30 minutos, parametrizar por sucursal si se pide
-// shortcut: L-19, mover y estirar turnos funciona con mouse; en táctil solo se arrastran empleados desde la paleta
+// Mover y estirar turnos es con mouse; en táctil (y con teclado) cada turno se edita en su editor (L-19, cerrada).
 
 type Mode = 'tpl' | 'date';
 interface Drag {
@@ -29,36 +30,71 @@ interface Drag {
 }
 
 export default function OwnerShifts() {
-  const { parkings, employees, refresh: refreshOwner } = useOwner();
+  const { parkings, employees, status, refresh: refreshOwner } = useOwner();
   const toast = useToast();
-  const [params, setParams] = useSearchParams();
-  const p = parkings.find(x => x.id === params.get('p')) ?? parkings[0];
+  const navigate = useNavigate();
+  const { parking: p, select } = useActiveParking();
   const [mode, setMode] = useState<Mode>('tpl');
   const [wk, setWk] = useState(monday(today()));
   const [week, setWeek] = useState<(Day | null)[] | null>(null);
   const [meta, setMeta] = useState<(ResolvedDay | null)[]>([]);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [holKey, setHolKey] = useState(0);
+  const [loadErr, setLoadErr] = useState(false);
+  const [editing, setEditing] = useState<{ d: number; blk: Block } | null>(null); // turno abierto en el editor
   const cols = useRef<(HTMLDivElement | null)[]>([]);
   const calRef = useRef<HTMLDivElement>(null);
 
+  // Solo la última carga escribe: al cambiar rápido de sucursal, de modo o de semana, una respuesta atrasada se descarta.
+  // Cada vista ya vista (sucursal + semana tipo o semana por fecha) queda en memoria: volver a ella es instantáneo, sin esqueleto,
+  // y se revalida en segundo plano. La otra vista se precarga para que el primer cambio también lo sea.
+  const req = useRef(0);
+  const cache = useRef(new Map<string, { week: (Day | null)[]; meta: (ResolvedDay | null)[] }>());
+  const shown = useRef('');
+  const keyOf = (m: Mode) => `${p?.id}|${m === 'tpl' ? 'tpl' : wk}`;
+  const fetchView = async (m: Mode) => {
+    if (!p) return;
+    if (m === 'tpl') return { week: (await getTemplate(p.id)).map(fromServer), meta: [] };
+    const days = await getRange(p.id, wk, addD(wk, 6));
+    return { meta: days, week: days.map(d => (d.source === 'holiday-closed' ? null : fromServer(d))) };
+  };
+  const prefetch = (m: Mode) => { const k = keyOf(m); fetchView(m).then(v => v && cache.current.set(k, v)).catch(() => {}); };
+  // La semana tipo cambia lo que resuelve cada fecha: tras editarla (o un feriado) las fechas en memoria se descartan y se vuelven a precargar.
+  const dropDates = () => {
+    cache.current.forEach((_, k) => { if (!k.endsWith('|tpl')) cache.current.delete(k); });
+    if (mode === 'tpl') prefetch('date');
+  };
   const load = useCallback(async () => {
     if (!p) return;
-    setWeek(null);
+    const n = ++req.current, k = keyOf(mode), hit = cache.current.get(k);
+    shown.current = k;
+    setWeek(hit?.week ?? null); setMeta(hit?.meta ?? []); setLoadErr(false); setEditing(null);
     try {
-      if (mode === 'tpl') {
-        setWeek((await getTemplate(p.id)).map(fromServer));
-        setMeta([]);
-      } else {
-        const days = await getRange(p.id, wk, addD(wk, 6));
-        setMeta(days);
-        setWeek(days.map(d => (d.source === 'holiday-closed' ? null : fromServer(d))));
-      }
-    } catch (x) { toast(apiError(x, 'No se pudieron cargar los turnos.'), 'err'); setWeek(Array(7).fill([])); }
+      const v = (await fetchView(mode))!;
+      if (n !== req.current) return;
+      setWeek(v.week);
+      setMeta(v.meta);
+      const other: Mode = mode === 'tpl' ? 'date' : 'tpl';
+      if (!cache.current.has(keyOf(other))) prefetch(other);
+    } catch {
+      // Sin los turnos reales no se muestra un calendario vacío: guardar un día lo reemplazaría entero.
+      if (n === req.current && !hit) setLoadErr(true);
+    }
   }, [p?.id, mode, wk]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [load]);
+  // Los cambios locales (guardar, deshacer, restablecer) también quedan en memoria para la vista que se está mostrando.
+  useEffect(() => { if (week && shown.current) cache.current.set(shown.current, { week, meta }); }, [week, meta]);
+  // Antes de pintar: así el cambio de vista nunca muestra un cuadro con el modo nuevo y los datos viejos.
+  useLayoutEffect(() => { load(); }, [load]);
 
-  if (!p) return <><PageHead eyebrow="Operación" title="Turnos" /><Empty icon={<Clock className="i" />} title="Todavía no hay sucursales">Creá una sucursal para armar sus turnos.</Empty></>;
+  if (status === 'loading') return <><PageHead title="Turnos" /><span className="sk" style={{ height: 320 }} /></>;
+  if (status === 'error') return <><PageHead title="Turnos" /><ErrorBox what="tus sucursales" onRetry={refreshOwner} /></>;
+  if (!p) return (
+    <><PageHead title="Turnos" />
+      <Empty icon={<Clock className="i" />} title="Todavía no hay sucursales"
+        action={<button type="button" className="btn pri" onClick={() => navigate('/owner?new=1')}><Plus className="i sm" />Registrar sucursal</button>}>
+        Los turnos se arman por sucursal. Registrá una para empezar.
+      </Empty></>
+  );
 
   const [s, e] = span(p);
   const rows = Math.max(1, Math.floor((e - s) / SLOT));
@@ -75,6 +111,7 @@ export default function OwnerShifts() {
       toast(`No se pueden cambiar los turnos de hoy anteriores a las ${hhmm(nowMin())}.`, 'err');
       return false;
     }
+    req.current++; // una revalidación en vuelo no pisa esta edición
     setWeek(w => w && w.map((x, i) => (i === d ? day : x)));
     try {
       let moved = 0;
@@ -88,6 +125,7 @@ export default function OwnerShifts() {
         setMeta(m => m.map((x, i) => (i === d ? r : x)));
         moved = r.reassigned ?? 0;
       }
+      if (mode === 'tpl') dropDates();
       if (mode === 'tpl' || moved) refreshOwner(); // panel, personal y reservas leen la semana tipo y el empleado asignado
       const text = `${msg}${moved ? ` ${plural(moved, 'reserva pasó', 'reservas pasaron')} al empleado de turno.` : ''}`.trim();
       if (text) toast(text, 'ok', undoable ? () => commit(d, prev, 'Cambio deshecho.', false) : undefined);
@@ -187,7 +225,33 @@ export default function OwnerShifts() {
     if (await commit(r.d, place(week[r.d]!, { who: b.who, a: r.a, b: r.b }), '', false)) await commit(d0, rest, '');
   };
 
+  // ---------- editor de un turno ----------
+  // Se busca de nuevo el bloque en el día: el calendario puede haber cambiado mientras el editor estaba abierto.
+  const editIndex = (ed: { d: number; blk: Block }) => week?.[ed.d]?.findIndex(x => x.who === ed.blk.who && x.a === ed.blk.a && x.b === ed.blk.b) ?? -1;
+  const editTarget = () => {
+    const ed = editing!, i = editIndex(ed);
+    if (locked(ed.d)) { toast(lockedMsg(ed.d), 'err'); return null; }
+    if (i < 0) { toast('El turno cambió mientras lo editabas. Volvé a abrirlo.', 'err'); setEditing(null); return null; }
+    return { ed, i };
+  };
+  const saveEdit = async (who: string, a: number, b: number) => {
+    const t = editTarget();
+    if (!t) return;
+    const { ed: { d, blk }, i } = t;
+    if (who === blk.who && a === blk.a && b === blk.b) { setEditing(null); return; } // sin cambios
+    const label = who === CLOSED ? `Cierre del ${DAYS_LONG[d]} de ${hhmm(a)} a ${tm(b)}.` : `${name(who)} cubre el ${DAYS_LONG[d]} de ${hhmm(a)} a ${tm(b)}.`;
+    if (await commit(d, place(week![d]!.filter((_, k) => k !== i), { who, a, b }), label)) setEditing(null);
+  };
+  const removeEdited = async () => {
+    const t = editTarget();
+    if (!t) return;
+    const { ed: { d, blk }, i } = t;
+    const label = blk.who === CLOSED ? `Cierre del ${DAYS_LONG[d]} quitado.` : `Turno de ${name(blk.who)} del ${DAYS_LONG[d]} quitado.`;
+    if (await commit(d, week![d]!.filter((_, k) => k !== i), label)) setEditing(null);
+  };
+
   const onBlockKey = (ev: RKeyboardEvent, d: number, i: number) => {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); return setEditing({ d, blk: week![d]![i]! }); }
     if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); return removeBlock(d, i); }
     const mv = ({ ArrowUp: [0, -SLOT], ArrowDown: [0, SLOT], ArrowLeft: [-1, 0], ArrowRight: [1, 0] } as Record<string, [number, number]>)[ev.key];
     if (!mv || !week) return;
@@ -215,7 +279,7 @@ export default function OwnerShifts() {
     const m = meta[d], iso = dateOf(d), past = !m?.editable && iso < today(), isToday = iso === today();
     let bd = null;
     if (m?.source === 'holiday-closed') bd = <span className="bd hol" data-tip={m.holiday?.name}>Feriado</span>;
-    else if (m?.modified && m.editable) bd = <button type="button" className="bd mod" data-tip="Restablecer a la semana tipo" onClick={() => reset(d)}>Modificado ↺</button>;
+    else if (m?.modified && m.editable) bd = <button type="button" className="bd mod" data-tip="Restablecer a la semana tipo" onClick={() => reset(d)}>Modificado<RotateCcw className="i xs" aria-hidden="true" /></button>;
     else if (m?.holiday?.open) bd = <span className="bd" data-tip={m.holiday.name}>Feriado · trabaja</span>;
     else if (isToday) bd = <span className="bd today">Hoy</span>;
     else if (past) bd = <span className="bd past">Pasado</span>;
@@ -248,8 +312,9 @@ export default function OwnerShifts() {
       return (
         <div key={`${from}-${i}`} className={`shb${cl ? ' cl' : ''}${ro ? ' ro' : ''}${dr ? ' drag' : ''}${dr?.out ? ' out' : ''}`}
           style={{ top: top(a), height: hgt(a, z), left: 2, width: 'calc(100% - 4px)' }}
-          tabIndex={ro ? undefined : 0} role="button"
-          aria-label={`${nm}, ${DAYS_LONG[d]} de ${hhmm(a)} a ${tm(z)}.${ro ? '' : ' Flechas para mover, Suprimir para quitar'}`}
+          tabIndex={ro ? undefined : 0} role="button" aria-haspopup={ro ? undefined : 'dialog'}
+          aria-label={`${nm}, ${DAYS_LONG[d]} de ${hhmm(a)} a ${tm(z)}.${ro ? '' : ' Enter para editar, flechas para mover, Suprimir para quitar'}`}
+          onClick={ro ? undefined : () => setEditing({ d: from, blk: b })}
           onPointerDown={ro ? undefined : ev => startDrag(ev, { kind: 'move', d0: from, i, a0: b.a, b0: b.b })}
           onKeyDown={ro ? undefined : ev => onBlockKey(ev, from, i)}>
           <b>{cl && <Lock className="i sm" />}{nm}</b><small>{hhmm(a)}–{tm(z)}</small>
@@ -281,10 +346,10 @@ export default function OwnerShifts() {
 
   return (
     <>
-      <PageHead eyebrow="Operación" title={date ? 'Turnos por fecha' : 'Semana tipo'}
+      <PageHead title={date ? 'Turnos por fecha' : 'Semana tipo'}
         sub={date ? 'Estás viendo fechas concretas. Un cambio vale solo para ese día y no modifica la semana tipo. Los días pasados son de solo lectura.'
           : 'Esta es la configuración estándar que se repite todas las semanas. Para cambios de una fecha puntual usá “Por fecha”; los feriados se manejan más abajo.'}
-        actions={<select className="sel" aria-label="Sucursal" value={p.id} onChange={ev => setParams({ p: ev.target.value })}>{parkings.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}</select>} />
+        actions={<ParkingPicker parkings={parkings} value={p.id} onChange={select} />} />
 
       <div className="panel" style={{ padding: 16 }}>
         <div className="toolbar" style={{ justifyContent: 'flex-start', gap: 16 }}>
@@ -302,7 +367,7 @@ export default function OwnerShifts() {
           )}
         </div>
 
-        {!week ? <span className="sk" style={{ height: 320, marginTop: 16 }} /> : (
+        {loadErr ? <ErrorBox what="los turnos" onRetry={load} /> : !week ? <span className="sk" style={{ height: 320, marginTop: 16 }} /> : (
           <div>
             <div className="shsum"><div><div className="lab">Cobertura semanal</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}><span className="bigsm">{cov!.pct}%</span>
@@ -312,7 +377,7 @@ export default function OwnerShifts() {
               </div></div></div>
             {!!groups.length && anyShift && <div className="gaps"><span className="lbl">Sin cubrir (no admiten reservas):</span>
               {groups.slice(0, 8).map(g => <span key={g} className="gapchip">{g}</span>)}{groups.length > 8 && <span className="ctx">+{groups.length - 8} más</span>}</div>}
-            {!!ww.length && <div className="gaps"><span className="lbl">Jornada:</span>{ww.map(x => <span key={x.t} className={x.c === 'err' ? 'errchip' : 'gapchip'}>{x.c === 'err' ? '⚠ ' : ''}{x.t}</span>)}</div>}
+            {!!ww.length && <div className="gaps"><span className="lbl">Jornada:</span>{ww.map(x => <span key={x.t} className={x.c === 'err' ? 'errchip' : 'gapchip'}>{x.c === 'err' && <AlertTriangle className="i xs" aria-hidden="true" />}{x.t}</span>)}</div>}
 
             <div className="pal" role="group" aria-label="Empleados de la sucursal">
               <span className="lbl">Arrastrá al día</span>
@@ -326,17 +391,21 @@ export default function OwnerShifts() {
                   </button>
                 );
               })}
-              {!staff.length && <span className="ctx">No hay empleados en esta sucursal. Asignalos desde Personal.</span>}
+              {!staff.length && <span className="ctx">No hay empleados en esta sucursal. <button type="button" className="link" onClick={() => navigate(`/owner/employees?p=${p.id}`)}>Asignalos desde Personal</button>.</span>}
               <button type="button" className="pc closed" aria-label="Programar un cierre"
                 onPointerDown={ev => startDrag(ev, { kind: 'new', who: CLOSED, label: 'Cerrado', d0: -1, i: -1, a0: 0, b0: 0 })}
                 onClick={() => kbdAdd(CLOSED)}><Lock className="i sm" />Cerrado</button>
             </div>
-            <p className="ctx" style={{ padding: '8px 0 12px' }}>Soltá un empleado sobre un horario libre para cubrirlo. Sobre un turno: en el medio lo reemplaza entero; arriba o abajo lo divide en partes iguales. Las reservas pasan solas al empleado que queda de turno. Arrastrá los turnos para moverlos (el que queda debajo se recorta solo) y sus bordes para ajustarlos; arrastralos fuera del calendario para quitarlos. “Cerrado” funciona igual que un empleado y se rechaza si hay reservas activas o pendientes en ese horario.</p>
+            {/* Lo esencial a la vista; el detalle del arrastre, un nivel más abajo */}
+            <div className="howto">
+              <p className="ctx">Soltá un empleado sobre un horario libre para cubrirlo, o tocá un turno para editarlo.</p>
+              <details><summary>Cómo funciona</summary><p className="ctx">Sobre un turno: en el medio lo reemplaza entero; arriba o abajo lo divide en partes iguales. Las reservas pasan solas al empleado que queda de turno. Arrastrá los turnos para moverlos (el que queda debajo se recorta solo) y sus bordes para ajustarlos; arrastralos fuera del calendario para quitarlos. “Cerrado” funciona igual que un empleado y se rechaza si hay reservas activas o pendientes en ese horario.</p></details>
+            </div>
             <div className="legend">
-              <span><i style={{ background: 'color-mix(in srgb,var(--ac) 24%,var(--surface))', borderLeft: '3px solid var(--ac-h)' }} />Turno</span>
+              <span><i className="sw-shift" />Turno</span>
               <span><i className="hatch" />Sin cobertura</span>
-              <span><i style={{ background: 'var(--hover)', border: '1px solid var(--line)' }} />Cerrado</span>
-              {date && <span><i style={{ background: 'color-mix(in srgb,var(--err) 14%,var(--surface))', borderLeft: '3px solid var(--err)' }} />Feriado</span>}
+              <span><i className="sw-closed" />Cerrado</span>
+              {date && <span><i className="sw-hol" />Feriado</span>}
             </div>
             <div className="calwrap" ref={calRef}>
               <div className={`cal${date ? ' dm' : ''}`} style={{ ['--rows' as string]: rows }}>
@@ -350,11 +419,77 @@ export default function OwnerShifts() {
       </div>
 
       <div className="panel" style={{ padding: 16, marginTop: 16 }}>
-        <Holidays key={`${p.id}-${holKey}`} parkingId={p.id} parkingName={p.name} onChange={() => date && load()} />
+        <Holidays key={`${p.id}-${holKey}`} parkingId={p.id} parkingName={p.name} onChange={() => { dropDates(); if (date) load(); }} />
       </div>
 
       {drag?.on && drag.kind === 'new' && <div className="dgh" style={{ left: drag.gx, top: drag.gy }}>{drag.label}</div>}
+      <Shown when={editing}>{ed => (
+        <ShiftEditor blk={ed.blk} day={`${cap(DAYS_LONG[ed.d]!)}${date ? ` ${shD(dateOf(ed.d))}` : ' · semana tipo'}`} staff={staff} s={s} e={e} name={name}
+          onSave={saveEdit} onRemove={removeEdited} onClose={() => setEditing(null)} />
+      )}</Shown>
     </>
+  );
+}
+
+// Editor de un turno (prototipo 57-editar-turno y 113-form-turno): el camino en el celular, donde los turnos no se arrastran (L-19), y con teclado.
+// Guarda por el mismo commit que el arrastre: lo que queda debajo se recorta (R-02) y el backend rechaza dejar reservas sin cubrir.
+function ShiftEditor({ blk, day, staff, s, e, name, onSave, onRemove, onClose }: {
+  blk: Block; day: string; staff: Emp[]; s: number; e: number; name: (id: string) => string;
+  onSave: (who: string, a: number, b: number) => Promise<void>; onRemove: () => Promise<void>; onClose: () => void;
+}) {
+  const [who, setWho] = useState(blk.who);
+  const [a, setA] = useState(blk.a);
+  const [b, setB] = useState(blk.b);
+  const [busy, setBusy] = useState(false);
+  const err = b <= a ? 'El fin tiene que ser posterior al inicio.' : '';
+  const closed = blk.who === CLOSED;
+  // Franjas de 30 min dentro del horario de la sucursal; si el turno viene con otra hora, también se ofrece.
+  const opts = (from: number, to: number, cur: number) => {
+    const l: number[] = [];
+    for (let m = from; m <= to; m += SLOT) l.push(m);
+    return (l.includes(cur) ? l : [...l, cur]).sort((x, y) => x - y);
+  };
+  const run = (fn: () => Promise<void>) => async () => {
+    if (busy) return;
+    setBusy(true);
+    try { await fn(); } finally { setBusy(false); }
+  };
+  const submit = (ev: FormEvent) => { ev.preventDefault(); if (!err) run(() => onSave(who, a, b))(); };
+
+  return (
+    <Drawer title={closed ? 'Editar cierre' : 'Editar turno'} sub={day} onClose={onClose}
+      footer={<div className="dfoot">
+        <button type="button" className="btn danger push" disabled={busy} onClick={run(onRemove)}><Trash2 className="i sm" />{closed ? 'Quitar cierre' : 'Quitar turno'}</button>
+        <button type="button" className="btn" onClick={onClose}>Cancelar</button>
+        <button type="submit" form="shform" className="btn pri" disabled={busy || !!err} aria-busy={busy}>Guardar</button>
+      </div>}>
+      <form id="shform" noValidate className="dbody" onSubmit={submit}>
+        <section className="fs">
+          <Field label="Quién cubre">
+            {(id, aria) => (
+              <select className="sel" id={id} {...aria} data-first value={who} onChange={ev => setWho(ev.target.value)}>
+                {staff.map(x => <option key={x.id} value={x.id}>{x.name} {x.last_name}</option>)}
+                {blk.who !== CLOSED && !staff.some(x => x.id === blk.who) && <option value={blk.who}>{name(blk.who)}</option>}
+                <option value={CLOSED}>Cerrado</option>
+              </select>
+            )}
+          </Field>
+          <div className="g2">
+            <Field label="Desde">
+              {(id, aria) => <select className="sel" id={id} {...aria} value={a} onChange={ev => setA(+ev.target.value)}>
+                {opts(s, e - SLOT, a).map(m => <option key={m} value={m}>{hhmm(m)}</option>)}</select>}
+            </Field>
+            <Field label="Hasta" error={err}>
+              {(id, aria) => <select className="sel" id={id} {...aria} value={b} onChange={ev => setB(+ev.target.value)}>
+                {opts(s + SLOT, e, b).map(m => <option key={m} value={m}>{tm(m)}</option>)}</select>}
+            </Field>
+          </div>
+          <p className="ctx" style={{ margin: 0 }}>
+            Lo que quede debajo de este horario se recorta. Las reservas pasan solas al empleado que quede de turno; si un horario con reservas activas o pendientes quedaría sin cubrir, el cambio se rechaza.
+          </p>
+        </section>
+      </form>
+    </Drawer>
   );
 }
 

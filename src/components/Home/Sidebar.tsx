@@ -30,7 +30,6 @@ export const Sidebar: React.FC<any> = (props: any) => {
     handleOpenVehiclesList,
     handleOpenFavorites,
     handleOpenInvoices,
-    handleOpenLogin,
     handleHostClick,
     handleLogout,
     handleOpenSupport,
@@ -70,7 +69,7 @@ export const Sidebar: React.FC<any> = (props: any) => {
       footer={
         <div className="dfoot">
           {user ? (
-            <button type="button" className="btn danger" onClick={handleLogout}>
+            <button type="button" className="btn" onClick={handleLogout}>
               <LogOut className="i" />
               Cerrar sesión
             </button>

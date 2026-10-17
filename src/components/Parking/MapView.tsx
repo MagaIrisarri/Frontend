@@ -5,7 +5,7 @@ import * as maptilersdk from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import type { Parking } from '../../types/parking.types';
 import type { VehicleFilterType } from '../../types/mapFilters.types';
-import { formatSpotPrice, getUnavailableReason } from '../../utils/parkingPriceUtils.js';
+import { formatSpotPrice, getUnavailableReason, isPresential } from '../../utils/parkingPriceUtils.js';
 import { iconOf } from '../Owner/ui/vehicles';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle } from '../../config/map.js';
 import { useTheme } from '../../context/ThemeContext';
@@ -59,6 +59,7 @@ function MapViewComponent({
   const getSingleMarkerHtml = useCallback((spot: Parking, isSelected: boolean) => {
     const spotPrice = formatSpotPrice(spot, selectedVehicleType);
     const reason = selectedVehicleType ? getUnavailableReason(spot, selectedVehicleType.id) : null;
+    const presential = isPresential(spot);
     const isUnavailable = !spotPrice.isAvailable || reason !== null;
 
     // Con filtro: ícono de la categoría (los mismos del panel del dueño) y precio de esa categoría; sin filtro: "desde" el menor.
@@ -68,7 +69,8 @@ function MapViewComponent({
       reason === 'NO_SPACE' ? 'Completo'
       : reason === 'NO_PRICE' || spotPrice.price === null ? (selectedVehicleType ? 'Sin tarifa' : 'Consultar')
       : `${selectedVehicleType ? '' : '<small>desde</small> '}$${spotPrice.price.toLocaleString('es-AR')}<small>/h</small>`;
-    return `<div class="pin${isSelected ? ' sel' : ''}${isUnavailable ? ' na' : ''}">${icon}<span>${label}</span></div>`;
+    // L-44: solo presencial se ve con su precio, en gris; el detalle dice que no se reserva online.
+    return `<div class="pin${isSelected ? ' sel' : ''}${isUnavailable ? ' na' : ''}${presential ? ' wi' : ''}">${icon}<span>${label}</span></div>`;
   }, [selectedVehicleType]);
 
   // Helper para generar el contenido HTML de un Cluster

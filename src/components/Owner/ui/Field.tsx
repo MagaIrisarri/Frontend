@@ -2,7 +2,7 @@ import { useId, useState, type InputHTMLAttributes, type ReactNode } from 'react
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 // Campo de formulario del prototipo (.field): etiqueta, ayuda y error accesible.
-export function Field({ label, error, hint, fixed, children }: { label: string; error?: string; hint?: string; fixed?: boolean; children: (id: string, aria: Record<string, string | boolean | undefined>) => ReactNode }) {
+export function Field({ label, error, hint, fixed, children }: { label: string; error?: string; hint?: ReactNode; fixed?: boolean; children: (id: string, aria: Record<string, string | boolean | undefined>) => ReactNode }) {
   const id = useId();
   const aria = { 'aria-invalid': error ? true : undefined, 'aria-describedby': error ? `${id}-e` : undefined };
   return (

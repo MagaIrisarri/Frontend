@@ -1,9 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, FileText, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { ConfirmModal, Drawer } from '../Owner/ui/Layer';
 import { Presence } from '../Owner/ui/Presence';
-import { VICON } from '../Owner/ui/vehicles';
 import { Field, Input, Password, apiError } from '../Owner/ui/Field';
 import { useToast } from '../Owner/ui/Toasts';
 import { changePassword, removeUser, updateUser } from '../../services/user.service';
@@ -23,7 +22,6 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
   const id: string = me.id || me._id || '';
   const type = String(me.type || me.role || '').toUpperCase();
   const isOwner = type.includes('DUE') || type.includes('OWNER');
-  const isClient = !isOwner && !type.includes('ADMIN') && !type.includes('EMP');
 
   const [v, setV] = useState({ name: me.name ?? '', last_name: me.last_name ?? '', email: me.email ?? '', phone: me.phone ?? '', dob: me.date_of_birth?.slice(0, 10) ?? '', pw0: '', pw1: '', pw2: '' });
   const [fiscal, setFiscal] = useState({ businessName: me.businessName ?? '', cuit: me.cuit ?? '', vatCondition: me.vatCondition ?? IVA[0]!, fiscalAddress: me.fiscalAddress ?? '' });
@@ -40,7 +38,6 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
   }, [isOwner, id]);
 
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => { setV({ ...v, [k]: e.target.value }); setErr({ ...err, [k]: '' }); };
-  const go = (to: string) => { onClose(); navigate(to); };
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -93,22 +90,11 @@ export default function ProfileDrawer({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const links: [string, string, typeof Calendar][] = [['/reservations', 'Mis reservas', Calendar], ['/invoices', 'Facturación y pagos', FileText], ['/vehicles', 'Mis vehículos', VICON.AUTO]];
-
   return (
     <>
       <Drawer title="Mi perfil" sub={isOwner ? 'Datos de tu cuenta de dueño' : 'Datos de tu cuenta'} onClose={onClose}
         footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn pri" type="submit" form="meform" aria-busy={busy}>Guardar cambios</button></div>}>
         <form className="dbody" id="meform" noValidate onSubmit={save}>
-          {isClient && (
-            <section className="fs"><div className="fh"><h3>Mi cuenta</h3></div>
-              <div className="list">{links.map(([to, label, I]) => (
-                <button type="button" key={to} className="li" style={{ border: 0, background: 'none', color: 'inherit', textAlign: 'left', width: '100%', cursor: 'pointer' }} onClick={() => go(to)}>
-                  <span className="l"><I className="i" />{label}</span><ArrowRight className="i sm" />
-                </button>
-              ))}</div>
-            </section>
-          )}
           <section className="fs"><div className="fh"><h3>Datos personales</h3></div>
             <div className="g2">
               <Input label="Nombre" value={v.name} onChange={set('name')} error={err.name} autoComplete="given-name" data-first />

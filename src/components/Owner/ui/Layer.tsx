@@ -10,6 +10,7 @@ import { useSwipeClose } from '../../../hooks/useSwipeClose';
 export const syncScrollLock = () => {
   document.body.style.overflow = document.querySelector('.layer, .modal-root') ? 'hidden' : '';
 };
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 const lockScroll = () => { document.body.style.overflow = 'hidden'; };
 const unlockScroll = () => queueMicrotask(syncScrollLock); // la capa ya salió del DOM cuando corre la limpieza del efecto
 
@@ -29,9 +30,17 @@ function useLayer(onClose: () => void, focusSel = '[data-first],input:not([type=
       first?.focus();
     }, 30);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' && e.key !== 'Tab') return;
+      const el = ref.current;
       const layers = document.querySelectorAll('.owner .layer.on, .owner .modal-root.on');
-      if (layers[layers.length - 1] === ref.current) close.current(); // solo cierra la capa de arriba
+      if (!el || layers[layers.length - 1] !== el) return; // solo la capa de arriba
+      if (e.key === 'Escape') { close.current(); return; }
+      // Tab y Shift+Tab giran dentro de la capa: el foco no se va a la página que quedó detrás del fondo.
+      const focusable = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(x => x.getClientRects().length);
+      if (!focusable.length) { e.preventDefault(); return; }
+      const first = focusable[0]!, last = focusable[focusable.length - 1]!, at = document.activeElement;
+      if (e.shiftKey && (at === first || !el.contains(at))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (at === last || !el.contains(at))) { e.preventDefault(); first.focus(); }
     };
     document.addEventListener('keydown', onKey);
     // iOS no achica la ventana al abrir el teclado: --kb sube la hoja para que sus botones no queden tapados

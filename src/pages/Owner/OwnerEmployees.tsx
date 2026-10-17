@@ -8,6 +8,7 @@ import { Field, Input, Password, apiError } from '../../components/Owner/ui/Fiel
 import { Menu } from '../../components/Owner/ui/Menu';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { createEmployee, deleteEmployee, getEmployeesByOwner, reactivateEmployee, updateEmployee } from '../../services/employee.service';
+import { useSortable } from '../../components/Owner/ui/Sortable';
 import { useOwner, type Emp } from './OwnerContext';
 import { initials, shiftsText } from './owner.lib';
 
@@ -22,7 +23,9 @@ export default function OwnerEmployees() {
   const [del, setDel] = useState<Emp | null>(null);
   const [gone, setGone] = useState<Emp[] | null>(null); // dados de baja, solo cuando se piden
 
-  const showGone = ep === 'baja';
+  // Activos o dados de baja: un filtro aparte del de sucursal, que vale para los dos (el dado de baja conserva su sucursal).
+  const [view, setView] = useState<'active' | 'gone'>('active');
+  const showGone = view === 'gone';
   useEffect(() => {
     if (!showGone) return;
     setGone(null);
@@ -38,17 +41,26 @@ export default function OwnerEmployees() {
   };
 
   const ql = q.trim().toLowerCase();
-  const list = employees.filter(e => (!ep || (ep === 'none' ? !e.parkingId : e.parkingId === ep))
-    && (!ql || `${e.name} ${e.last_name} ${e.email} ${e.dni}`.toLowerCase().includes(ql)));
+  // Orden por columna, como en Reservas: nombre, DNI, teléfono o sucursal (los sin asignar quedan juntos).
+  const parkingName = (e: Emp) => parkings.find(p => p.id === e.parkingId)?.name ?? '';
+  const { sorted, th } = useSortable<Emp, 'name' | 'dni' | 'phone' | 'parking'>({
+    name: e => `${e.name} ${e.last_name}`, dni: e => Number(e.dni) || 0, phone: e => e.phone ?? '', parking: parkingName,
+  }, { k: 'name', d: 1 }, (a, b) => `${a.name} ${a.last_name}`.localeCompare(`${b.name} ${b.last_name}`, 'es'));
+  const matches = (e: Emp) => (!ep || (ep === 'none' ? !e.parkingId : e.parkingId === ep))
+    && (!ql || `${e.name} ${e.last_name} ${e.email} ${e.dni}`.toLowerCase().includes(ql));
+  const list = sorted(employees.filter(matches));
 
+  const [removing, setRemoving] = useState(false);
   const remove = async () => {
+    if (removing) return;
     const e = del!;
+    setRemoving(true);
     try {
       await deleteEmployee(ownerId, e.id);
       setDel(null);
       await refresh();
       toast(`${e.name} ${e.last_name} fue dado de baja. Podés reactivarlo desde “Dados de baja”.`, 'info');
-    } catch (x) { setDel(null); toast(apiError(x, 'No se pudo eliminar el empleado.'), 'err'); }
+    } catch (x) { setDel(null); toast(apiError(x, 'No se pudo eliminar el empleado.'), 'err'); } finally { setRemoving(false); }
   };
 
   let body;
@@ -56,8 +68,8 @@ export default function OwnerEmployees() {
   else if (status === 'loading' || (showGone && !gone)) body = <SkeletonRows n={4} />;
   else if (showGone) body = !gone!.length ? <Empty icon={<Users className="i" />} title="No hay empleados dados de baja" /> : (
     <div className="panel tw"><table className="tbl em">
-      <thead><tr><th>Empleado</th><th>DNI</th><th>Teléfono</th><th><span className="sr">Acciones</span></th></tr></thead>
-      <tbody>{gone!.filter(e => !ql || `${e.name} ${e.last_name} ${e.email} ${e.dni}`.toLowerCase().includes(ql)).map(e => (
+      <thead><tr>{th('name', 'Empleado')}{th('dni', 'DNI')}{th('phone', 'Teléfono')}<th><span className="sr">Acciones</span></th></tr></thead>
+      <tbody>{sorted(gone!.filter(matches)).map(e => (
         <tr key={e.id}>
           <td><div className="l" style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}><span className="av lg">{initials(e.name, e.last_name)}</span>
             <div style={{ minWidth: 0 }}><span className="nm">{e.name} {e.last_name}</span><div className="ad">{e.email}</div></div></div></td>
@@ -68,7 +80,13 @@ export default function OwnerEmployees() {
       ))}</tbody>
     </table></div>
   );
-  else if (!employees.length && !showGone) body = (
+  // Cada empleado trabaja en una sucursal: sin ninguna, el alta no se puede completar.
+  else if (!parkings.length) body = (
+    <Empty icon={<Building2 className="i" />} title="Primero registrá una sucursal"
+      action={<button type="button" className="btn pri" onClick={() => navigate('/owner?new=1')}><Plus className="i sm" />Registrar sucursal</button>}>
+      Cada empleado trabaja en una sucursal. Creá la primera para dar de alta a tu personal.
+    </Empty>);
+  else if (!employees.length) body = (
     <Empty icon={<Users className="i" />} title="No tenés empleados"
       action={<button type="button" className="btn pri" onClick={() => setForm('new')}><Plus className="i sm" />Crear primer empleado</button>}>
       Registrá a tu personal para que pueda operar las sucursales: check-in, check-out y validación de reservas.
@@ -77,7 +95,7 @@ export default function OwnerEmployees() {
   else body = (
     <div className="panel tw"><table className="tbl em">
       <colgroup><col /><col style={{ width: 110 }} /><col style={{ width: 140 }} /><col style={{ width: '30%' }} /><col style={{ width: 152 }} /></colgroup>
-      <thead><tr><th>Empleado</th><th>DNI</th><th>Teléfono</th><th>Sucursal y turno</th><th><span className="sr">Acciones</span></th></tr></thead>
+      <thead><tr>{th('name', 'Empleado')}{th('dni', 'DNI')}{th('phone', 'Teléfono')}{th('parking', 'Sucursal')}<th><span className="sr">Acciones</span></th></tr></thead>
       <tbody>{list.map(e => {
         const p = parkings.find(x => x.id === e.parkingId), sh = p ? shiftsText(templates[p.id], e.id) : [];
         return (
@@ -86,7 +104,7 @@ export default function OwnerEmployees() {
               <div style={{ minWidth: 0 }}><button type="button" className="nm" onClick={() => setForm(e)}>{e.name} {e.last_name}</button><div className="ad">{e.email}</div></div></div></td>
             <td data-label="DNI">{e.dni}</td>
             <td data-label="Teléfono">{e.phone || <span className="na">—</span>}</td>
-            <td className="c-wide" data-label="Sucursal y turno">{p ? (
+            <td className="c-wide" data-label="Sucursal">{p ? (
               <><div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}><Building2 className="i sm" /><span className="nm">{p.name}</span></div>
                 <div className="ad"><button type="button" className="link" title={`Ver turnos de ${p.name}`} onClick={() => navigate(`/owner/shifts?p=${p.id}`)}>{sh.length ? 'Ver turnos' : 'Definir turnos'}</button></div></>
             ) : <span className="st warn"><Unlink className="i sm" />Sin asignar</span>}</td>
@@ -106,20 +124,23 @@ export default function OwnerEmployees() {
   return (
     <>
       <PageHead title="Personal" sub={`Empleados operativos de tus sucursales${employees.length ? ` · ${employees.length} registrados` : ''}.`}
-        actions={<button type="button" className="btn pri" onClick={() => setForm('new')}><Plus className="i sm" />Nuevo empleado</button>} />
+        actions={<button type="button" className="btn pri" disabled={status === 'ready' && !parkings.length} onClick={() => setForm('new')}><Plus className="i sm" />Nuevo empleado</button>} />
       {status === 'ready' && (
         <div className="toolbar" style={{ marginBottom: -12 }}>
           <div className="search"><Search className="i" /><input className="inp" type="search" placeholder="Buscar por nombre, DNI o email" aria-label="Buscar empleado" value={q} onChange={e => setQ(e.target.value)} /></div>
           <select className="sel" aria-label="Filtrar por sucursal" style={{ width: 240 }} value={ep} onChange={e => setEp(e.target.value)}>
             <option value="">Todas las sucursales</option><option value="none">Sin asignar</option>
             {parkings.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            <option value="baja">Dados de baja</option>
           </select>
+          <div className="seg" role="group" aria-label="Estado del personal">
+            {([['active', 'Activos'], ['gone', 'Dados de baja']] as const).map(([k, l]) =>
+              <button type="button" key={k} aria-pressed={view === k} onClick={() => setView(k)}>{l}</button>)}
+          </div>
         </div>
       )}
       {body}
       <Shown when={form}>{f => <EmployeeDrawer emp={f === 'new' ? null : f} onClose={() => setForm(null)} />}</Shown>
-      <Shown when={del}>{d => <ConfirmModal title={`¿Dar de baja a ${d.name} ${d.last_name}?`} body="Pierde el acceso y deja de aparecer en tu personal. Podés reactivarlo más tarde." ok="Dar de baja" danger onConfirm={remove} onClose={() => setDel(null)} />}</Shown>
+      <Shown when={del}>{d => <ConfirmModal title={`¿Dar de baja a ${d.name} ${d.last_name}?`} body="Pierde el acceso y deja de aparecer en tu personal. Podés reactivarlo más tarde." ok="Dar de baja" danger busy={removing} onConfirm={remove} onClose={() => setDel(null)} />}</Shown>
     </>
   );
 }
@@ -127,16 +148,21 @@ export default function OwnerEmployees() {
 function EmployeeDrawer({ emp, onClose }: { emp: Emp | null; onClose: () => void }) {
   const { parkings, templates, employees, ownerId, reservations, refresh } = useOwner();
   const toast = useToast();
+  const navigate = useNavigate();
   const [v, setV] = useState({
     dni: emp?.dni ?? '', name: emp?.name ?? '', last_name: emp?.last_name ?? '', date_of_birth: emp?.date_of_birth?.slice(0, 10) ?? '',
     phone: emp?.phone ?? '', email: emp?.email ?? '', password: '', parkingId: emp?.parkingId ?? parkings[0]?.id ?? '',
   });
   const [err, setErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => { setV({ ...v, [k]: e.target.value }); setErr({ ...err, [k]: '' }); };
+  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => {
+    const value = e.target.value; // con el estado anterior de cada paso: dos campos cambiados seguidos no se pisan
+    setV(s => ({ ...s, [k]: value })); setErr(x => ({ ...x, [k]: '' }));
+  };
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy) return; // Enter en un campo vuelve a enviar el formulario
     const er: Record<string, string> = {};
     if (!/^\d{7,8}$/.test(v.dni.trim())) er.dni = 'El DNI debe tener 7 u 8 dígitos.';
     if (v.name.trim().length < 2) er.name = 'Requerido.';
@@ -171,7 +197,7 @@ function EmployeeDrawer({ emp, onClose }: { emp: Emp | null; onClose: () => void
 
   return (
     <Drawer title={emp ? 'Editar empleado' : 'Nuevo empleado'} sub={emp ? `${emp.name} ${emp.last_name}` : 'Alta de personal operativo.'} onClose={onClose}
-      footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn pri" type="submit" form="eform" aria-busy={busy}>{emp ? 'Guardar cambios' : 'Crear empleado'}</button></div>}>
+      footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn pri" type="submit" form="eform" disabled={busy} aria-busy={busy}>{emp ? 'Guardar cambios' : 'Crear empleado'}</button></div>}>
       <form id="eform" noValidate className="dbody" onSubmit={save}>
         <section className="fs"><div className="fh"><h3>Datos personales</h3></div>
           <Input label="DNI" placeholder="Sin puntos" inputMode="numeric" maxLength={8} autoComplete="off" value={v.dni} onChange={set('dni')} error={err.dni} data-first />
@@ -184,7 +210,8 @@ function EmployeeDrawer({ emp, onClose }: { emp: Emp | null; onClose: () => void
           {!emp && <Password label="Contraseña temporal" autoComplete="new-password" value={v.password} onChange={set('password')} error={err.password} hint="El empleado deberá cambiarla en su primer ingreso." />}
         </section>
         <section className="fs"><div className="fh"><h3>Sucursal</h3></div>
-          <Field label="Sucursal asignada" error={err.parkingId} hint="Los turnos se definen en Turnos.">
+          <Field label="Sucursal asignada" error={err.parkingId}
+            hint={v.parkingId ? <>Los turnos se definen en <button type="button" className="link" onClick={() => { onClose(); navigate(`/owner/shifts?p=${v.parkingId}`); }}>Turnos</button>.</> : undefined}>
             {(id, aria) => <select className="sel" id={id} {...aria} value={v.parkingId} onChange={set('parkingId')}>{parkings.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>}
           </Field>
         </section>

@@ -35,6 +35,7 @@
 
 /* ───── Lista y tarjetas ───── */
 .tag.mute{color:var(--tx2);background:var(--soft)}
+.presential{font-size:13.5px;color:var(--tx2);padding:10px 12px;border-radius:var(--r-md);background:var(--soft)}.presential strong{color:var(--tx)}
 .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 
 .pcard{display:flex;gap:12px;padding:12px;border:1px solid transparent;border-radius:var(--r-lg);background:var(--raised);cursor:pointer;transition:background .12s}
@@ -76,6 +77,8 @@
 .grid2.keep{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} /* pares de datos cortos (nombre/apellido, DNI/teléfono) siguen en dos columnas también en el teléfono */
 .btn.errtx{color:var(--err)}
 .rcard{display:grid;gap:10px;padding:14px;border-radius:var(--r-lg);background:var(--raised)}
+.rcard[aria-current=true]{box-shadow:0 0 0 2px var(--focus)} /* la reserva que abrió una notificación */
+.rcard .acts{justify-content:flex-start;flex-wrap:wrap;gap:8px}
 .rcard .rtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .rcard .rn{font-weight:600}
 .rcard .ad{display:flex;gap:4px;align-items:center;color:var(--tx2);font-size:12.5px}
@@ -164,8 +167,8 @@
 .dfoot .fmsg .ferr{align-items:flex-start}.dfoot .fmsg .ferr .i{margin-top:1px}
 
 /* Feedback al presionar (en el instante del toque, no al soltar) */
-.pcard,.opt,.mitem,.bi,.pcta,.sitem,.seg button{transition:background .12s,transform .1s ease-out}
-.pcard:active,.opt:active,.mitem:active,.bi:active,.pcta:active{transform:scale(.985)}
+.pcard,.opt,.bi,.pcta,.sitem,.seg button{transition:background .12s,transform .1s ease-out}
+.pcard:active,.opt:active,.bi:active,.pcta:active{transform:scale(.985)}
 .seg button:active,.sitem:active{transform:scale(.97)}
 
 /* ───── Entrada y salida de paneles y modales (la salida es el espejo de la entrada; ver Presence.tsx) ───── */
@@ -215,7 +218,7 @@
 .mtools .search{flex:1 1 220px;max-width:none}
 /* listas largas dentro del detalle: se desplazan con la página (un solo scroll) y el título de cada grupo queda pegado bajo la barra */
 .mscroll .gh{position:sticky;top:var(--bar-h);z-index:1;box-shadow:0 -8px 0 var(--surface)}
-.nav button{white-space:nowrap;flex:none}
+.nav a{white-space:nowrap;flex:none}
 .lk{font-size:inherit;text-align:left}
 .gh{display:flex;justify-content:space-between;padding:8px 12px;background:var(--raised);border:1px solid var(--soft);border-radius:var(--r-sm);font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
 .mr{padding:11px 12px;border-bottom:1px solid var(--soft);font-weight:500}
@@ -272,10 +275,11 @@
 .e-grp>h2 b{font-weight:500;color:var(--tx3)}
 .e-list{display:grid;gap:1px;width:100%;background:var(--div);border-radius:var(--r-md);overflow:hidden;box-shadow:0 0 0 1px var(--edge),var(--card-sh)}
 .e-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"a s" "b b" "c c";align-items:center;gap:12px;min-height:64px;padding:10px 12px;background:var(--surface)}
-.e-row:hover{background:var(--raised)}
+@media(hover:hover){.e-row:hover{background:var(--raised)}}
 .e-row>div:nth-child(-n+2){min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .e-pl{font:600 16px var(--mono);letter-spacing:.06em}
 .e-sub{margin-top:2px;overflow:hidden;font-size:12.5px;color:var(--tx3);white-space:nowrap;text-overflow:ellipsis}
+.e-sub.e-io{color:var(--tx2);white-space:normal}
 .e-row .st{justify-self:start}
 .e-row>:nth-child(1){grid-area:a}.e-row>:nth-child(2){grid-area:b}.e-row>:nth-child(3){grid-area:s;justify-self:end}.e-row>:nth-child(4){grid-area:c}
 .e-acts{display:grid;grid-template-columns:1fr 96px;gap:12px}
@@ -283,6 +287,7 @@
 .e-empty{display:grid;gap:12px;justify-items:center;padding:28px 16px;text-align:center;background:var(--surface);color:var(--tx2);border-radius:var(--r-md);box-shadow:0 0 0 1px var(--edge),var(--card-sh)}
 
 /* ───── Contenido de los paneles ───── */
+.e-flat{margin:0;padding:0}
 .e-note{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:var(--r-md);background:var(--raised);box-shadow:0 0 0 1px var(--div);font-size:13px;color:var(--tx2)}
 .e-note .i{margin-top:2px}
 .e-note.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--tx)}.e-note.warn .i{color:var(--warn)}
@@ -297,8 +302,9 @@
 .e-vt.err{background:color-mix(in srgb,var(--err) 14%,var(--surface));color:var(--err)}
 .e-vt.ok b,.e-vt.err b{color:inherit}
 .e-opts{display:grid;grid-template-columns:1fr;gap:8px;padding:1px}
-.e-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:6px 12px;border:1px solid var(--inp);border-radius:var(--r-md);background:var(--raised);font-size:13.5px;text-align:left}
+.e-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:6px 12px;border:1px solid var(--inp);border-radius:var(--r-md);background:var(--raised);font-size:13.5px;text-align:left;transition:background .12s,transform .1s ease-out}
 .e-opt:hover{background:var(--hover)}
+.e-opt:active,.seg button:active,.e-cal button:active{transform:scale(.97)}
 .e-opt>span:last-child{color:var(--tx2);white-space:nowrap}
 .e-opt[aria-checked=true]{background:var(--ac-soft);border-color:var(--ac);color:var(--ac-tx)}
 .e-opt[aria-checked=true]>span:last-child{color:inherit}
@@ -312,7 +318,7 @@
 .e-cm b::first-letter{text-transform:uppercase}
 .e-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
 .e-cal .wd{padding-block:4px;font-size:12px;color:var(--tx3)}
-.e-cal button{position:relative;height:44px;border:0;border-radius:var(--r-md);background:transparent}
+.e-cal button{position:relative;height:44px;border:0;border-radius:var(--r-md);background:transparent;transition:background .12s,transform .1s ease-out}
 .e-cal button:hover{background:var(--raised)}
 .e-cal button[aria-pressed=true]{background:var(--ac);color:var(--on-ac)}
 .e-cal button[aria-current=date]{box-shadow:inset 0 0 0 1px var(--ac)}
@@ -323,11 +329,12 @@
 /* tabla del resumen por período */
 .e-tw{overflow:auto;border-radius:var(--r-md);border:1px solid var(--soft)}
 .e-tw table{width:100%;border-collapse:collapse;font-size:12px}
-.e-tw th,.e-tw td{padding:8px 10px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--soft)}
+.e-tw th,.e-tw td{padding:8px 10px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--soft);font-weight:400}
 .e-tw th:first-child,.e-tw td:first-child{text-align:left}
-.e-tw th{position:sticky;top:0;background:var(--raised);color:var(--tx2);font-weight:500}
-.e-tw tfoot td{position:sticky;bottom:0;background:var(--raised);border-bottom:0;font-weight:600}
+.e-tw thead th{position:sticky;top:0;background:var(--raised);color:var(--tx2);font-weight:500}
+.e-tw tfoot th,.e-tw tfoot td{position:sticky;bottom:0;background:var(--raised);border-bottom:0;font-weight:600}
 .e-range{margin-left:auto}
+@media(prefers-reduced-motion:reduce){.e-meter i{transition:none}}
 
 /* ───── Responsive, mobile-first: lo de arriba es el teléfono (SM); MD y LG solo agregan con min-width (_breakpoints.scss) ───── */
 @media(min-width:$sm + 1){
@@ -355,11 +362,48 @@
   .e-wrap{padding-bottom:40px}
   .e-chip{flex:initial;min-width:132px} /* crece si el tipo y el conteo no entran (Camionetas 10/12) */
   .e-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 148px 258px;grid-template-areas:"a b s c";height:64px;min-height:auto}
+  .e-sub.e-io{white-space:nowrap}
   .e-row>:nth-child(3){justify-self:start}
   .e-acts{grid-template-columns:150px 96px;justify-content:end}
 }
 /* con mouse o trackpad, controles más chicos (táctil sigue en 44 px a cualquier ancho) */
 @media(min-width:$sm + 1) and (pointer:fine){.e-cal button{height:42px}.e-opt{min-height:38px}}
 @media(min-width:$md + 1) and (pointer:fine){.e-acts .btn{height:30px}}
+
+/* selector de la sucursal activa, en las acciones del encabezado de Plazas, Servicios y Turnos */
+.sel.picker{width:auto;min-width:220px;max-width:100%}
+/* acción destructiva del pie, separada de Cancelar y Guardar */
+.dfoot .push{margin-right:auto}
+/* un error dentro de un panel no es otra tarjeta */
+.panel .errbox{box-shadow:none;background:none}
+/* turno presionado: respuesta inmediata al tocar o agarrar, antes de cualquier arrastre */
+.shb:not(.ro):active{background:color-mix(in srgb,var(--ac) 40%,var(--surface))}
+.shb.cl:not(.ro):active{background:var(--line)}
+
+/* Íconos chicos dentro de texto de 12 px (chips de jornada, "Modificado" del calendario) */
+.i.xs{width:12px;height:12px}
+.errchip{display:inline-flex;align-items:center;gap:4px}
+/* "Modificado" en el encabezado del día: se toca en 32 px sin agrandar la fila */
+.ch .bd.mod{position:relative;display:inline-flex;align-items:center;gap:3px}
+.ch .bd.mod::before{content:"";position:absolute;inset:-9px -8px}
+/* Número protagonista del detalle: tracking negativo y leading corto porque es grande */
+.bigrow{display:flex;align-items:baseline;gap:12px}
+.bignum{font-size:34px;font-weight:600;line-height:1.05;letter-spacing:-.02em;font-optical-sizing:auto}
+/* Muestras de la leyenda del calendario: los mismos colores que los bloques */
+.legend .sw-shift{background:color-mix(in srgb,var(--ac) 24%,var(--surface));border-left:3px solid var(--ac-h)}
+.legend .sw-closed{background:var(--hover);border:1px solid var(--line)}
+.legend .sw-hol{background:color-mix(in srgb,var(--err) 14%,var(--surface));border-left:3px solid var(--err)}
+/* Estado vacío dentro de un panel que ya tiene su encabezado */
+.empty.inset{padding:36px 0 20px}
+/* Ayuda del calendario: la primera oración a la vista, el resto plegado */
+.howto{padding:8px 0 12px;display:grid;gap:4px}
+.howto summary{width:max-content;cursor:pointer;color:var(--ac-tx);font-size:12.5px;font-weight:500;min-height:32px;display:flex;align-items:center}
+.howto details p{margin:0}
+/* Cerrar un error: a la derecha y con el color del texto, no el del ícono del aviso */
+.toast .tx{flex:none;margin:-4px -6px -4px 2px}
+.toast .tx .i{color:var(--tx2)}
+/* Filtros segmentados: cada opción entera; si no entran, la fila se desliza */
+.seg{overscroll-behavior-x:contain;scrollbar-width:thin}
+.seg button{flex:none}
 
 }

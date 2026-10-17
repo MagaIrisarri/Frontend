@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { Drawer } from '../../components/Owner/ui/Layer';
 import { Presence } from '../../components/Owner/ui/Presence';
 import { Field, Input, apiError } from '../../components/Owner/ui/Field';
@@ -15,7 +16,7 @@ const PLATE_HELP = 'Letras y números, sin espacios.';
 
 // R-29: ingreso de mostrador. Patente, vehículo, cliente y horas; el inicio (ahora, sin segundos) lo fija el servidor.
 export default function WalkInDrawer({ open, ...p }: WalkInProps & { open: boolean }) { return <Presence open={open}><WalkIn {...p} /></Presence>; }
-type WalkInProps = { parking: EParking; onChange: () => Promise<void>; onClose: () => void };
+type WalkInProps = { parking: EParking; onChange: () => Promise<any>; onClose: () => void };
 function WalkIn({ parking, onChange, onClose }: WalkInProps) {
   const toast = useToast();
   const [v, setV] = useState(EMPTY);
@@ -25,18 +26,19 @@ function WalkIn({ parking, onChange, onClose }: WalkInProps) {
   const [models, setModels] = useState<any[]>([]);
   const [offer, setOffer] = useState<Svc[]>([]);
   const [err, setErr] = useState<Record<string, string>>({});
+  const [srvErr, setSrvErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof EMPTY) => (e: { target: { value: string } }) => { setV(x => ({ ...x, [k]: e.target.value })); setErr(x => ({ ...x, [k]: '' })); };
+  const set = (k: keyof typeof EMPTY) => (e: { target: { value: string } }) => { setV(x => ({ ...x, [k]: e.target.value })); setErr(x => ({ ...x, [k]: '' })); setSrvErr(''); };
 
   useEffect(() => {
     getBrands().then(x => setBrands(list(x))).catch(() => toast('No se pudieron cargar las marcas.', 'err'));
     getParkingServices(parking.id).then(x => setOffer(list(x).filter((s: any) => s.expirationDate == null)
       .map((s: any) => ({ id: s.id, name: s.serviceCatalog?.name ?? 'Servicio', price: Number(s.price) })))).catch(() => setOffer([]));
-  }, [parking.id, toast]);
+  }, [parking.id]);
   useEffect(() => {
     setModels([]);
     if (v.brandId) getModels(v.brandId).then(x => setModels(list(x))).catch(() => toast('No se pudieron cargar los modelos.', 'err'));
-  }, [v.brandId, toast]);
+  }, [v.brandId]);
 
   // Horas posibles: desde el mínimo de la sucursal hasta lo que queda hasta el cierre, sin pasar el máximo.
   // L-04: la hora de ahora en Argentina; el fin, ahora sin segundos + h horas (igual que el backend).
@@ -67,6 +69,8 @@ function WalkIn({ parking, onChange, onClose }: WalkInProps) {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    setSrvErr('');
     const e2: Record<string, string> = {};
     if (plateSt !== 'ok') e2.plate = 'La patente no tiene un formato argentino válido.';
     if (!v.brandId) e2.brandId = 'Elegí la marca.';
@@ -89,20 +93,22 @@ function WalkIn({ parking, onChange, onClose }: WalkInProps) {
       toast(`Ingreso de ${plate} registrado${space ? ` en la plaza ${space}` : ''}.`);
       if (res?.accountCreated) toast(`Se creó la cuenta de ${v.email.trim()}; su contraseña inicial es su DNI.`, 'info');
       onClose();
-    } catch (x) { toast(apiError(x, 'No se pudo registrar el ingreso.'), 'err'); }
+    } catch (x) { setSrvErr(apiError(x, 'No se pudo registrar el ingreso.')); }
     setBusy(false);
   };
 
   return (
     <Drawer title="Nuevo ingreso" sub={`Ahora ${hhmm(nowD)} · cliente de mostrador`} onClose={onClose} focusSel="[data-first]"
-      footer={<div className="dfoot"><button type="button" className="btn" onClick={onClose}>Cancelar</button>
+      footer={<div className="dfoot">
+        {srvErr && <span className="fmsg push ferr" role="alert"><AlertCircle className="i sm" aria-hidden="true" />{srvErr}</span>}
+        <button type="button" className="btn" onClick={onClose}>Cancelar</button>
         <button className="btn pri" type="submit" form="wform" disabled={busy || !!blocked || noRate || noSpaces}>Registrar ingreso</button></div>}>
       <form id="wform" noValidate className="dbody" onSubmit={submit}>
         {blocked && <div className="e-note warn" role="alert"><span>{blocked}</span></div>}
         <Field label="Patente" error={err.plate} hint={plateMsg}>
           {(id, aria) => <input className="inp plate" id={id} {...aria} placeholder="Patente" autoComplete="off" maxLength={7} value={v.plate} data-first
             aria-invalid={plateSt === 'bad' || !!err.plate || undefined}
-            onChange={e => { setV(x => ({ ...x, plate: cleanPlate(e.target.value) })); setErr(x => ({ ...x, plate: '' })); }} />}
+            onChange={e => { setV(x => ({ ...x, plate: cleanPlate(e.target.value) })); setErr(x => ({ ...x, plate: '' })); setSrvErr(''); }} />}
         </Field>
 
         {plateSt === 'ok' && <>

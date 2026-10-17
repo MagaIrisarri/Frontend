@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
-export function PageHead({ eyebrow, title, sub, actions }: { eyebrow?: string; title: string; sub?: ReactNode; actions?: ReactNode }) {
+// Sin etiqueta sobre el título: el h1 se sostiene solo (craft-floor).
+export function PageHead({ title, sub, actions }: { title: string; sub?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="pagehead">
-      <div>{eyebrow && <div className="eyebrow">{eyebrow}</div>}<h1>{title}</h1>{sub && <p className="sub">{sub}</p>}</div>
+      <div><h1>{title}</h1>{sub && <p className="sub">{sub}</p>}</div>
       <div>{actions}</div>
     </div>
   );

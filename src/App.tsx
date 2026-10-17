@@ -13,7 +13,6 @@ import OwnerLayout from './pages/Owner/OwnerLayout';
 import OwnerShifts from './pages/Owner/OwnerShifts';
 import { ProtectedRoute, ClientOrGuestRoute } from './components/Auth/ProtectedRoute';
 import OwnerSpaces from './pages/Owner/OwnerSpaces';
-import MetricsView from './pages/Owner/MetricsView';
 import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
 import AdminPanel from './pages/Admin/AdminPanel';
 import AdminService from './pages/Admin/AdminService';
@@ -34,6 +33,11 @@ import { ScrollLockGuard } from './components/Owner/ui/ScrollLockGuard';
 function RedirectToParkingSpaces() {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={`/owner/spaces?p=${id}`} replace />;
+}
+// La vieja pantalla de métricas: el Panel abre el detalle de la sucursal de ?p, donde está su historial.
+function RedirectToParkingDetail() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/owner?p=${id}`} replace />;
 }
 
 export function App() {
@@ -119,15 +123,8 @@ export function App() {
         {/* El listado, el alta y la edición de sucursales viven en /owner; las rutas viejas caen en el fallback */}
         <Route path="/my-parkings/:id/spaces" element={<RedirectToParkingSpaces />} />
 
-        {/* Métricas y reportes de facturación */}
-        <Route
-          path="/parkings/:id/metrics"
-          element={
-            <ProtectedRoute allowedRoles={['DUEÑO']}>
-              <MetricsView />
-            </ProtectedRoute>
-          }
-        />
+        {/* Las métricas viven en el detalle de la sucursal ("Historial"), dentro del panel del dueño */}
+        <Route path="/parkings/:id/metrics" element={<RedirectToParkingDetail />} />
 
 
         {/* Redirecciones de compatibilidad para plazas */}

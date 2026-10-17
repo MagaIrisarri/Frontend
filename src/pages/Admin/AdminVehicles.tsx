@@ -4,6 +4,8 @@ import { Drawer } from '../../components/Owner/ui/Layer';
 import { Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
 import { FilterBar } from '../../components/Owner/ui/FilterBar';
+import { useSortable } from '../../components/Owner/ui/Sortable';
+import { formatStamp } from '../../utils/date';
 import { VICON, iconOf } from '../../components/Owner/ui/vehicles';
 import { getVehicles } from '../../services/vehicle.service';
 import { matchesQuery } from '../../utils/search';
@@ -14,6 +16,7 @@ interface V {
   id: string; plate: string; year?: number; color?: string | null;
   brand?: { name: string }; model?: { name: string }; vehicleType?: { name: string }; insurance?: { name: string } | null;
   client?: Client;
+  createdAt?: string | null; updatedAt?: string | null; // 'AAAA-MM-DD' (columnas de solo día)
 }
 const fullName = (c?: Client) => (c ? `${c.name} ${c.last_name}` : '—');
 const Car = VICON.AUTO;
@@ -36,17 +39,26 @@ export default function AdminVehicles() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // Clic en el encabezado ordena por esa columna (otro clic invierte); por defecto, por patente. Desempata la patente.
+  const { sorted, th } = useSortable<V, 'plate' | 'model' | 'type' | 'insurance' | 'client' | 'since'>({
+    plate: v => v.plate,
+    model: v => `${v.brand?.name ?? ''} ${v.model?.name ?? ''}`,
+    type: v => typeLabel(v.vehicleType?.name ?? ''),
+    insurance: v => v.insurance?.name ?? '',
+    client: v => (v.client ? `${v.client.last_name} ${v.client.name}` : ''),
+    since: v => v.createdAt ?? '',
+  }, { k: 'plate', d: 1 }, (a, b) => a.plate.localeCompare(b.plate));
+
   const types = [...new Set(list.map(v => v.vehicleType?.name).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, 'es'));
   // La patente se busca también sin espacios ("AB 123 CD"); el resto, con matchesQuery (sin tildes ni mayúsculas, todas las palabras).
   const plateQ = q.trim().toUpperCase().replace(/\s/g, '');
-  const shown = list
+  const shown = sorted(list)
     .filter(v => (ft === 'all' || v.vehicleType?.name === ft)
-      && (!q.trim() || v.plate.toUpperCase().includes(plateQ) || matchesQuery(q, `${v.brand?.name ?? ''} ${v.model?.name ?? ''} ${fullName(v.client)}`)))
-    .sort((a, b) => a.plate.localeCompare(b.plate));
+      && (!q.trim() || v.plate.toUpperCase().includes(plateQ) || matchesQuery(q, `${v.brand?.name ?? ''} ${v.model?.name ?? ''} ${fullName(v.client)}`)));
 
   let body;
   if (status === 'error') body = <ErrorBox what="los vehículos" onRetry={load} />;
-  else if (status === 'loading') body = <SkeletonRows n={6} cols={5} />;
+  else if (status === 'loading') body = <SkeletonRows n={6} cols={6} />;
   else if (!list.length) body = <Empty icon={<Car className="i" />} title="Todavía no hay vehículos">Los vehículos aparecen acá cuando los clientes los registran.</Empty>;
   else if (!shown.length) body = (
     <Empty icon={<Search className="i" />} title="Sin resultados"
@@ -55,8 +67,8 @@ export default function AdminVehicles() {
     </Empty>);
   else body = (
     <div className="panel tw"><table className="tbl">
-      <colgroup><col style={{ width: 130 }} /><col /><col style={{ width: 120 }} /><col style={{ width: 170 }} /><col style={{ width: '24%' }} /></colgroup>
-      <thead><tr><th>Patente</th><th>Marca y modelo</th><th>Tipo</th><th>Seguro</th><th>Cliente</th></tr></thead>
+      <colgroup><col style={{ width: 130 }} /><col /><col style={{ width: 120 }} /><col style={{ width: 170 }} /><col style={{ width: '24%' }} /><col style={{ width: 130 }} /></colgroup>
+      <thead><tr>{th('plate', 'Patente')}{th('model', 'Marca y modelo')}{th('type', 'Tipo')}{th('insurance', 'Seguro')}{th('client', 'Cliente')}{th('since', 'Alta')}</tr></thead>
       <tbody>{shown.map(v => (
         <tr key={v.id}>
           <td><span className="plate">{v.plate}</span>{v.year && <div className="ad">{v.year}{v.color ? ` · ${v.color}` : ''}</div>}</td>
@@ -66,6 +78,7 @@ export default function AdminVehicles() {
           <td data-label="Cliente">{v.client
             ? <button type="button" className="link" aria-label={`Ver datos de ${fullName(v.client)}`} onClick={() => setClient(v.client!)}>{fullName(v.client)}</button>
             : <span className="na">—</span>}</td>
+          <td data-label="Alta">{formatStamp(v.createdAt)}{v.updatedAt && v.updatedAt !== v.createdAt && <div className="ad">Modificado {formatStamp(v.updatedAt)}</div>}</td>
         </tr>
       ))}</tbody>
     </table></div>

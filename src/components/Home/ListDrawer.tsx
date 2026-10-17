@@ -8,6 +8,7 @@ import {
   formatSpotPrice,
   getTypeSpaces,
   getUnavailableReason,
+  isPresential,
 } from '../../utils/parkingPriceUtils';
 import { Empty, ErrorBox } from '../Owner/ui/Page';
 import { Presence } from '../Owner/ui/Presence';
@@ -121,6 +122,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
   const renderCard = (p: Parking) => {
     const isSelected = p.id === selectedParkingId;
     const reason = category ? getUnavailableReason(p, category.id) : null;
+    const presential = isPresential(p);
     const imgUrl = p.imageUrl || p.image || DEFAULT_PARKING_IMAGE;
     const counts = (p.spaceTypes ?? []).map((t) => ({ Icon: iconOf(t.name), n: t.available ?? t.capacity, label: typeLabel(t.name).toLowerCase() }));
 
@@ -179,17 +181,21 @@ export const ListDrawer: React.FC<any> = (props: any) => {
             <span className="pr">
               {p.prices && p.prices.length > 0 ? formatSpotPrice(p, category).text : `${p.openingTime} - ${p.closingTime} hs`}
             </span>
-            <button
-              type="button"
-              className={`btn sm${isSelected ? ' pri' : ''}`}
-              disabled={!!reason}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenReservation(p);
-              }}
-            >
-              Reservar
-            </button>
+            {presential ? (
+              <span className="tag mute">Solo presencial</span>
+            ) : (
+              <button
+                type="button"
+                className={`btn sm${isSelected ? ' pri' : ''}`}
+                disabled={!!reason}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenReservation(p);
+                }}
+              >
+                Reservar
+              </button>
+            )}
           </div>
         </div>
       </article>
@@ -320,15 +326,21 @@ export const ListDrawer: React.FC<any> = (props: any) => {
           </div>
 
           <div className="dfoot">
-            <button
-              type="button"
-              className="btn pri"
-              disabled={!!category && getTypeSpaces(sp, category.id) <= 0}
-              onClick={() => handleOpenReservation(sp)}
-            >
-              Reservar en esta cochera
-              <ChevronRight className="i sm" />
-            </button>
+            {isPresential(sp) ? (
+              <p className="presential" role="note">
+                <strong>Solo presencial.</strong> Por ahora no toma reservas online: acercate y te atienden en el lugar.
+              </p>
+            ) : (
+              <button
+                type="button"
+                className="btn pri"
+                disabled={!!category && getTypeSpaces(sp, category.id) <= 0}
+                onClick={() => handleOpenReservation(sp)}
+              >
+                Reservar en esta cochera
+                <ChevronRight className="i sm" />
+              </button>
+            )}
           </div>
         </>
       ) : (
