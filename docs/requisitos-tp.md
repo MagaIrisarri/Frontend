@@ -2,13 +2,13 @@
 
 Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Frontend separados), con el estado de cada punto. Es parte del arnés: los `CLAUDE.md` de los dos repos apuntan acá.
 
-- **Revisado el 2026-10-14** (las filas de entrega se actualizaron el 17/10; el resto no se volvió a verificar) leyendo el código y los commits (solo se corrieron las pruebas del Backend afectadas por D-10): Backend `aa56d66` (`prueba-valen-bk`), Frontend `66e80c5` (`prueba-valen-fr`), y `main` (Backend, `1d95828`) y `master` (Frontend, `b8383d4`) en GitHub. Ninguna rama de trabajo está mergeada todavía.
+- **Revisado el 2026-10-16:** `main` (Backend, `8971f3b`, PR [MagaIrisarri/Backend#10](https://github.com/MagaIrisarri/Backend/pull/10)) y `master` (Frontend, `57d2e5b`, PR [MagaIrisarri/Frontend#14](https://github.com/MagaIrisarri/Frontend/pull/14)), con las ramas prueba-valen-* mergeadas. Se corrieron las pruebas de la cátedra y las e2e locales (53/53).
 - **No repite** [revision-alcance.md](revision-alcance.md), que tiene cada CRUD, listado y CUU del proposal con su evidencia. Acá van los requisitos técnicos, las reglas de la FAQ, las entregas, la documentación, la gestión y la guía de estilo.
 - Al cerrar una fila, se actualiza su estado con el hash del commit, como en las notas del dueño.
 
 ## Resumen
 
-- **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), también la regla de la FAQ del detalle que pide datos al backend. La regularidad está completa, con los PR [MagaIrisarri/Backend#9](https://github.com/MagaIrisarri/Backend/pull/9) y [MagaIrisarri/Frontend#13](https://github.com/MagaIrisarri/Frontend/pull/13).
+- **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), también la regla de la FAQ del detalle que pide datos al backend. La regularidad está completa, con los PR [MagaIrisarri/Backend#10](https://github.com/MagaIrisarri/Backend/pull/10) y [MagaIrisarri/Frontend#14](https://github.com/MagaIrisarri/Frontend/pull/14).
 - **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, Backend `a183668`, Frontend `82162df`). Los tests de la cátedra están en `tests-catedra/` de cada repo: 5 unitarias y 1 de integración del backend, 1 de componente y 1 e2e del frontend. La evidencia está en `Backend/docs/tests.md`. Faltan la documentación de la API, el deploy y el video.
 
 ## Fuentes
@@ -95,7 +95,7 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 
 | Entregable | Reg. | Apr. | Estado | Qué falta |
 |---|:-:|:-:|---|---|
-| `docs/README.md` enlazado desde el README | X | X | Backend: en `main` [MagaIrisarri/Backend#9](https://github.com/MagaIrisarri/Backend/pull/9). Frontend: en `master` [MagaIrisarri/Frontend#13](https://github.com/MagaIrisarri/Frontend/pull/13) | — |
+| `docs/README.md` enlazado desde el README | X | X | Backend: en `main` [MagaIrisarri/Backend#9](https://github.com/MagaIrisarri/Backend/pull/10). Frontend: en `master` [MagaIrisarri/Frontend#13](https://github.com/MagaIrisarri/Frontend/pull/14) | — |
 | README con instalación y ejecución por scripts | X | X | Cumple en `main` y en `master` | — |
 | Proposal actualizada con los links a los PR | X | X | Cumple: el proposal enlaza los repos y los PR | — |
 | Links a los PR/MR en la documentación | X | X | Cumple: los `docs/README.md` enlazan los PR concretos | — |
