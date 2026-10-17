@@ -8,6 +8,7 @@ import { Field, Input, Password, apiError } from '../../components/Owner/ui/Fiel
 import { Menu } from '../../components/Owner/ui/Menu';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { createEmployee, deleteEmployee, getEmployeesByOwner, reactivateEmployee, updateEmployee } from '../../services/employee.service';
+import { useSortable } from '../../components/Owner/ui/Sortable';
 import { useOwner, type Emp } from './OwnerContext';
 import { initials, shiftsText } from './owner.lib';
 
@@ -38,8 +39,13 @@ export default function OwnerEmployees() {
   };
 
   const ql = q.trim().toLowerCase();
-  const list = employees.filter(e => (!ep || (ep === 'none' ? !e.parkingId : e.parkingId === ep))
-    && (!ql || `${e.name} ${e.last_name} ${e.email} ${e.dni}`.toLowerCase().includes(ql)));
+  // Orden por columna, como en Reservas: nombre, DNI, teléfono o sucursal (los sin asignar quedan juntos).
+  const parkingName = (e: Emp) => parkings.find(p => p.id === e.parkingId)?.name ?? '';
+  const { sorted, th } = useSortable<Emp, 'name' | 'dni' | 'phone' | 'parking'>({
+    name: e => `${e.name} ${e.last_name}`, dni: e => Number(e.dni) || 0, phone: e => e.phone ?? '', parking: parkingName,
+  }, { k: 'name', d: 1 }, (a, b) => `${a.name} ${a.last_name}`.localeCompare(`${b.name} ${b.last_name}`, 'es'));
+  const list = sorted(employees.filter(e => (!ep || (ep === 'none' ? !e.parkingId : e.parkingId === ep))
+    && (!ql || `${e.name} ${e.last_name} ${e.email} ${e.dni}`.toLowerCase().includes(ql))));
 
   const remove = async () => {
     const e = del!;
@@ -56,8 +62,8 @@ export default function OwnerEmployees() {
   else if (status === 'loading' || (showGone && !gone)) body = <SkeletonRows n={4} />;
   else if (showGone) body = !gone!.length ? <Empty icon={<Users className="i" />} title="No hay empleados dados de baja" /> : (
     <div className="panel tw"><table className="tbl em">
-      <thead><tr><th>Empleado</th><th>DNI</th><th>Teléfono</th><th><span className="sr">Acciones</span></th></tr></thead>
-      <tbody>{gone!.filter(e => !ql || `${e.name} ${e.last_name} ${e.email} ${e.dni}`.toLowerCase().includes(ql)).map(e => (
+      <thead><tr>{th('name', 'Empleado')}{th('dni', 'DNI')}{th('phone', 'Teléfono')}<th><span className="sr">Acciones</span></th></tr></thead>
+      <tbody>{sorted(gone!.filter(e => !ql || `${e.name} ${e.last_name} ${e.email} ${e.dni}`.toLowerCase().includes(ql))).map(e => (
         <tr key={e.id}>
           <td><div className="l" style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}><span className="av lg">{initials(e.name, e.last_name)}</span>
             <div style={{ minWidth: 0 }}><span className="nm">{e.name} {e.last_name}</span><div className="ad">{e.email}</div></div></div></td>
@@ -77,7 +83,7 @@ export default function OwnerEmployees() {
   else body = (
     <div className="panel tw"><table className="tbl em">
       <colgroup><col /><col style={{ width: 110 }} /><col style={{ width: 140 }} /><col style={{ width: '30%' }} /><col style={{ width: 152 }} /></colgroup>
-      <thead><tr><th>Empleado</th><th>DNI</th><th>Teléfono</th><th>Sucursal y turno</th><th><span className="sr">Acciones</span></th></tr></thead>
+      <thead><tr>{th('name', 'Empleado')}{th('dni', 'DNI')}{th('phone', 'Teléfono')}{th('parking', 'Sucursal y turno')}<th><span className="sr">Acciones</span></th></tr></thead>
       <tbody>{list.map(e => {
         const p = parkings.find(x => x.id === e.parkingId), sh = p ? shiftsText(templates[p.id], e.id) : [];
         return (

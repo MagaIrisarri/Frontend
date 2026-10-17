@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Search } from 'lucide-react';
 import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
 import { Presence, Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
@@ -9,6 +9,7 @@ import { useToast } from '../../components/Owner/ui/Toasts';
 import { cancelReservation, getReservation } from '../../services/reservation.service';
 import { getRange } from '../../services/shift.service';
 import { Stars } from '../../components/Owner/ui/Stars';
+import { useSortable } from '../../components/Owner/ui/Sortable';
 import { useOwner, type Emp } from './OwnerContext';
 import {
   RS, addD, billLines, cap, downloadCsv, fmtD, fmtH, initials, mm, money, normRes, plural, shD, today, type Res, type ResState,
@@ -43,28 +44,13 @@ export default function OwnerReservations() {
 
 type SortKey = 'code' | 'desde' | 'hasta' | 'horas' | 'emp' | 'monto';
 
-// Orden por columna, compartido por el listado por fecha y el resumen mensual.
+// Orden por columna, compartido por el listado por fecha y el resumen mensual (useSortable, como Personal).
 function useSort(employees: Emp[], init: { k: SortKey; d: 1 | -1 }) {
-  const [sort, setSort] = useState(init);
   const emp = (id: string | null) => employees.find(e => e.id === id);
-  const KEY: Record<SortKey, (r: Res) => string | number> = {
+  const { sorted, th } = useSortable<Res, SortKey>({
     code: r => r.code, desde: r => r.date + r.start, hasta: r => r.endDate + r.end, horas: r => r.hours,
     emp: r => empName(emp(r.eid)), monto: r => r.amount ?? -1,
-  };
-  const sorted = (list: Res[]) => [...list].sort((a, b) => {
-    const x = KEY[sort.k](a), z = KEY[sort.k](b);
-    return (x < z ? -1 : x > z ? 1 : 0) * sort.d || (a.date + a.start).localeCompare(b.date + b.start);
-  });
-  const th = (k: SortKey, l: string, c = '') => {
-    const on = sort.k === k;
-    return (
-      <th className={c} aria-sort={on ? (sort.d > 0 ? 'ascending' : 'descending') : 'none'}>
-        <button type="button" className={`thb${on ? ' on' : ''}`} onClick={() => setSort({ k, d: on ? (-sort.d as 1 | -1) : 1 })}>
-          {l}<ChevronDown className="i sm" style={{ transform: on && sort.d < 0 ? 'rotate(180deg)' : undefined, opacity: on ? 1 : 0 }} />
-        </button>
-      </th>
-    );
-  };
+  }, init, (a, b) => (a.date + a.start).localeCompare(b.date + b.start));
   return { emp, sorted, th };
 }
 
