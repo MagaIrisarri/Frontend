@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, Building2, CalendarDays, Check, Circle, DollarSign, Eye, LayoutGrid, Layers, Lock, MoreVertical,
+  AlertTriangle, Building2, CalendarDays, Check, DollarSign, Eye, LayoutGrid, Layers, Lock, MoreVertical,
   Pause, Pencil, Plus, Power, Search, Users,
 } from 'lucide-react';
 import { ConfirmModal, Drawer } from '../../components/Owner/ui/Layer';
@@ -18,8 +18,8 @@ import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
 import ParkingDrawer from './ParkingDrawer';
 import {
-  CLOSED, cap, capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, missing, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
-  typeLabel, typePlural, typesAcross, typesOf, type Day,
+  cap, capOf, svcOf, coverage, gapGroups, hrs, initials, issues, lvl, money, oc, occOf, pct, plural, priceOf, shiftsText, span, today, tot,
+  typeLabel, typePlural, typesAcross, typesOf,
 } from './owner.lib';
 
 import { matchesQuery } from '../../utils/search';
@@ -43,31 +43,6 @@ function OccBar({ value, label }: { value: number; label: string }) {
   return <div className={`bar-t ${lvl(value)}`} role="img" aria-label={label}><i style={{ width: `${Math.min(100, value)}%` }} /></div>;
 }
 
-
-// Puesta en marcha: lo que le falta a una sucursal para recibir reservas, en el orden en que se configura.
-// `k` es la vista de cada paso (/owner/<k>?p=id).
-type Step = { k: string; l: string; todo: string; done: boolean };
-function setupOf(p: Parking, employees: { parkingId?: string | null }[], week?: Day[]): Step[] {
-  const spaces = tot(p) > 0;
-  return [
-    { k: 'spaces', l: 'Plazas', todo: 'Agregar plazas', done: spaces },
-    { k: 'tariffs', l: 'Tarifas', todo: 'Cargar tarifas', done: spaces && !missing(p).length },
-    { k: 'employees', l: 'Personal', todo: 'Sumar personal', done: employees.some(e => e.parkingId === p.id) },
-    // Un turno de un empleado alcanza para el paso; la cobertura completa ya la avisa issues() (R-01).
-    { k: 'shifts', l: 'Turnos', todo: 'Armar turnos', done: !!week?.some(d => d.some(x => x.who !== CLOSED)) },
-  ];
-}
-
-function SetupSteps({ p, steps }: { p: Parking; steps: Step[] }) {
-  const navigate = useNavigate();
-  return (
-    <ol className="setup" aria-label={`Puesta en marcha de ${p.name}`}>
-      {steps.map(s => <li key={s.k}>{s.done
-        ? <span className="st ok"><Check className="i sm" />{s.l}<span className="sr">: listo</span></span>
-        : <button type="button" className="link" onClick={() => navigate(`/owner/${s.k}?p=${p.id}`)}><Circle className="i sm" />{s.todo}</button>}</li>)}
-    </ol>
-  );
-}
 
 export default function OwnerDashboard() {
   const { parkings, templates, reservations, employees, status, refresh } = useOwner();
@@ -168,9 +143,6 @@ export default function OwnerDashboard() {
   ];
 
   const loading = status === 'loading';
-  const pendingSetup = status === 'ready'
-    ? parkings.map(p => ({ p, steps: setupOf(p, employees, templates[p.id]) })).filter(x => x.steps.some(s => !s.done))
-    : [];
   let body;
   if (status === 'error') body = <ErrorBox what="tus sucursales" onRetry={refresh} />;
   else if (loading) body = <SkeletonRows n={4} />;
@@ -212,16 +184,6 @@ export default function OwnerDashboard() {
 
   return (
     <>
-      {pendingSetup.length > 0 && (
-        <section className="panel setupcard" aria-labelledby="setup-h">
-          <div className="fh"><h2 id="setup-h">Puesta en marcha</h2>
-            <span className="ctx">{plural(pendingSetup.length, 'sucursal sin terminar de configurar', 'sucursales sin terminar de configurar')}</span></div>
-          <div className="list">{pendingSetup.map(({ p, steps }) => (
-            <div className="li" key={p.id}><button type="button" className="nm" onClick={() => setDetail(p)}>{p.name}</button><SetupSteps p={p} steps={steps} /></div>
-          ))}</div>
-        </section>
-      )}
-
       {loading ? <SkeletonRows n={2} cols={2} /> : (
         <div className="kpis">
           <section className="panel occ" aria-label="Ocupación actual">
@@ -306,8 +268,6 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onCloseB
   const n = pct(p), staff = employees.filter(e => e.parkingId === p.id);
   const cov = week?.some(d => d.length) ? coverage(week, ...span(p)) : null;
   const closed = shiftsText(week, '__closed');
-  const steps = setupOf(p, employees, week);
-  const doneSteps = steps.filter(s => s.done).length;
 
   return (
     <Drawer title={p.name} sub={`${p.address}, ${p.locality}`} onClose={onClose} focusSel=".dfoot .btn.pri"
@@ -318,9 +278,6 @@ function ParkingDetail({ p, employees, week, alerts, onClose, onToggle, onCloseB
         <button type="button" className="btn pri" onClick={onEdit}><Pencil className="i sm" />Editar sucursal</button>
       </div>}>
       <div className="dbody">
-        <div className="fs"><div className="fh"><h3>Puesta en marcha</h3><span className="ctx">{doneSteps} de {steps.length}</span></div>
-          <SetupSteps p={p} steps={steps} />
-        </div>
         {(p.imageUrl || p.image) && <img src={p.imageUrl || p.image} alt={`Fachada de ${p.name}`} style={{ width: '100%', height: 128, objectFit: 'cover', borderRadius: 8, marginTop: 16 }} />}
         <div className="fs"><div className="fh"><h3>Ocupación en vivo</h3>
           <StateChip p={p} /></div>

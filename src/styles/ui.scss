@@ -365,13 +365,6 @@
 @media(min-width:$sm + 1) and (pointer:fine){.e-cal button{height:42px}.e-opt{min-height:38px}}
 @media(min-width:$md + 1) and (pointer:fine){.e-acts .btn{height:30px}}
 
-/* Puesta en marcha de una sucursal: pasos hechos (chip) y pendientes (link a la vista del paso) */
-.setup{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0;padding:0;list-style:none}
-.setup .link{display:inline-flex;align-items:center;gap:6px;min-height:32px;font-size:13px;font-weight:500}
-.setupcard{padding:16px 20px;display:grid;gap:4px}
-.setupcard h2{font-size:15px;font-weight:600}
-.setupcard .li{flex-wrap:wrap}
-.setupcard .li .nm{flex:1 1 180px;min-width:0}
 /* selector de la sucursal activa, en las acciones del encabezado de Plazas, Servicios y Turnos */
 .sel.picker{width:auto;min-width:220px;max-width:100%}
 /* acción destructiva del pie, separada de Cancelar y Guardar */
