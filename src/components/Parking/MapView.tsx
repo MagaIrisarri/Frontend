@@ -69,9 +69,8 @@ function MapViewComponent({
       reason === 'NO_SPACE' ? 'Completo'
       : reason === 'NO_PRICE' || spotPrice.price === null ? (selectedVehicleType ? 'Sin tarifa' : 'Consultar')
       : `${selectedVehicleType ? '' : '<small>desde</small> '}$${spotPrice.price.toLocaleString('es-AR')}<small>/h</small>`;
-    // L-44: solo presencial se ve con su precio, en otro color y con el texto (no solo el color).
-    const tail = presential ? '<small> · presencial</small>' : '';
-    return `<div class="pin${isSelected ? ' sel' : ''}${isUnavailable ? ' na' : ''}${presential ? ' wi' : ''}">${icon}<span>${label}${tail}</span></div>`;
+    // L-44: solo presencial se ve con su precio, en gris; el detalle dice que no se reserva online.
+    return `<div class="pin${isSelected ? ' sel' : ''}${isUnavailable ? ' na' : ''}${presential ? ' wi' : ''}">${icon}<span>${label}</span></div>`;
   }, [selectedVehicleType]);
 
   // Helper para generar el contenido HTML de un Cluster

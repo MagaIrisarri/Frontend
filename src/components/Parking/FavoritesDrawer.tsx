@@ -100,7 +100,7 @@ export function FavoritesDrawer({
                       Ver en el mapa
                     </button>
                     {p.walkInOnly ? (
-                      <span className="tag warn">Solo presencial</span>
+                      <span className="tag mute">Solo presencial</span>
                     ) : (
                       <button
                         type="button"

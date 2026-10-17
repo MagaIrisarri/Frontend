@@ -182,7 +182,7 @@ export const ListDrawer: React.FC<any> = (props: any) => {
               {p.prices && p.prices.length > 0 ? formatSpotPrice(p, category).text : `${p.openingTime} - ${p.closingTime} hs`}
             </span>
             {presential ? (
-              <span className="tag warn">Solo presencial</span>
+              <span className="tag mute">Solo presencial</span>
             ) : (
               <button
                 type="button"

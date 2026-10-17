@@ -35,8 +35,7 @@
 
 /* ───── Lista y tarjetas ───── */
 .tag.mute{color:var(--tx2);background:var(--soft)}
-.tag.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,var(--surface));white-space:nowrap}
-.presential{font-size:13.5px;color:var(--tx2);padding:10px 12px;border-radius:var(--r-md);background:color-mix(in srgb,var(--warn) 12%,var(--surface))}.presential strong{color:var(--warn)}
+.presential{font-size:13.5px;color:var(--tx2);padding:10px 12px;border-radius:var(--r-md);background:var(--soft)}.presential strong{color:var(--tx)}
 .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 
 .pcard{display:flex;gap:12px;padding:12px;border:1px solid transparent;border-radius:var(--r-lg);background:var(--raised);cursor:pointer;transition:background .12s}
