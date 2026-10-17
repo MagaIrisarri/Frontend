@@ -83,7 +83,7 @@ export default function OwnerEmployees() {
   else body = (
     <div className="panel tw"><table className="tbl em">
       <colgroup><col /><col style={{ width: 110 }} /><col style={{ width: 140 }} /><col style={{ width: '30%' }} /><col style={{ width: 152 }} /></colgroup>
-      <thead><tr>{th('name', 'Empleado')}{th('dni', 'DNI')}{th('phone', 'Teléfono')}{th('parking', 'Sucursal y turno')}<th><span className="sr">Acciones</span></th></tr></thead>
+      <thead><tr>{th('name', 'Empleado')}{th('dni', 'DNI')}{th('phone', 'Teléfono')}{th('parking', 'Sucursal')}<th><span className="sr">Acciones</span></th></tr></thead>
       <tbody>{list.map(e => {
         const p = parkings.find(x => x.id === e.parkingId), sh = p ? shiftsText(templates[p.id], e.id) : [];
         return (
@@ -92,7 +92,7 @@ export default function OwnerEmployees() {
               <div style={{ minWidth: 0 }}><button type="button" className="nm" onClick={() => setForm(e)}>{e.name} {e.last_name}</button><div className="ad">{e.email}</div></div></div></td>
             <td data-label="DNI">{e.dni}</td>
             <td data-label="Teléfono">{e.phone || <span className="na">—</span>}</td>
-            <td className="c-wide" data-label="Sucursal y turno">{p ? (
+            <td className="c-wide" data-label="Sucursal">{p ? (
               <><div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}><Building2 className="i sm" /><span className="nm">{p.name}</span></div>
                 <div className="ad"><button type="button" className="link" title={`Ver turnos de ${p.name}`} onClick={() => navigate(`/owner/shifts?p=${p.id}`)}>{sh.length ? 'Ver turnos' : 'Definir turnos'}</button></div></>
             ) : <span className="st warn"><Unlink className="i sm" />Sin asignar</span>}</td>
