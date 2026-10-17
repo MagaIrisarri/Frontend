@@ -1,5 +1,5 @@
 import { AR_TZ } from '../../utils/date';
-import { AlertCircle, ArrowRightLeft, Bell, Calendar, Check, ChevronRight, Clock, FileText, LogIn, Pause, UserCheck, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowRightLeft, Bell, Calendar, CalendarDays, Check, ChevronRight, Clock, FileText, LogIn, Pause, UserCheck, XCircle } from 'lucide-react';
 import type { AppNotification, NotificationType } from '../../services/notification.service';
 import { Drawer } from '../Owner/ui/Layer';
 import OwnerShell from '../Owner/ui/OwnerShell';
@@ -27,7 +27,7 @@ interface NotificationsDrawerProps {
 
 const ICON: Record<NotificationType, typeof Bell> = {
   RESERVA_NUEVA: Calendar, RESERVA_CANCELADA: XCircle, RESERVA_VENCIDA: XCircle,
-  RESERVA_EXTENDIDA: Clock, PLAZA_CAMBIADA: ArrowRightLeft, SALIDA: FileText, RECORDATORIO: Bell, INGRESO: LogIn, RESERVA_TRANSFERIDA: UserCheck, SUCURSAL_LLENA: AlertCircle, SUCURSAL_PAUSADA: Pause,
+  RESERVA_EXTENDIDA: Clock, PLAZA_CAMBIADA: ArrowRightLeft, SALIDA: FileText, RECORDATORIO: Bell, INGRESO: LogIn, RESERVA_TRANSFERIDA: UserCheck, SUCURSAL_LLENA: AlertCircle, SUCURSAL_PAUSADA: Pause, FERIADOS_ACTUALIZADOS: CalendarDays,
 };
 
 // fmtD (owner.lib) exige 'YYYY-MM-DD'; acá llega la fecha y hora completa.

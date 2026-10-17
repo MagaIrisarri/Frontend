@@ -2,7 +2,8 @@ import { api } from './api';
 
 export type NotificationType =
   | 'RESERVA_NUEVA' | 'RESERVA_CANCELADA' | 'RESERVA_VENCIDA'
-  | 'RESERVA_EXTENDIDA' | 'PLAZA_CAMBIADA' | 'SALIDA' | 'RECORDATORIO' | 'INGRESO' | 'RESERVA_TRANSFERIDA' | 'SUCURSAL_LLENA' | 'SUCURSAL_PAUSADA';
+  | 'RESERVA_EXTENDIDA' | 'PLAZA_CAMBIADA' | 'SALIDA' | 'RECORDATORIO' | 'INGRESO' | 'RESERVA_TRANSFERIDA' | 'SUCURSAL_LLENA' | 'SUCURSAL_PAUSADA'
+  | 'FERIADOS_ACTUALIZADOS';
 
 export interface AppNotification {
   id: string;
@@ -32,6 +33,7 @@ export const notificationTarget = (n: AppNotification, role: string): string | n
     if (r.startsWith('DUE')) return `/owner?p=${n.parkingId}`;
     if (r === 'EMPLEADO') return '/employee';
   }
+  if (n.type === 'FERIADOS_ACTUALIZADOS' && r === 'ADMINISTRADOR') return '/admin/holidays?import=1'; // L-12
   return null;
 };
 

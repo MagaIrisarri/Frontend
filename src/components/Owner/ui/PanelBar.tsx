@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, ChevronDown, LogOut, Moon, RefreshCw, Sun, User } from 'lucide-react';
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Moon, RefreshCw, Sun, User } from 'lucide-react';
 import { Menu } from './Menu';
 import { useToast } from './Toasts';
 import { useTheme } from '../../../context/ThemeContext';
@@ -36,6 +36,28 @@ export default function PanelBar({ home, role, views = [], onRefresh, keep }: {
     const r = el.getBoundingClientRect(), nr = n.getBoundingClientRect();
     n.scrollBy({ left: r.left - nr.left - (nr.width - r.width) / 2, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [pathname]);
+  // Con mouse no hay gesto para deslizarla: flechas en el borde que tiene más secciones, y la rueda vertical la desliza.
+  const [edge, setEdge] = useState({ prev: false, next: false });
+  useEffect(() => {
+    const n = navRef.current;
+    if (!n) return;
+    const update = () => setEdge({ prev: n.scrollLeft > 1, next: n.scrollLeft + n.clientWidth < n.scrollWidth - 1 });
+    const wheel = (e: WheelEvent) => {
+      if (n.scrollWidth <= n.clientWidth || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      e.preventDefault();
+      n.scrollLeft += e.deltaY;
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(n);
+    n.addEventListener('scroll', update, { passive: true });
+    n.addEventListener('wheel', wheel, { passive: false });
+    return () => { ro.disconnect(); n.removeEventListener('scroll', update); n.removeEventListener('wheel', wheel); };
+  }, [views.length]);
+  const slide = (dir: 1 | -1) => {
+    const n = navRef.current;
+    n?.scrollBy({ left: dir * n.clientWidth * 0.7, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
 
   return (
     <header className="appbar">
@@ -43,9 +65,14 @@ export default function PanelBar({ home, role, views = [], onRefresh, keep }: {
         <NavLink className="brand" to={home} aria-label="ServicioCocheras, inicio"><span className="logo">SC</span><span>ServicioCocheras</span></NavLink>
         {views.length > 0 && <>
           <span className="sep" />
-          <nav className="nav" ref={navRef} aria-label={`Secciones del panel de ${role.toLowerCase()}`}>
-            {views.map(([to, l]) => <NavLink key={to} to={href(to)} end={to === home}>{l}</NavLink>)}
-          </nav>
+          <div className="navw">
+            {/* Solo para el mouse: con teclado se llega a cada sección con Tab, y el foco la trae a la vista. */}
+            {edge.prev && <button type="button" className="icon-btn navbtn prev" tabIndex={-1} aria-label="Ver secciones anteriores" onClick={() => slide(-1)}><ChevronLeft className="i" /></button>}
+            <nav className="nav" ref={navRef} aria-label={`Secciones del panel de ${role.toLowerCase()}`}>
+              {views.map(([to, l]) => <NavLink key={to} to={href(to)} end={to === home}>{l}</NavLink>)}
+            </nav>
+            {edge.next && <button type="button" className="icon-btn navbtn next" tabIndex={-1} aria-label="Ver más secciones" onClick={() => slide(1)}><ChevronRight className="i" /></button>}
+          </div>
         </>}
         <span className="grow" />
         {onRefresh && (

@@ -93,8 +93,12 @@ button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:tran
 .brand{color:var(--tx);text-decoration:none;display:flex;align-items:center;gap:8px;font-weight:600;letter-spacing:-.01em;margin-right:4px}
 .logo{width:24px;height:24px;border-radius:6px;background:var(--ac);color:var(--on-ac);display:grid;place-items:center;font-size:11px;font-weight:700;letter-spacing:-.02em}
 .sep{display:none;width:1px;height:20px;background:var(--line);margin:0 10px}
-/* la navegación se desliza de costado cuando no entra: sin barra visible y con los bordes fundidos para que se note que sigue */
-.nav{display:flex;order:5;width:calc(100% + 32px);height:44px;margin:0 -16px;padding:0 12px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,transparent,black 12px,black calc(100% - 24px),transparent);mask-image:linear-gradient(to right,transparent,black 12px,black calc(100% - 24px),transparent)}
+/* la navegación se desliza de costado cuando no entra: sin barra visible y con los bordes fundidos para que se note que sigue.
+   Con mouse no hay gesto de costado: aparecen flechas en el borde que tiene más secciones y la rueda la desliza (PanelBar). */
+.navw{position:relative;display:flex;order:5;width:calc(100% + 32px);height:44px;margin:0 -16px}
+.navbtn{display:none}
+@media(pointer:fine){.navbtn{display:grid;position:absolute;top:50%;z-index:1;transform:translateY(-50%);background:var(--surface);box-shadow:0 0 0 1px var(--line)}.navbtn.prev{left:4px}.navbtn.next{right:4px}}
+.nav{display:flex;flex:1;min-width:0;padding:0 12px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-mask-image:linear-gradient(to right,transparent,black 12px,black calc(100% - 24px),transparent);mask-image:linear-gradient(to right,transparent,black 12px,black calc(100% - 24px),transparent)}
 .nav::-webkit-scrollbar{display:none}
 .nav a{display:inline-flex;align-items:center;text-decoration:none;color:var(--tx2);padding:0 12px;height:100%;position:relative;font-weight:500}
 .nav a:hover{color:var(--tx)}
@@ -352,8 +356,8 @@ tr:hover .pv .del,.pv .del:focus-visible,tr:focus-within .pv .del{opacity:1}
   &{--bar-h:53px}
   .bar{height:52px;padding:0 24px;flex-wrap:nowrap;row-gap:6px}.sep{display:block}
   /* en una fila: la navegación toma el lugar que queda y se desliza si no entra; las acciones de la derecha nunca quedan afuera */
-  .nav{order:0;flex:1 1 auto;min-width:0;width:auto;height:100%;margin:0;padding:0 12px}
-  .nav+.grow{display:none}
+  .navw{order:0;flex:1 1 auto;min-width:0;width:auto;height:100%;margin:0}
+  .navw+.grow{display:none}
   .me .nm2{display:block}
   .page{padding:28px 24px 72px}.big{font-size:60px}
   .g2{grid-template-columns:1fr 1fr}
