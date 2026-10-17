@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { Drawer } from '../../components/Owner/ui/Layer';
 import { Presence } from '../../components/Owner/ui/Presence';
 import { addD, today } from '../Owner/owner.lib';
@@ -28,17 +28,20 @@ function Calendar({ value, worked, turno, onPick, onClose }: CalProps) {
       footer={<div className="dfoot"><button type="button" className="btn" onClick={() => onPick(now)}>Ir a hoy</button></div>}>
       <div className="dbody">
         <div className="e-cm">
-          <button type="button" className="btn sm" aria-label="Mes anterior" onClick={() => step(-1)}>‹</button>
+          <button type="button" className="btn sm" aria-label="Mes anterior" disabled={month <= min.slice(0, 7)} onClick={() => step(-1)}><ChevronLeft className="i" aria-hidden="true" /></button>
           <b>{title}</b>
-          <button type="button" className="btn sm" aria-label="Mes siguiente" onClick={() => step(1)}>›</button>
+          <button type="button" className="btn sm" aria-label="Mes siguiente" disabled={month >= max.slice(0, 7)} onClick={() => step(1)}><ChevronRight className="i" aria-hidden="true" /></button>
         </div>
         <div className="e-cal">
           {WEEK.map((w, i) => <span className="wd" key={i}>{w}</span>)}
           {Array.from({ length: lead }, (_, i) => <span key={`b${i}`} />)}
           {Array.from({ length: days }, (_, i) => {
             const iso = `${month}-${String(i + 1).padStart(2, '0')}`;
+            const d = new Date(y, m - 1, i + 1);
+            const hasShift = worked.includes(d.getDay());
+            const desc = `${d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}${hasShift ? ', día con turno' : ''}`;
             return (
-              <button type="button" key={iso} className={worked.includes(new Date(y, m - 1, i + 1).getDay()) ? 'w' : ''}
+              <button type="button" key={iso} className={hasShift ? 'w' : ''} aria-label={desc}
                 aria-pressed={iso === value} aria-current={iso === now ? 'date' : undefined} disabled={iso < min || iso > max}
                 onClick={() => onPick(iso)}>{i + 1}</button>
             );
