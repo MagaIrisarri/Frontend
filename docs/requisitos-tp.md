@@ -8,8 +8,8 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 
 ## Resumen
 
-- **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), también la regla de la FAQ del detalle que pide datos al backend. La entrega de regularidad está hecha: minutas, links a los PR y merge a `main` y `master` (Backend #9, Frontend #13).
-- **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, Backend `a183668`, Frontend `82162df`). Los tests de la cátedra están en `tests-catedra/` de cada repo (en `main` y `master`): 5 unitarias y 1 de integración del backend, 1 de componente y 1 e2e del frontend. La evidencia está en `Backend/docs/tests.md`. Faltan la documentación de la API, el deploy y el video.
+- **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), también la regla de la FAQ del detalle que pide datos al backend. La regularidad está completa, con los PR [MagaIrisarri/Backend#9](https://github.com/MagaIrisarri/Backend/pull/9) y [MagaIrisarri/Frontend#13](https://github.com/MagaIrisarri/Frontend/pull/13).
+- **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, Backend `a183668`, Frontend `82162df`). Los tests de la cátedra están en `tests-catedra/` de cada repo: 5 unitarias y 1 de integración del backend, 1 de componente y 1 e2e del frontend. La evidencia está en `Backend/docs/tests.md`. Faltan la documentación de la API, el deploy y el video.
 
 ## Fuentes
 
@@ -74,7 +74,7 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 | Apr. | 1 test unitario de un componente | Cumple (en `main` y `master`) | `tests-catedra/unit/Pager.test.tsx` (Vitest y Testing Library): rango visible, anterior y siguiente, bordes, estado ocupado y sin paginador con una sola página. `pnpm test` | |
 | Apr. | 1 test end-to-end | Cumple (en `main` y `master`) | `tests-catedra/e2e/search.spec.ts` con `playwright.config.ts`: abre la app en el navegador, busca por ciudad o barrio, filtra el listado y encuadra el mapa, con la API simulada dentro de la spec. `pnpm test:e2e` | Las 16 specs de `tests/e2e/` siguen locales |
 | Apr. | Login y acceso según el nivel de usuario | Cumple | `ProtectedRoute allowedRoles` en [App.tsx](../src/App.tsx): CLIENTE, DUEÑO, EMPLEADO y ADMINISTRADOR | Protege la navegación; el backend controla lo mismo en cada ruta (ver la tabla anterior) |
-| Apr. | Ambientes | Cumple, con matiz | `.env` con `VITE_API_URL` y `VITE_MAPTILER_API_KEY` | El `.env` está versionado (en `master` y en esta rama) aunque `.gitignore` lo excluye, y no hay `.env.example`. La key de MapTiler es de navegador: conviene restringirla por dominio |
+| Apr. | Ambientes | Cumple, con matiz | `.env` con `VITE_API_URL` y `VITE_MAPTILER_API_KEY` | El `.env` está versionado (en `master`) aunque `.gitignore` lo excluye, y no hay `.env.example`. La key de MapTiler es de navegador: conviene restringirla por dominio |
 
 ## Requisitos funcionales: lo que agrega la FAQ
 
@@ -95,11 +95,11 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 
 | Entregable | Reg. | Apr. | Estado | Qué falta |
 |---|:-:|:-:|---|---|
-| `docs/README.md` enlazado desde el README | X | X | Backend: en `main`. Frontend: solo en `prueba-valen-fr`, aunque el README de `master` ya lo enlaza | Mergear `prueba-valen-fr` |
-| README con instalación y ejecución por scripts | X | X | Cumple en `main` y en `master`; las ramas de trabajo tienen el README viejo | Al mergear, conservar el README de `main` y de `master` |
-| Proposal actualizada con los links a los PR | X | X | El proposal enlaza los repos, no los PR | Agregar los PR de la entrega (los últimos mergeados: [Backend #7](https://github.com/MagaIrisarri/Backend/pull/7) y [Frontend #11](https://github.com/MagaIrisarri/Frontend/pull/11)) |
-| Links a los PR/MR en la documentación | X | X | Los `docs/README.md` enlazan la lista de PR | Enlazar los PR concretos |
-| Minutas de reunión y avance | X | X | **Vacío**: la tabla del `docs/README.md` del Backend solo tiene el encabezado | Cargar las minutas |
+| `docs/README.md` enlazado desde el README | X | X | Backend: en `main` [MagaIrisarri/Backend#9](https://github.com/MagaIrisarri/Backend/pull/9). Frontend: en `master` [MagaIrisarri/Frontend#13](https://github.com/MagaIrisarri/Frontend/pull/13) | — |
+| README con instalación y ejecución por scripts | X | X | Cumple en `main` y en `master` | — |
+| Proposal actualizada con los links a los PR | X | X | Cumple: el proposal enlaza los repos y los PR | — |
+| Links a los PR/MR en la documentación | X | X | Cumple: los `docs/README.md` enlazan los PR concretos | — |
+| Minutas de reunión y avance | X | X | Cumple: 8 minutas, del 18/04 al 14/10, en el `docs/README.md` del Backend | — |
 | Seguimiento de features, bugs e issues | X | X | Cumple: tablero de Notion enlazado en el `docs/README.md` del Backend | — |
 | Documentación de la API | | X | No hay (ni OpenAPI ni un listado de endpoints) | Documentar los endpoints |
 | Evidencia de los tests automáticos | | X | [Backend `docs/tests.md`](https://github.com/MagaIrisarri/Backend/blob/main/docs/tests.md): tabla con autor, comandos y la salida de las 4 corridas (16/10/2026) | Hecho (`d74f2bb`) |
@@ -107,11 +107,11 @@ El estado de cada CRUD, listado y CUU está en revision-alcance.md (todo cumple)
 | Deploy, con links y credenciales | TBD | X | No hay configuración de deploy | Deploy con un MySQL hospedado. Las credenciales pueden ser las de la siembra (`password123`) |
 | Contacto para coordinar la defensa | | X | — | Va en el form |
 
-**Repositorio:** la FAQ pide crear el repo como fork de `utnfrrodsw/tp` y entregar por PR/MR. `TPDSW` no es un fork y no hay ningún PR a `utnfrrodsw/tp`, pero 3.3 dice que se entrega por el form. Hay que confirmar con el docente cuál rige.
+**Repositorio:** la FAQ pide crear el repo como fork de `utnfrrodsw/tp` y entregar por PR/MR. `TPDSW` no es un fork y no hay ningún PR a `utnfrrodsw/tp`, pero 3.3 dice que se entrega por el form. Confirmado con el docente (16/10/2026): se entrega por el formulario, sin fork.
 
 ## Gestión y evaluación (4 y 5)
 
-- **Gestión** (la cátedra la marca "en revisión"): pide declarar una metodología ágil (Scrum, XP u otra), minutas y seguimiento de features y bugs. La herramienta es libre si se enlaza. Hoy se usan Notion y ramas por feature con PR ([`docs/README.md` del Backend](https://github.com/MagaIrisarri/Backend/blob/main/docs/README.md)). Faltan cargar las minutas. La metodología quedó nombrada (Kanban) en el `docs/README.md` del Backend, pendiente de que el grupo la confirme.
+- **Gestión** (la cátedra la marca "en revisión"): pide declarar una metodología ágil (Scrum, XP u otra), minutas y seguimiento de features y bugs. La herramienta es libre si se enlaza. Hoy se usan Notion y ramas por feature con PR ([`docs/README.md` del Backend](https://github.com/MagaIrisarri/Backend/blob/main/docs/README.md)). La metodología quedó nombrada (Kanban) en el `docs/README.md` del Backend, pendiente de que el grupo la confirme.
 - **Evaluación:** se miran los requisitos de la etapa, UX/UI y buenas prácticas, el uso apropiado de la tecnología, la documentación, **la participación de cada integrante**, **el uso de git**, la defensa oral, la gestión y la innovación.
 
 ## Guía de estilo (Airbnb, sugerida)
