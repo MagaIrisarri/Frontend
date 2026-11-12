@@ -55,3 +55,6 @@ playwright/.cache/
 .agents/
 skills-lock.json
 scripts/ralph/
+
+# Material de estudio local
+guia-completa.pdf

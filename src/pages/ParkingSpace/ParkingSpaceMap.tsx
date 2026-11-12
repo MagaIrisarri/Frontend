@@ -8,6 +8,7 @@ import type { ParkingSpace } from '@/types/parkingSpace.types';
 import { cn } from '@/lib/utils.js';
 import type { ServicePrice } from '@/types/servicePrice.types';
 import { getParkingServices } from '@/services/servicePrice.service';
+import { money } from '../Owner/owner.lib';
 import { createReservation } from '../../services/reservation.service';
 import { today } from '../Owner/owner.lib';
 import { atAR } from '../../utils/date';
@@ -217,7 +218,7 @@ export function ParkingSpaceMap() {
                     {service.serviceCatalog.description}
                   </span>
                 </div>
-                <span className="text-sm font-semibold text-primary">+${service.price}</span>
+                <span className="text-sm font-semibold text-primary">+{money(Number(service.price))}</span>
               </label>
             ))}
           </div>
