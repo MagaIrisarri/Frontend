@@ -145,7 +145,7 @@ Donde el proyecto se aparta de Airbnb, manda su convención:
 ## Patrones de diseño para la defensa
 
 **Backend: Repository + inyección de dependencias.** Cada módulo separa `Route → Controller → Service → Repository`. Las reglas de negocio viven en el servicio, que no toca la base: pide todo al repositorio (MikroORM). Las dependencias no se crean dentro de las clases, se pasan por el constructor. El ejemplo es `ReservationService`:
-- `Reservation.Route.ts` instancia `ReservationRepository`, `InvoiceRepository`, `ParkingPriceRepository` y `ParkingSpaceRepository` con `orm.em`, y se los pasa al servicio junto con `scheduleService`, `notificationService` y `parkingService`. Después le pasa el servicio al `ReservationController`.
+- `Reservation.Route.ts` instancia `ReservationRepository`, `InvoiceRepository` y `ParkingPriceRepository` con `orm.em`, y se los pasa al servicio junto con `scheduleService`, `notificationService` y `parkingService`. Después le pasa el servicio al `ReservationController`.
 - Ventaja para explicar: el servicio se prueba y se reemplaza sin cambiar el acceso a datos (las pruebas de `tests-catedra/` usan el mismo `reservationService`), y las reglas compartidas (`scheduleService`) tienen una sola instancia.
 
 **Frontend: Provider (React Context) con observadores.** El estado compartido vive en un proveedor y los componentes lo consumen con un hook, sin pasarlo por props. Cuando el estado cambia, React vuelve a dibujar a quienes lo consumen, que es la idea del Observer. Ejemplos: `NotificationsContext` (cuenta de no leídas y panel de avisos, con polling), `ProfileContext` y `ThemeContext` en `src/context/`.
