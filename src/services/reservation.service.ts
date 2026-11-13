@@ -17,7 +17,9 @@ export const createReservation = (payload: {
 export const getReservationsByClient = (clientId: string) => api.get('/api/reservations/client/' + clientId).then(res => res.data);
 export const getReservationsByClientId = getReservationsByClient;
 
-export const getReservationsByOwner =(ownerId: string) => api.get('/api/reservations/owner/' + ownerId).then(res => res.data);
+// Con from/to ('AAAA-MM-DD', incluidos) solo las que empiezan en esos días; sin rango, todas.
+export const getReservationsByOwner = (ownerId: string, range: { from?: string; to?: string } = {}) =>
+  api.get('/api/reservations/owner/' + ownerId, { params: range }).then(res => res.data);
 export const getReservationsByParking = (parkingId: string) => api.get('/api/reservations/parking/' + parkingId).then(res => res.data);
 // Detalle de una reserva, en cualquier estado, con el importe y la factura.
 export const getReservation = (id: string) => api.get('/api/reservations/' + id).then(res => res.data);

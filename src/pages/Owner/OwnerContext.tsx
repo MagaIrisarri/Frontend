@@ -6,7 +6,11 @@ import { getEmployeesByOwner } from '../../services/employee.service';
 import { useAuthStore } from '../../stores/authStore';
 import type { Parking } from '../../types/parking.types';
 import { getTemplate } from '../../services/shift.service';
-import { fromServer, normRes, type Day, type Res } from './owner.lib';
+import { fromServer, isoD, normRes, today, type Day, type Res } from './owner.lib';
+
+// Rendimiento: el panel carga las reservas desde el primer día del mes anterior (resumen de hoy, en curso, pendientes futuras
+// y los dos últimos meses del listado). Un mes anterior lo pide aparte la pantalla Reservas (useMonthRes).
+const resFromOf = (day: string) => { const d = new Date(`${day.slice(0, 7)}-01T12:00`); d.setMonth(d.getMonth() - 1); return isoD(d); };
 
 export interface Emp {
   id: string; dni: string; name: string; last_name: string; email: string; phone?: string;
@@ -19,6 +23,7 @@ interface OwnerData {
   parkings: Parking[];
   employees: Emp[];
   reservations: Res[];
+  resFrom: string; // las reservas cargadas empiezan desde este día
   templates: Record<string, Day[]>; // semana tipo por sucursal (lunes a domingo)
   status: 'loading' | 'ready' | 'error';
   refresh: () => Promise<boolean>; // true si se cargó todo
@@ -41,17 +46,20 @@ const list = (x: any) => (Array.isArray(x) ? x : x?.data ?? []);
 export function OwnerProvider({ children }: { children: ReactNode }) {
   const me = useAuthStore(s => s.user) ?? {};
   const ownerId: string = me.id || me._id || '';
-  const [state, setState] = useState<Omit<OwnerData, 'refresh' | 'refreshParkings' | 'ownerId' | 'me' | 'lastParking' | 'setLastParking'>>({ parkings: [], employees: [], reservations: [], templates: {}, status: 'loading' });
+  const [state, setState] = useState<Omit<OwnerData, 'refresh' | 'refreshParkings' | 'ownerId' | 'me' | 'lastParking' | 'setLastParking' | 'resFrom'>>({ parkings: [], employees: [], reservations: [], templates: {}, status: 'loading' });
   const [lastParking, setLastParking] = useState<string | null>(null);
+  const [resFrom, setResFrom] = useState(() => resFromOf(today()));
 
   const refresh = useCallback(async () => {
     if (!ownerId) return false;
     try {
-      const [p, r, e] = await Promise.all([getParkingsByOwner(ownerId), getReservationsByOwner(ownerId), getEmployeesByOwner(ownerId)]);
+      const from = resFromOf(today()); // se recalcula: el panel puede quedar abierto de un mes al otro
+      const [p, r, e] = await Promise.all([getParkingsByOwner(ownerId), getReservationsByOwner(ownerId, { from }), getEmployeesByOwner(ownerId)]);
       const parkings: Parking[] = list(p);
       const weeks = await Promise.all(parkings.map(x => getTemplate(x.id).then(w => w.map(fromServer)).catch(() => null)));
       const templates = Object.fromEntries(parkings.map((x, i) => [x.id, weeks[i] ?? []]));
       setState({ parkings, templates, reservations: list(r).map(normRes), employees: list(e), status: 'ready' });
+      setResFrom(from);
       return true;
     } catch (err) {
       console.error('Error al cargar datos del dueño:', err);
@@ -75,7 +83,7 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
     }
   }, [ownerId]);
 
-  return <Ctx.Provider value={{ ...state, ownerId, me, refresh, refreshParkings, lastParking, setLastParking }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ ...state, resFrom, ownerId, me, refresh, refreshParkings, lastParking, setLastParking }}>{children}</Ctx.Provider>;
 }
 
 // Sucursal activa de las vistas por sucursal (Plazas, Servicios, Turnos): la de ?p, si no la última elegida, si no la primera.

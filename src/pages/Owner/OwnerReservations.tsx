@@ -6,7 +6,7 @@ import { Presence, Shown } from '../../components/Owner/ui/Presence';
 import { Empty, ErrorBox, PageHead, SkeletonRows } from '../../components/Owner/ui/Page';
 import { Input, apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
-import { cancelReservation, getReservation } from '../../services/reservation.service';
+import { cancelReservation, getReservation, getReservationsByOwner } from '../../services/reservation.service';
 import { getRange } from '../../services/shift.service';
 import { Stars } from '../../components/Owner/ui/Stars';
 import { useSortable } from '../../components/Owner/ui/Sortable';
@@ -24,6 +24,7 @@ export default function OwnerReservations() {
   const [params, setParams] = useSearchParams();
   const [mode, setMode] = useState<'day' | 'month'>('day');
   const [openId, setOpenId] = useState<string | null>(params.get('r'));
+  const [picked, setPicked] = useState<Res | null>(null); // la del listado, aunque sea de un mes que el panel no cargó
   // Desde una notificación (?r=id): abre el detalle y saca el parámetro, así volver atrás no lo reabre.
   useEffect(() => {
     const r = params.get('r');
@@ -32,7 +33,8 @@ export default function OwnerReservations() {
     params.delete('r');
     setParams(params, { replace: true });
   }, [params, setParams]);
-  const open = reservations.find(r => r.id === openId);
+  const open = (picked && reservations.find(r => r.id === picked.id)) ?? picked ?? reservations.find(r => r.id === openId);
+  const close = () => { setPicked(null); setOpenId(null); };
 
   return (
     <>
@@ -43,11 +45,32 @@ export default function OwnerReservations() {
       </div>
       {status === 'error' ? <ErrorBox what="las reservas" onRetry={refresh} />
         : status === 'loading' ? <SkeletonRows n={5} />
-          : mode === 'day' ? <DayList reservations={reservations} employees={employees} initial={(params.get('s') as StFilter) || 'all'} onOpen={setOpenId} />
-            : <MonthSummary reservations={reservations} employees={employees} onOpen={setOpenId} />}
-      <Shown when={open}>{r => <ResDetail r={r} onClose={() => setOpenId(null)} />}</Shown>
+          : mode === 'day' ? <DayList employees={employees} initial={(params.get('s') as StFilter) || 'all'} onOpen={setPicked} />
+            : <MonthSummary employees={employees} onOpen={setPicked} />}
+      <Shown when={open}>{r => <ResDetail r={r} onClose={close} />}</Shown>
     </>
   );
+}
+
+// Reservas de un mes ('AAAA-MM'): las del panel si ya las cargó (desde resFrom); si es anterior, se piden solo esas a la API.
+// null mientras llegan.
+function useMonthRes(month: string): Res[] | null {
+  const { reservations, resFrom, ownerId } = useOwner();
+  const toast = useToast();
+  const loaded = `${month}-01` >= resFrom;
+  const [old, setOld] = useState<{ month: string; list: Res[] } | null>(null);
+  useEffect(() => {
+    if (loaded) return;
+    let alive = true;
+    const [y, m] = month.split('-').map(Number) as [number, number];
+    const to = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+    getReservationsByOwner(ownerId, { from: `${month}-01`, to })
+      .then(x => { if (alive) setOld({ month, list: (Array.isArray(x) ? x : x?.data ?? []).map(normRes) }); })
+      .catch(x => { if (alive) { setOld({ month, list: [] }); toast(apiError(x, 'No se pudieron cargar las reservas de ese mes.'), 'err'); } });
+    return () => { alive = false; };
+  }, [loaded, month, ownerId, toast]);
+  if (loaded) return reservations;
+  return old?.month === month ? old.list : null;
 }
 
 type SortKey = 'code' | 'desde' | 'hasta' | 'horas' | 'emp' | 'monto';
@@ -62,7 +85,7 @@ function useSort(employees: Emp[], init: { k: SortKey; d: 1 | -1 }) {
   return { emp, sorted, th };
 }
 
-function DayList({ reservations, employees, initial, onOpen }: { reservations: Res[]; employees: Emp[]; initial: StFilter; onOpen: (id: string) => void }) {
+function DayList({ employees, initial, onOpen }: { employees: Emp[]; initial: StFilter; onOpen: (r: Res) => void }) {
   const { parkings } = useOwner();
   const { emp, sorted, th } = useSort(employees, { k: 'desde', d: -1 });
   const now = today();
@@ -73,7 +96,8 @@ function DayList({ reservations, employees, initial, onOpen }: { reservations: R
   // Un día pasado no puede tener reservas en curso ni pendientes.
   const only: StFilter[] | null = rd < now ? ['all', 'finalizada', 'cancelada'] : null;
   const st = only && !only.includes(rs) ? 'all' : rs;
-  const D = reservations.filter(r => r.date === rd);
+  const month = useMonthRes(rd.slice(0, 7));
+  const D = (month ?? []).filter(r => r.date === rd);
   const q = rq.trim().toLowerCase().replace(/[\s-]/g, '');
   const list = sorted(D.filter(r => (st === 'all' || r.st === st) && (!rp || r.pid === rp) && (!q || (r.plate + r.code).toLowerCase().replace(/-/g, '').includes(q))));
   const sum = list.reduce((a, r) => a + (r.amount ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
@@ -83,7 +107,8 @@ function DayList({ reservations, employees, initial, onOpen }: { reservations: R
   ]);
 
   let t;
-  if (!D.length) t = <Empty icon={<CalendarDays className="i" />} title={`Sin reservas el ${fmtD(rd)}`}>Probá con otra fecha. Las reservas de tus sucursales aparecen acá con su código y su importe.</Empty>;
+  if (!month) t = <SkeletonRows n={5} />;
+  else if (!D.length) t = <Empty icon={<CalendarDays className="i" />} title={`Sin reservas el ${fmtD(rd)}`}>Probá con otra fecha. Las reservas de tus sucursales aparecen acá con su código y su importe.</Empty>;
   else if (!list.length) t = <Empty icon={<Search className="i" />} title="Sin resultados" action={<button type="button" className="btn" onClick={() => { setRs('all'); setRq(''); setRp(''); }}>Limpiar filtros</button>}>Ninguna reserva coincide con los filtros actuales.</Empty>;
   else t = (
     <div className="panel tw"><table className="tbl rs">
@@ -99,7 +124,7 @@ function DayList({ reservations, employees, initial, onOpen }: { reservations: R
             <td data-label="Empleado">{e ? empName(e) : <span className="na">Sin asignar</span>}</td>
             <td data-label="Estado"><span className={`st ${RS[r.st].c}`}>{RS[r.st].l}</span></td>
             <td className="r" data-label="Importe">{r.amount != null ? money(r.amount) : <span className="na">—</span>}</td>
-            <td className="r"><div className="acts"><button type="button" className="btn sm" aria-label={`Ver detalle de la reserva ${r.code}`} onClick={() => onOpen(r.id)}>Ver detalle</button></div></td>
+            <td className="r"><div className="acts"><button type="button" className="btn sm" aria-label={`Ver detalle de la reserva ${r.code}`} onClick={() => onOpen(r)}>Ver detalle</button></div></td>
           </tr>
         );
       })}</tbody>
@@ -134,7 +159,7 @@ function DayList({ reservations, employees, initial, onOpen }: { reservations: R
   );
 }
 
-function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]; employees: Emp[]; onOpen: (id: string) => void }) {
+function MonthSummary({ employees, onOpen }: { employees: Emp[]; onOpen: (r: Res) => void }) {
   const { parkings } = useOwner();
   const toast = useToast();
   const now = today();
@@ -165,7 +190,8 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
     }).catch(() => { setHours({}); toast('No se pudieron calcular las horas por empleado.', 'err'); });
   }, [rm, parkings, y, m, now, toast]);
 
-  const M = reservations.filter(r => r.date.slice(0, 7) === rm);
+  const monthRes = useMonthRes(rm);
+  const M = (monthRes ?? []).filter(r => r.date.slice(0, 7) === rm);
   const list = sorted(M.filter(r => ms === 'all' || r.st === ms));
   const sum = list.reduce((a, r) => a + (r.amount ?? 0), 0), hs = list.reduce((a, r) => a + r.hours, 0);
   // R-27: valoración promedio del mes por sucursal, con las reservas que la tienen.
@@ -195,7 +221,7 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
           <button type="button" key={k} aria-pressed={ms === k} onClick={() => setMs(k)}>{l}<b>{M.filter(r => k === 'all' || r.st === k).length}</b></button>
         ))}
       </div>
-      {!M.length ? <Empty icon={<CalendarDays className="i" />} title="Sin reservas">No hay reservas en {label}.</Empty>
+      {!monthRes ? <SkeletonRows n={5} /> : !M.length ? <Empty icon={<CalendarDays className="i" />} title="Sin reservas">No hay reservas en {label}.</Empty>
         : !list.length ? <Empty icon={<Search className="i" />} title="Sin resultados" action={<button type="button" className="btn" onClick={() => setMs('all')}>Limpiar filtros</button>}>Ninguna reserva de {label} está en ese estado.</Empty> : (
         <>
           <div className="panel tw"><table className="tbl rm">
@@ -205,7 +231,7 @@ function MonthSummary({ reservations, employees, onOpen }: { reservations: Res[]
               const e = emp(r.eid);
               return (
                 <tr key={r.id}>
-                  <td data-label="Código"><button type="button" className="nm" aria-label={`Ver detalle de la reserva ${r.code}`} onClick={() => onOpen(r.id)}>{r.code}</button></td>
+                  <td data-label="Código"><button type="button" className="nm" aria-label={`Ver detalle de la reserva ${r.code}`} onClick={() => onOpen(r)}>{r.code}</button></td>
                   <td data-label="Desde">{shD(r.date)} {r.start}</td><td data-label="Hasta">{shD(r.endDate)} {r.end}</td>
                   <td data-label="Horas">{fmtH(r.hours)}</td>
                   <td data-label="Empleado">{e ? empName(e) : <span className="na">Sin asignar</span>}</td>
