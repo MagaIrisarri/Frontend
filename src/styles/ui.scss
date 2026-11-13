@@ -292,6 +292,7 @@
 .e-note .i{margin-top:2px}
 .e-note.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--tx)}.e-note.warn .i{color:var(--warn)}
 .e-note.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--tx)}.e-note.ok .i{color:var(--ok)}
+.e-note.err{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--tx)}.e-note.err .i{color:var(--err)}
 .e-sum{display:grid;gap:4px;padding:12px;border-radius:var(--r-md);background:var(--raised);box-shadow:0 0 0 1px var(--div)}
 .e-sum>div{display:flex;justify-content:space-between;gap:12px}
 .e-sum .t{margin-top:4px;padding-top:6px;border-top:1px solid var(--line);font-size:16px;font-weight:600}

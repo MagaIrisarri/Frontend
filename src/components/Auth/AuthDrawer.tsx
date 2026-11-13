@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Drawer } from '../Owner/ui/Layer';
 import OwnerShell from '../Owner/ui/OwnerShell';
 import { Presence } from '../Owner/ui/Presence';
-import { Field, Input, Password } from '../Owner/ui/Field';
+import { Field, Input, Password, apiError } from '../Owner/ui/Field';
 
 interface AuthDrawerProps {
   isOpen: boolean;
@@ -23,6 +23,17 @@ type FieldName = (typeof FIELDS)[number];
 const EMPTY: Record<FieldName, string> = {
   name: '', last_name: '', dni: '', phone: '', date_of_birth: '', email: '', password: '', confirmPassword: '', type: 'CLIENTE',
 };
+
+// Qué falló al iniciar sesión, dicho para quien lo lee: sin respuesta es la conexión, 401 son los datos, 5xx el servidor.
+// El 401 no distingue "no existe", "contraseña mal" ni "dado de baja" a propósito (el backend tampoco lo revela).
+function loginError(err: any): string {
+  const status = err?.response?.status;
+  if (!err?.response) return 'No pudimos conectarnos con el servidor. Revisá tu conexión e intentá de nuevo.';
+  if (status === 401) return 'El correo o la contraseña no son correctos. Revisalos e intentá de nuevo.';
+  if (status === 429) return 'Hiciste muchos intentos seguidos. Esperá un momento y probá de nuevo.';
+  if (status >= 500) return 'El servidor tuvo un problema. Intentá de nuevo en unos minutos.';
+  return apiError(err, 'No se pudo iniciar sesión. Intentá de nuevo.');
+}
 
 function validate(name: FieldName, value: string, form: Record<FieldName, string>): string | undefined {
   switch (name) {
@@ -87,6 +98,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
   const openProfile = useOpenProfile();
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
   const [errors, setErrors] = useState<FormErrors>({});
+  const [loginErrs, setLoginErrs] = useState<{ email?: string; password?: string }>({}); // del login, por campo
 
   const finish = (data: any) => {
     const user = data.user || data.data;
@@ -98,12 +110,23 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
 
   const submitLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
+    const formEl = e.currentTarget as HTMLFormElement;
+    const focus = (name: string) => formEl.querySelector<HTMLInputElement>(`input[name="${name}"]`)?.focus();
+    // Lo que se puede ver sin ir al servidor se marca en su campo.
+    const found = {
+      email: !form.email.trim() ? 'Ingresá tu correo electrónico' : validate('email', form.email, form),
+      password: !form.password ? 'Ingresá tu contraseña' : undefined,
+    };
+    setLoginErrs(found);
+    if (found.email || found.password) { focus(found.email ? 'email' : 'password'); return; }
     setLoading(true);
     try {
       finish(await loginUser(form.email.trim(), form.password));
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Credenciales incorrectas');
+      setError(loginError(err));
+      if (err?.response?.status === 401) focus('password');
     } finally {
       setLoading(false);
     }
@@ -117,6 +140,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
     const next = { ...form, [name]: value };
     setForm(next);
     setError(null);
+    if (name === 'email' || name === 'password') setLoginErrs((prev) => ({ ...prev, [name]: undefined }));
     setErrors((prev) => {
       const out = { ...prev };
       if (touched[name]) out[name] = validate(name, value, next);
@@ -202,6 +226,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
     fromH.current = wrap.current?.offsetHeight ?? 0; // si había una animación en curso, es la altura que se ve ahora
     setTab(next);
     setError(null);
+    setLoginErrs({});
   };
   useLayoutEffect(() => {
     const b = seg.current?.querySelector<HTMLElement>('button[aria-pressed=true]');
@@ -223,7 +248,7 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
       footer={
         <div className="dfoot">
           <div className="fmsg">
-            {error
+            {error && !isLogin
               ? <span className="ferr" role="alert" title={error}><AlertCircle className="i sm" />{error}</span>
               : summary && <span className="ferr" role="status"><AlertCircle className="i sm" />{summary}</span>}
           </div>
@@ -244,10 +269,11 @@ function Content({ onClose, initialTab = 'login', onSuccess }: AuthDrawerProps) 
         <div className="swapin" key={tab}>
         {isLogin ? (
           <>
+            {error && <div className="e-note err" role="alert"><AlertCircle className="i sm" aria-hidden="true" /><span>{error}</span></div>}
             <Input label="Correo electrónico" name="email" type="email" autoComplete="email" placeholder="ejemplo@correo.com" value={form.email} required
-              onChange={change} />
+              fixed error={loginErrs.email} onChange={change} />
             <Password label="Contraseña" name="password" autoComplete="current-password" placeholder="••••••••" value={form.password} required
-              onChange={change} />
+              fixed error={loginErrs.password} onChange={change} />
           </>
         ) : (
           <>
