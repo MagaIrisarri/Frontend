@@ -4,7 +4,7 @@ import { Drawer, ConfirmModal } from '../../components/Owner/ui/Layer';
 import { Presence } from '../../components/Owner/ui/Presence';
 import { Field, Input } from '../../components/Owner/ui/Field';
 import { cancelReservation, changeReservationSpace, extendReservation, setReservationServices } from '../../services/reservation.service';
-import { payInvoice } from '../../services/invoice.service';
+import { editInvoicePayment, payInvoice } from '../../services/invoice.service';
 import { iconOf } from '../../components/Owner/ui/vehicles';
 import { getSpaceAvailability } from '../../services/parkingSpace.service';
 import { getParkingServices } from '../../services/servicePrice.service';
@@ -26,6 +26,8 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   const [method, setMethod] = useState('EFECTIVO');
   const [received, setReceived] = useState(''); // efectivo entregado; vacío = pagó justo
   const [receipt, setReceipt] = useState(''); // comprobante del posnet o la app, opcional
+  const [ask, setAsk] = useState<'out' | 'pay' | null>(null); // salida y cobro se confirman antes
+  const [editing, setEditing] = useState(false); // corregir el pago de una factura ya cobrada (L-47)
   const payRef = useRef<HTMLFormElement>(null);
   const active = ACTIVE.includes(r.status);
   const due = toPay(r);
@@ -107,16 +109,31 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
   useEffect(() => {
     if (lacking > 0) payRef.current?.scrollIntoView({ block: 'nearest' });
   }, [lacking]);
-  const pay = () => {
+  const methodLabel = (k: string) => METHODS.find(([m]) => m === k)?.[1] ?? k;
+  const askPay = () => { if (!busy && lacking === 0) setAsk('pay'); };
+  const pay = async () => {
+    setAsk(null);
     if (busy || lacking > 0) return;
-    run(() => payInvoice(r.invoice!.id, method, cash ? (recv != null ? { amountReceived: recv } : {}) : receipt.trim() ? { receiptNumber: receipt.trim() } : {}),
-      `Estadía de ${r.code} cobrada: ${money(total ?? 0)}${change ? `. Vuelto ${money(change)}` : ''}.`);
+    const extra = cash ? (recv != null ? { amountReceived: recv } : {}) : receipt.trim() ? { receiptNumber: receipt.trim() } : {};
+    if (editing) {
+      if (await run(() => editInvoicePayment(r.invoice!.id, method, extra), `Pago de ${r.code} corregido: ${methodLabel(method)}.`)) setEditing(false);
+      return;
+    }
+    run(() => payInvoice(r.invoice!.id, method, extra), `Estadía de ${r.code} cobrada: ${money(total ?? 0)}${change ? `. Vuelto ${money(change)}` : ''}.`);
   };
+  // Corregir: el formulario del cobro arranca con lo que se guardó.
+  const startEdit = () => {
+    setMethod(r.invoice!.method || 'EFECTIVO');
+    setReceived(r.invoice!.received != null ? String(r.invoice!.received) : '');
+    setReceipt(r.invoice!.receipt ?? '');
+    setEditing(true);
+  };
+  const checkOut = () => { setAsk(null); run(p!.call!, p!.ok!); };
 
   const primaryLabel = p?.key === 'in' && early ? `Ingreso desde ${hhmm(from)}` : p?.key === 'pay' ? 'Registrar pago' : p?.label;
   const primary = p && (
     <button type="button" className="btn pri" disabled={busy || p.disabled || (p.key === 'pay' && lacking > 0)}
-      onClick={() => p.key === 'pay' ? pay() : run(p.call!, p.ok!)}>{primaryLabel}</button>
+      onClick={() => p.key === 'pay' ? askPay() : p.key === 'out' ? setAsk('out') : run(p.call!, p.ok!)}>{primaryLabel}</button>
   );
 
   const amountSec = r.status !== 'CANCELADA' && (
@@ -130,9 +147,10 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
     </section>
   );
 
-  const dueSec = due && (
-    <form ref={payRef} className="fs" noValidate onSubmit={e => { e.preventDefault(); pay(); }}>
-      <div className="fh"><h3>Cobro</h3></div>
+  const dueSec = (due || editing) && (
+    <form ref={payRef} className="fs" noValidate onSubmit={e => { e.preventDefault(); askPay(); }}>
+      <div className="fh"><h3>{editing ? 'Corregir cobro' : 'Cobro'}</h3>
+        {editing && <button type="button" className="btn sm" disabled={busy} onClick={() => setEditing(false)}>Descartar</button>}</div>
       <div className="grid2">
         <Field label="Medio de pago" fixed>{(id, aria) => <select className="sel" id={id} {...aria} value={method} onChange={e => { setMethod(e.target.value); setReceived(''); setReceipt(''); }}>
           {METHODS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>}</Field>
@@ -160,7 +178,9 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
           {r.status === 'PENDIENTE' && <button type="button" className="btn danger" disabled={busy} onClick={() => setConfirm(true)}>Cancelar reserva</button>}
           <div className="fmsg">{err && <span className="ferr" role="alert" title={err}><AlertCircle className="i sm" />{err}</span>}</div>
           <button type="button" className="btn" onClick={onClose}>Cerrar</button>
-          {primary}
+          {editing
+            ? <button type="button" className="btn pri" disabled={busy || lacking > 0} onClick={askPay}>Guardar corrección</button>
+            : primary}
         </div>}>
         <div className="dbody">
           {due && <>{amountSec}{dueSec}</>}
@@ -215,7 +235,9 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
 
           {!due && amountSec}
 
-          {r.invoice?.status === 'PAGADA' && r.invoice.method && <section className="fs"><div className="fh"><h3>Cobro</h3></div>
+          {editing && dueSec}
+          {!editing && r.invoice?.status === 'PAGADA' && r.invoice.method && <section className="fs"><div className="fh"><h3>Cobro</h3>
+            <button type="button" className="btn sm" disabled={busy} onClick={startEdit}>Corregir pago</button></div>
             <dl className="dl e-flat">
               <dt>Medio de pago</dt><dd>{METHODS.find(([k]) => k === r.invoice!.method)?.[1] ?? r.invoice.method}</dd>
               {r.invoice.received != null && <><dt>Recibido</dt><dd>{money(r.invoice.received)}{total != null && r.invoice.received > total && ` · vuelto ${money(r.invoice.received - total)}`}</dd></>}
@@ -224,6 +246,12 @@ export default function ResDrawer({ r, parking, onChange, onClose }: { r: ERes; 
           </section>}
         </div>
       </Drawer>
+      <Presence open={ask === 'out'}><ConfirmModal title={`¿Registrar la salida de ${r.plate}?`}
+        body={`Se cierra la estadía, se libera la plaza ${r.space} y se genera la factura${total != null ? ` por ${money(total)}` : ''}. No se puede deshacer.`}
+        ok="Registrar salida" back="Volver" busy={busy} onConfirm={checkOut} onClose={() => setAsk(null)} /></Presence>
+      <Presence open={ask === 'pay'}><ConfirmModal title={editing ? `¿Corregir el pago de ${r.code}?` : `¿Cobrar ${money(total ?? 0)} a ${r.client.n}?`}
+        body={`${methodLabel(method)}${cash && recv != null ? `: recibe ${money(recv)}, vuelto ${money(change)}` : !cash && receipt.trim() ? `, comprobante ${receipt.trim()}` : ''}.${editing ? ' El total y la fecha del cobro no cambian.' : ' Si el medio no es el correcto, lo podés corregir después desde este detalle.'}`}
+        ok={editing ? 'Guardar corrección' : 'Registrar pago'} back="Volver" busy={busy} onConfirm={pay} onClose={() => setAsk(null)} /></Presence>
       <Presence open={confirm}><ConfirmModal title={`¿Cancelar la reserva ${r.code}?`} body={`${r.client.n} pierde la plaza ${r.space} reservada y recibe un aviso con el motivo.`} ok="Cancelar reserva" back="Volver" danger busy={busy} onConfirm={cancel} onClose={() => setConfirm(false)}>
         <Input label="Motivo" data-first maxLength={300} value={reason} error={reasonErr} onChange={e => { setReason(e.target.value); setReasonErr(''); }} />
       </ConfirmModal></Presence>

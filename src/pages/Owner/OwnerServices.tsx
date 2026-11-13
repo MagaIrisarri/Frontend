@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Check, Layers, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Empty, ErrorBox, PageHead } from '../../components/Owner/ui/Page';
+import { ConfirmModal } from '../../components/Owner/ui/Layer';
+import { Shown } from '../../components/Owner/ui/Presence';
 import { apiError } from '../../components/Owner/ui/Field';
 import { useToast } from '../../components/Owner/ui/Toasts';
 import { ParkingPicker } from '../../components/Owner/ui/ParkingPicker';
@@ -26,6 +28,7 @@ export default function OwnerServices() {
   const [price, setPrice] = useState('');
   const [err, setErr] = useState('');
   const [edit, setEdit] = useState<{ id: string; v: string; err: string } | null>(null);
+  const [asking, setAsking] = useState<Svc | null>(null);
 
   const loadCatalog = useCallback(() => {
     setCatalog(null); setCatErr(false);
@@ -70,8 +73,9 @@ export default function OwnerServices() {
       toast(`Precio de ${s.serviceCatalog.name}: ${money(n)}.`);
     } catch (x) { setEdit({ ...edit!, err: apiError(x) }); }
   };
-  // Sin confirmación previa: se puede deshacer, y vuelve a asignarse con el mismo precio (R-24 ya rechaza quitarlo con reservas activas).
+  // Se confirma antes y además se puede deshacer: vuelve a asignarse con el mismo precio (R-24 ya rechaza quitarlo con reservas activas).
   const remove = async (s: Svc) => {
+    setAsking(null);
     const where = { id: pid!, name: p!.name };
     try {
       await deleteServicePrice(s.id);
@@ -128,7 +132,7 @@ export default function OwnerServices() {
         ) : (
           <div className="acts"><b style={{ marginRight: 8 }}>{money(s.price)}</b>
             <button type="button" className="icon-btn sm" aria-label={`Editar precio de ${s.serviceCatalog.name}`} onClick={() => setEdit({ id: s.id, v: String(s.price), err: '' })}><Pencil className="i sm" /></button>
-            <button type="button" className="icon-btn sm" aria-label={`Quitar ${s.serviceCatalog.name}`} onClick={() => remove(s)}><Trash2 className="i sm" /></button>
+            <button type="button" className="icon-btn sm" aria-label={`Quitar ${s.serviceCatalog.name}`} onClick={() => setAsking(s)}><Trash2 className="i sm" /></button>
           </div>
         )}
       </div>
@@ -156,6 +160,9 @@ export default function OwnerServices() {
       <PageHead title="Servicios" sub="Asigná servicios del catálogo a cada sucursal y definí su precio."
         actions={p && <ParkingPicker parkings={parkings} value={p.id} onChange={select} />} />
       {body}
+      <Shown when={asking}>{s => <ConfirmModal title={`¿Quitar ${s.serviceCatalog.name} de ${p?.name ?? 'la sucursal'}?`}
+        body="Los clientes dejan de poder pedirlo al reservar. Las reservas que ya lo tienen lo conservan." ok="Quitar servicio" danger
+        onConfirm={() => remove(s)} onClose={() => setAsking(null)} />}</Shown>
     </>
   );
 }

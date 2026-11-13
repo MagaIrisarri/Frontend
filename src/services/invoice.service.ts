@@ -6,3 +6,6 @@ export const getInvoicesByClientId = (clientId: string) =>
 // Efectivo: amountReceived (tiene que cubrir el total). Otros medios: receiptNumber opcional del posnet o la app.
 export const payInvoice = (invoiceId: string, paymentMethod: string, extra: { amountReceived?: number; receiptNumber?: string } = {}) =>
   api.post(`/api/billing/${invoiceId}/pay`, { paymentMethod, ...extra }).then(res => res.data);
+// Corrige el medio, el efectivo recibido o el comprobante de una factura ya cobrada (L-47). Mismas reglas que el cobro.
+export const editInvoicePayment = (invoiceId: string, paymentMethod: string, extra: { amountReceived?: number; receiptNumber?: string } = {}) =>
+  api.put(`/api/billing/${invoiceId}/payment`, { paymentMethod, ...extra }).then(res => res.data);

@@ -8,6 +8,8 @@ import { useToast } from '../../components/Owner/ui/Toasts';
 import { createParkingPrice, deleteParkingPrice } from '../../services/parking.service';
 import type { Parking } from '../../types/parking.types';
 import { useOwner } from './OwnerContext';
+import { ConfirmModal } from '../../components/Owner/ui/Layer';
+import { Shown } from '../../components/Owner/ui/Presence';
 import { iconOf } from '../../components/Owner/ui/vehicles';
 import { capOf, missing, money, parsePesos, pesosTyping, priceOf, typeLabel, typePlural, typesAcross, type TypeRef } from './owner.lib';
 
@@ -60,6 +62,7 @@ function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
   const [edit, setEdit] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
+  const [asking, setAsking] = useState(false);
   const aria = `${t.n} en ${p.name}`;
 
   if (!capOf(p, type.id)) return <td data-label={t.n}><span className="na" title={`La sucursal no tiene plazas de ${t.pl.toLowerCase()}`}>—<span className="sr"> Sin plazas de este tipo</span></span></td>;
@@ -76,8 +79,9 @@ function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
       toast(`Tarifa de ${t.pl.toLowerCase()} en ${p.name}: ${money(n)}/h.`);
     } catch (x) { setErr(apiError(x)); } finally { setSaving(false); }
   };
-  // Sin confirmación previa: se deshace volviendo a crear la tarifa con el mismo precio (es versionada, no se pierde historia).
+  // Se confirma antes y además se puede deshacer volviendo a crear la tarifa con el mismo precio (es versionada, no se pierde historia).
   const del = async () => {
+    setAsking(false);
     if (!price) return;
     const was = Number(price.price);
     try {
@@ -111,7 +115,11 @@ function TariffCell({ p, t: type }: { p: Parking; t: TypeRef }) {
   return price
     ? <td data-label={t.n}><div className="pv">
       <button type="button" className="pbtn" aria-label={`Editar tarifa, ${aria}`} onClick={() => setEdit(String(price.price))}>{money(price.price)}<small>/h</small></button>
-      <button type="button" className="icon-btn sm del" aria-label={`Eliminar tarifa, ${aria}`} onClick={del}><Trash2 className="i sm" /></button>
-    </div></td>
+      <button type="button" className="icon-btn sm del" aria-label={`Eliminar tarifa, ${aria}`} onClick={() => setAsking(true)}><Trash2 className="i sm" /></button>
+    </div>
+      <Shown when={asking}>{() => <ConfirmModal title={`¿Eliminar la tarifa de ${t.pl.toLowerCase()} en ${p.name}?`}
+        body={`Sin tarifa, los vehículos de este tipo no pueden reservar en esta sucursal. Las reservas hechas conservan su precio.`}
+        ok="Eliminar tarifa" danger onConfirm={del} onClose={() => setAsking(false)} />}</Shown>
+    </td>
     : <td data-label={t.n}><button type="button" className="assign" aria-label={`Asignar tarifa, ${aria}`} onClick={() => setEdit('')}>+ Asignar</button></td>;
 }
