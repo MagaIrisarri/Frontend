@@ -9,6 +9,13 @@ Qué pide la cátedra, aplicado a este proyecto (4 integrantes, Backend y Fronte
 ## Resumen
 
 - **Regularidad:** lo técnico cumple (mobile-first y la pantalla de TipoVehículo, Frontend `82162df`). Lo funcional cumple (revision-alcance.md), también la regla de la FAQ del detalle que pide datos al backend. La regularidad está completa, con los PR [MagaIrisarri/Backend#10](https://github.com/MagaIrisarri/Backend/pull/10) y [MagaIrisarri/Frontend#14](https://github.com/MagaIrisarri/Frontend/pull/14).
+- **Regularidad aprobada** en la defensa del 13/11/2026. Devolución del profesor y qué se hizo:
+  - Lógica del controller en el servicio: `getCoverage` (turnos), el 400/404 de `updatePassword` y el estado del listado de empleados pasaron al servicio.
+  - Revisar `auth` ("no debería buscar el id", "dónde guardo el rol"): el rol viaja en el JWT y `auth` no consulta la base (L-46).
+  - Strings `'EMPLEADO'`, `'DUEÑO'`… en el backend: se usa el enum `UserType` (también `User.type` y los esquemas). Se quitó el chequeo `EMPLEADO` inalcanzable de `Vehicle.Service.create`.
+  - Rendimiento: `GET /api/reservations/owner/:id` acepta `?from=&to=`; el panel del dueño carga desde el mes anterior y la pantalla Reservas pide aparte un mes más viejo.
+  - Cartel antes de acciones importantes: se sumó la confirmación al quitar una tarifa o un servicio de la sucursal y al registrar la salida y el cobro; el pago cobrado se puede corregir (L-47). Bajas, pausa, cancelación y plazas ya confirmaban.
+  - Errores del inicio de sesión: cada campo dice qué falta y el aviso distingue datos incorrectos, sin conexión y error del servidor.
 - **Aprobación directa:** la autenticación con rutas protegidas ya está (JWT, Backend `a183668`, Frontend `82162df`). Los tests de la cátedra están en `tests-catedra/` de cada repo: 5 unitarias y 1 de integración del backend, 1 de componente y 1 e2e del frontend. La evidencia está en `Backend/docs/tests.md`. Faltan la documentación de la API, el deploy y el video.
 
 ## Fuentes
